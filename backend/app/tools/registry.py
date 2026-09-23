@@ -21,7 +21,7 @@ from pathlib import Path
 from backend.app import config
 from backend.app.memory import service as memory_service
 from backend.app.storage import db
-from backend.app.tools import blender_gen, generators
+from backend.app.tools import blender_gen, generators, rbxlx_gen
 
 MAX_UPLOAD_BYTES = 2 * 1024 * 1024
 MAX_READ_CHARS = 200_000
@@ -82,6 +82,13 @@ TOOLS: dict[str, dict] = {
         "descricao": "Gera scripts Python do Blender (terreno, cena, personagem). Com Blender no servidor, executa de verdade e devolve .glb + render; sem Blender, entrega o .py para rodar no seu.",
         "permissoes": ["geracao_de_script_3d", "execucao_blender_local_se_instalado"],
         "confirmacao": True,
+    },
+    "rbxlx_gen": {
+        "id": "rbxlx_gen",
+        "nome": "Gerador de place nativo Roblox Studio (.rbxlx)",
+        "descricao": "Gera um place pronto no formato XML oficial do Roblox Studio (obby, arena, base). Você baixa e abre direto no Studio — a cena já vem construída.",
+        "permissoes": ["geracao_de_place_roblox"],
+        "confirmacao": False,
     },
 }
 
@@ -250,6 +257,12 @@ def run(user_id: str, tool_id: str, args: dict) -> dict:
                     "descricao": "O Blender não está instalado neste servidor. Segue o script pronto para rodar no seu Blender (ou instale o Blender no servidor e a ARKHER executa de verdade).",
                     "arquivo": {"nome": f"{cena}_seed{seed}_arkher.py", "conteudo": script},
                 }
+        elif tool_id == "rbxlx_gen":
+            try:
+                seed = int(args.get("seed", 42))
+                result = rbxlx_gen.gerar_place(args.get("tipo", ""), seed)
+            except ValueError as e:
+                raise ToolError("INVALID_ARG", str(e))
         else:
             raise ToolError("UNKNOWN_TOOL", "Ferramenta desconhecida.")
         _audit(user_id, tool_id, True, json.dumps(args, ensure_ascii=False), int((time.monotonic() - t0) * 1000))

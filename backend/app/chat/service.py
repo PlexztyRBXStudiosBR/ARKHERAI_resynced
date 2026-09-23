@@ -172,6 +172,7 @@ _TOOL_CMDS = {
     "/roblox": ("roblox_gen", "tipo"),
     "/terreno": ("obj_gen", "seed"),
     "/blender": ("blender_gen", "cena"),
+    "/place": ("rbxlx_gen", "tipo"),
 }
 
 
@@ -187,6 +188,15 @@ def _detectar_tarefa(texto: str) -> tuple[str, dict] | None:
     # perguntas vão para o modelo, nunca para execução automática
     if "?" in t or re.search(r"\b(como|porque|por que|o que e|qual|quais|quando|onde|existe)\b", t):
         return None
+    seed_m = re.search(r"(?:seed|semente)[^0-9]{0,8}(\d{1,6})", t) or re.search(r"\b(\d{1,6})\s*$", t)
+    seed = seed_m.group(1) if seed_m else "42"
+    # place nativo do Roblox Studio (.rbxlx): obby/arena/base
+    if "obby" in t or "parkour" in t:
+        return ("rbxlx_gen", {"tipo": "obby", "seed": seed})
+    if ("arena" in t or "base" in t or "casa" in t) and ("roblox" in t or "studio" in t or "place" in t):
+        if "arena" in t:
+            return ("rbxlx_gen", {"tipo": "arena", "seed": seed})
+        return ("rbxlx_gen", {"tipo": "base", "seed": seed})
     if "roblox" in t or "studio" in t:
         if "salvamento" in t or "salvar progresso" in t or "save" in t or "datastore" in t:
             return ("roblox_gen", {"tipo": "salvamento"})
@@ -198,8 +208,6 @@ def _detectar_tarefa(texto: str) -> tuple[str, dict] | None:
             return ("roblox_gen", {"tipo": "checkpoint"})
         if "dia" in t and "noite" in t:
             return ("roblox_gen", {"tipo": "dia_noite"})
-    seed_m = re.search(r"(?:seed|semente)[^0-9]{0,8}(\d{1,6})", t) or re.search(r"\b(\d{1,6})\s*$", t)
-    seed = seed_m.group(1) if seed_m else "42"
     if "blender" in t or "3d" in t or "personagem" in t or "robo" in t or "cenario" in t or "modelo" in t:
         if "terreno" in t or "montanha" in t or "relevo" in t:
             return ("blender_gen", {"cena": "terreno", "seed": seed})
@@ -243,6 +251,12 @@ def _formatar_ferramenta(tool_id: str, result: dict) -> tuple[str, str, dict | N
                 "3. Os artefatos saem na pasta `arkher_saida/`."
             )
         return f"{result['descricao']}{extra}", "arquivo", result["arquivo"]
+    if tool_id == "rbxlx_gen":
+        corpo = (
+            f"{result['descricao']}\n\nComo usar: {result['como_usar']}\n\n"
+            "Use o botão de download na resposta para baixar o .rbxlx."
+        )
+        return corpo, "arquivo", result["arquivo"]
     if tool_id == "file_read":
         conteudo = result["conteudo"][:8000]
         return f"Conteúdo de `{result['nome']}` ({result['caracteres']} caracteres):\n\n```\n{conteudo}\n```", "ferramenta", None
@@ -271,6 +285,9 @@ def _run_tool_message(user_id: str, message: str) -> tuple[str, str, list[str], 
     if tool_id == "blender_gen":
         peda = arg.split()
         args = {"cena": peda[0] if peda else "", "seed": peda[1] if len(peda) > 1 else "42"}
+    elif tool_id == "rbxlx_gen":
+        peda = arg.split()
+        args = {"tipo": peda[0] if peda else "", "seed": peda[1] if len(peda) > 1 else "42"}
     else:
         args = {} if field is None else {field: arg}
     return executar_ferramenta(user_id, tool_id, args)

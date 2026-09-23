@@ -280,6 +280,49 @@ def test_blender_executar_com_blender_instalado(tmp_path, monkeypatch):
     assert base64.b64decode(res["conteudo_b64"])[:2] == b"PK"
 
 
+# ------------------------------------------------------- place nativo Roblox
+def test_rbxlx_gerados_sao_xml_valido():
+    """Todo place gerado precisa ser XML bem-formado no formato oficial."""
+    import xml.etree.ElementTree as ET
+    from backend.app.tools import rbxlx_gen
+
+    for tipo in ("obby", "arena", "base"):
+        res = rbxlx_gen.gerar_place(tipo, 7)
+        xml = res["arquivo"]["conteudo"]
+        raiz = ET.fromstring(xml)  # lança se inválido
+        assert raiz.tag == "roblox"
+        classes = [it.get("class") for it in raiz.iter("Item")]
+        assert "Workspace" in classes and "Lighting" in classes
+        assert "SpawnLocation" in classes
+        assert res["arquivo"]["nome"] == f"arkher_{tipo}_seed7.rbxlx"
+    # obby tem lava com script; determinismo por seed
+    obby1 = rbxlx_gen.gerar_place("obby", 3)["arquivo"]["conteudo"]
+    obby2 = rbxlx_gen.gerar_place("obby", 3)["arquivo"]["conteudo"]
+    assert obby1 == obby2
+    assert "class=\"Script\"" in obby1 and "Touched" in obby1
+
+
+def test_rbxlx_rejeita_tipo_invalido(auth_client):
+    auth_client.post("/api/tools/rbxlx_gen/authorize")
+    r = auth_client.post("/api/tools/rbxlx_gen/run", json={"tipo": "x"})
+    assert r.status_code == 400
+
+
+def test_comando_place_entrega_arquivo(auth_client):
+    auth_client.post("/api/tools/rbxlx_gen/authorize")
+    ev = _feito_sse(auth_client, "/place arena 5")
+    assert ev.get("kind") == "arquivo"
+    assert ev["arquivo"]["nome"] == "arkher_arena_seed5.rbxlx"
+    assert ev["arquivo"]["conteudo"].startswith("<?xml")
+
+
+def test_intencao_obby_natural(auth_client):
+    auth_client.post("/api/tools/rbxlx_gen/authorize")
+    ev = _feito_sse(auth_client, "cria um obby pro roblox")
+    assert ev.get("kind") == "arquivo"
+    assert ev["arquivo"]["nome"].startswith("arkher_obby")
+
+
 # ------------------------------------------------------- intenção natural
 def _feito_sse(auth_client, mensagem):
     with auth_client.stream("POST", "/api/chat", json={"message": mensagem}) as r:

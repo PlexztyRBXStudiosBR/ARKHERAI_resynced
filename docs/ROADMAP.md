@@ -41,8 +41,9 @@ persistindo no checkpoint, sem nenhuma máquina precisando ficar ligada para sem
 1. ✅ **Conector Blender (já implementado)**: gera scripts Python do Blender e,
    com o Blender instalado no servidor ou na máquina do usuário, executa em modo
    headless e devolve 3D real (.glb + render). Sem controle remoto escondido.
-2. **Conector Roblox Studio**: exportação de módulos Luau e assets gerados pela ARKHER
-   para o projeto do usuário, com revisão humana antes de publicar.
+2. ✅ **Conector Roblox Studio (já implementado)**: além dos sistemas Luau, gera
+   **places nativos .rbxlx** (obby, arena, base) que abrem direto no Studio com a
+   cena já construída — o usuário controla sua máquina e só abre o arquivo.
 3. **Conector de animação**: geração de blocos de keyframes/dados de animação em
    formatos abertos para uso em ferramentas do usuário.
 4. **Sinal de uso**: o feedback 👍/👎 (já implementado) alimenta os ciclos de treino.
