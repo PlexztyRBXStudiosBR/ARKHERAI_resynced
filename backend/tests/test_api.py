@@ -2,6 +2,7 @@
 streaming, cancelamento, memória por usuário, ferramentas e logs sem segredos."""
 from __future__ import annotations
 
+import json
 import logging
 
 from backend.tests.conftest import read_sse
@@ -277,6 +278,45 @@ def test_blender_executar_com_blender_instalado(tmp_path, monkeypatch):
     assert res is not None
     assert res["itens"] == ["x.glb"]
     assert base64.b64decode(res["conteudo_b64"])[:2] == b"PK"
+
+
+# ------------------------------------------------------- intenção natural
+def _feito_sse(auth_client, mensagem):
+    with auth_client.stream("POST", "/api/chat", json={"message": mensagem}) as r:
+        texto = "".join(chunk for chunk in r.iter_text())
+    evento = {}
+    if "event: done" in texto:
+        dado = texto.split("event: done\ndata: ", 1)[1].split("\n\n", 1)[0]
+        evento = json.loads(dado)
+    return evento
+
+
+def test_intencao_blender_personagem(auth_client):
+    auth_client.post("/api/tools/blender_gen/authorize")
+    ev = _feito_sse(auth_client, "Crie um personagem 3D no Blender")
+    assert ev.get("kind") == "arquivo"
+    assert ev["arquivo"]["nome"].startswith("personagem")
+    assert "import bpy" in ev["arquivo"]["conteudo"]
+
+
+def test_intencao_terreno_montanhas(auth_client):
+    auth_client.post("/api/tools/obj_gen/authorize")
+    ev = _feito_sse(auth_client, "gere um terreno com montanhas seed 11")
+    assert ev.get("kind") == "arquivo"
+    assert ev["arquivo"]["nome"].endswith(".obj")
+
+
+def test_intencao_roblox_salvamento(auth_client):
+    auth_client.post("/api/tools/roblox_gen/authorize")
+    ev = _feito_sse(auth_client, "faz um sistema de salvamento pro roblox")
+    assert ev.get("kind") == "ferramenta"
+    assert "```lua" in ev["content"]
+
+
+def test_intencao_exige_autorizacao(auth_client):
+    ev = _feito_sse(auth_client, "crie um personagem no blender")
+    assert ev.get("kind") == "erro"
+    assert "bloqueada" in ev["content"]
 
 
 # ------------------------------------------------------------- feedback

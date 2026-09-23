@@ -7,10 +7,10 @@ import { t } from "../services/i18n";
 import type { Ctx } from "../app/app";
 
 const EXAMPLES = [
-  "O que é uma pipeline 3D completa?",
+  "Crie um personagem 3D no Blender",
+  "Gere um terreno com montanhas",
+  "Faça um sistema de salvamento para Roblox",
   "/blender terreno 7",
-  "/roblox salvamento",
-  "Como estruturar um jogo no Roblox?",
 ];
 
 export function renderChat(ctx: Ctx): HTMLElement {

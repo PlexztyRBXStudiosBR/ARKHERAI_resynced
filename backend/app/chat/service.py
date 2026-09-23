@@ -14,6 +14,7 @@ import re
 import secrets
 import threading
 import time
+import unicodedata
 from datetime import datetime, timezone
 
 from backend.app import config
@@ -174,6 +175,90 @@ _TOOL_CMDS = {
 }
 
 
+def _norm(t: str) -> str:
+    t = unicodedata.normalize("NFKD", t.lower())
+    return "".join(c for c in t if not unicodedata.combining(c))
+
+
+def _detectar_tarefa(texto: str) -> tuple[str, dict] | None:
+    """Intenção nativa: o usuário pede em linguagem natural, a ARKHER executa
+    via conector autorizado (nada de controle de máquina / GUI / shell)."""
+    t = _norm(texto)
+    # perguntas vão para o modelo, nunca para execução automática
+    if "?" in t or re.search(r"\b(como|porque|por que|o que e|qual|quais|quando|onde|existe)\b", t):
+        return None
+    if "roblox" in t or "studio" in t:
+        if "salvamento" in t or "salvar progresso" in t or "save" in t or "datastore" in t:
+            return ("roblox_gen", {"tipo": "salvamento"})
+        if "leaderstat" in t or "placar" in t or "pontos" in t:
+            return ("roblox_gen", {"tipo": "leaderstats"})
+        if "teleporte" in t or "teleport" in t or "portal" in t:
+            return ("roblox_gen", {"tipo": "teleporte"})
+        if "checkpoint" in t or "fase" in t:
+            return ("roblox_gen", {"tipo": "checkpoint"})
+        if "dia" in t and "noite" in t:
+            return ("roblox_gen", {"tipo": "dia_noite"})
+    seed_m = re.search(r"(?:seed|semente)[^0-9]{0,8}(\d{1,6})", t) or re.search(r"\b(\d{1,6})\s*$", t)
+    seed = seed_m.group(1) if seed_m else "42"
+    if "blender" in t or "3d" in t or "personagem" in t or "robo" in t or "cenario" in t or "modelo" in t:
+        if "terreno" in t or "montanha" in t or "relevo" in t:
+            return ("blender_gen", {"cena": "terreno", "seed": seed})
+        if "personagem" in t or "robo" in t:
+            return ("blender_gen", {"cena": "personagem", "seed": seed})
+        return ("blender_gen", {"cena": "cena", "seed": seed})
+    if "terreno" in t or "heightmap" in t or "montanha" in t or "relevo" in t:
+        return ("obj_gen", {"seed": seed})
+    return None
+
+
+def _formatar_ferramenta(tool_id: str, result: dict) -> tuple[str, str, dict | None]:
+    """(corpo, kind, arquivo) para o resultado de uma ferramenta executada."""
+    if tool_id == "data_export":
+        return (
+            "Exportação pronta. Use o botão de download na resposta para salvar seus dados.",
+            "arquivo",
+            {"nome": "arkher-dados.json", "conteudo": json.dumps(result, ensure_ascii=False, indent=1)},
+        )
+    if tool_id == "roblox_gen":
+        corpo = (
+            f"{result['descricao']}\n\n"
+            f"```lua\n{result['codigo']}\n```\n\n"
+            f"Como usar: {result['como_usar']}"
+        )
+        return corpo, "ferramenta", None
+    if tool_id == "obj_gen":
+        corpo = (
+            f"{result['descricao']}\n\nComo usar: {result['como_usar']}\n\n"
+            "Use o botão de download na resposta para baixar o arquivo."
+        )
+        return corpo, "arquivo", result["arquivo"]
+    if tool_id == "blender_gen":
+        if result.get("modo") == "blender_real":
+            extra = "\n\nExecutado em Blender real no servidor — artefatos no zip (GLB + render PNG)."
+        else:
+            extra = (
+                "\n\nComo rodar no seu Blender:\n"
+                "1. Baixe o script no botão de download;\n"
+                "2. `blender --background --python nome_do_script.py` (ou abra e rode);\n"
+                "3. Os artefatos saem na pasta `arkher_saida/`."
+            )
+        return f"{result['descricao']}{extra}", "arquivo", result["arquivo"]
+    if tool_id == "file_read":
+        conteudo = result["conteudo"][:8000]
+        return f"Conteúdo de `{result['nome']}` ({result['caracteres']} caracteres):\n\n```\n{conteudo}\n```", "ferramenta", None
+    return "Resultado da ferramenta `" + tool_id + "`:\n\n```json\n" + json.dumps(result, ensure_ascii=False, indent=1)[:6000] + "\n```", "ferramenta", None
+
+
+def executar_ferramenta(user_id: str, tool_id: str, args: dict) -> tuple[str, str, list[str], dict | None]:
+    """Executa ferramenta por id+args (usado por comandos e pela intenção natural)."""
+    try:
+        result = tools.run(user_id, tool_id, args)
+        corpo, kind, arquivo = _formatar_ferramenta(tool_id, result)
+        return corpo, kind, [tool_id], arquivo
+    except tools.ToolError as e:
+        return f"Ferramenta bloqueada: {e.message}", "erro", [], None
+
+
 def _run_tool_message(user_id: str, message: str) -> tuple[str, str, list[str], dict | None]:
     """Executa comando de ferramenta explícito.
 
@@ -188,46 +273,7 @@ def _run_tool_message(user_id: str, message: str) -> tuple[str, str, list[str], 
         args = {"cena": peda[0] if peda else "", "seed": peda[1] if len(peda) > 1 else "42"}
     else:
         args = {} if field is None else {field: arg}
-    try:
-        result = tools.run(user_id, tool_id, args)
-        if tool_id == "data_export":
-            return (
-                "Exportação pronta. Use o botão de download na resposta para salvar seus dados.",
-                "arquivo",
-                [tool_id],
-                {"nome": "arkher-dados.json", "conteudo": json.dumps(result, ensure_ascii=False, indent=1)},
-            )
-        if tool_id == "roblox_gen":
-            corpo = (
-                f"{result['descricao']}\n\n"
-                f"```lua\n{result['codigo']}\n```\n\n"
-                f"Como usar: {result['como_usar']}"
-            )
-            return corpo, "ferramenta", [tool_id], None
-        if tool_id == "obj_gen":
-            corpo = (
-                f"{result['descricao']}\n\nComo usar: {result['como_usar']}\n\n"
-                "Use o botão de download na resposta para baixar o arquivo."
-            )
-            return corpo, "arquivo", [tool_id], result["arquivo"]
-        if tool_id == "blender_gen":
-            extra = ""
-            if result.get("modo") == "blender_real":
-                extra = "\n\nExecutado em Blender real no servidor — artefatos no zip (GLB + render PNG)."
-            else:
-                extra = (
-                    "\n\nComo rodar no seu Blender:\n"
-                    "1. Baixe o script no botão de download;\n"
-                    "2. `blender --background --python nome_do_script.py` (ou abra e rode);\n"
-                    "3. Os artefatos saem na pasta `arkher_saida/`."
-                )
-            return f"{result['descricao']}{extra}", "arquivo", [tool_id], result["arquivo"]
-        if tool_id == "file_read":
-            conteudo = result["conteudo"][:8000]
-            return f"Conteúdo de `{result['nome']}` ({result['caracteres']} caracteres):\n\n```\n{conteudo}\n```", "ferramenta", [tool_id], None
-        return "Resultado da ferramenta `" + tool_id + "`:\n\n```json\n" + json.dumps(result, ensure_ascii=False, indent=1)[:6000] + "\n```", "ferramenta", [tool_id], None
-    except tools.ToolError as e:
-        return f"Ferramenta bloqueada: {e.message}", "erro", [], None
+    return executar_ferramenta(user_id, tool_id, args)
 
 
 def chat_stream(user_id: str, session_id: str | None, message: str, memory_enabled: bool, replace_last_user: bool = False):
@@ -273,6 +319,19 @@ def chat_stream(user_id: str, session_id: str | None, message: str, memory_enabl
         first_word = message.split(maxsplit=1)[0].lower()
         if first_word in _TOOL_CMDS:
             resposta, kind, ran, arquivo = _run_tool_message(user_id, message)
+            add_message(sid, "assistant", resposta, kind=kind)
+            yield sse("token", {"t": resposta})
+            done_payload = {"content": resposta, "kind": kind, "tools": ran}
+            if arquivo is not None:
+                done_payload["arquivo"] = arquivo
+            yield sse("done", done_payload)
+            return
+
+        # intenção em linguagem natural: pediu, a ARKHER executa via conector
+        # autorizado (mesma autorização + auditoria dos comandos explícitos)
+        tarefa = _detectar_tarefa(message)
+        if tarefa is not None:
+            resposta, kind, ran, arquivo = executar_ferramenta(user_id, tarefa[0], tarefa[1])
             add_message(sid, "assistant", resposta, kind=kind)
             yield sse("token", {"t": resposta})
             done_payload = {"content": resposta, "kind": kind, "tools": ran}
