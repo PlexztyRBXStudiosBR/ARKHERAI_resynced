@@ -292,8 +292,12 @@ $('#b-saveagent').onclick = () => {
   setTimeout(() => $('#b-saveagent').innerHTML = icon('i-check') + 'Salvar', 1500);
   pingAgent();
 };
-/* voltou do Google? guarda a sessao ANTES de decidir se mostra o gate */
-try { if (window.AuthSocial) await AuthSocial.capturarRetorno(); } catch (e) {}
+/* voltou do Google? guarda a sessao ANTES de decidir se mostra o gate.
+   ui.js e um script classico (nao um modulo): top-level await faria o
+   navegador abortar o arquivo inteiro antes de ligar as abas e o chat. */
+const retornoSocial = (window.AuthSocial && typeof AuthSocial.capturarRetorno === 'function')
+  ? Promise.resolve(AuthSocial.capturarRetorno()).catch(() => false)
+  : Promise.resolve(false);
 
 const bGoo = $('#g-google');
 if (bGoo) {
@@ -536,6 +540,7 @@ setInterval(pingAgent, 30000);
   if(skip) skip.onclick=()=>{ LS.set('arkher_local',true); show(false); boot(); };
   window.__gate=show;
   (async()=>{
+    await retornoSocial;
     if(Auth.ativo()) return;                       // sessao valida
     if(Auth.renovavel()){                          // expirou mas da pra renovar
       msg('renovando sessão…');
