@@ -309,6 +309,14 @@ def build_plugin(user: dict = auth.CurrentUser):
     return PlainTextResponse(_PLUGIN_PATH.read_text(encoding="utf-8"))
 
 
+_PLUGIN_BLENDER_PATH = Path(__file__).resolve().parent.parent / "tools" / "arkher_ponte_blender.py"
+
+
+@router.get("/api/build/plugin-blender")
+def build_plugin_blender(user: dict = auth.CurrentUser):
+    return PlainTextResponse(_PLUGIN_BLENDER_PATH.read_text(encoding="utf-8"))
+
+
 @router.get("/api/build/{build_id}")
 def build_get(build_id: str, user: dict = auth.CurrentUser):
     b = build_gen.obter_build(user["id"], build_id)

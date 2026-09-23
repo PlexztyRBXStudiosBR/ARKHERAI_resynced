@@ -308,7 +308,7 @@ def test_fluxo_build_api(auth_client):
     prox = auth_client.get("/api/build/proximo").json()
     assert prox.get("build_id") == bid and len(prox["ops"]) > 60
     um = auth_client.get(f"/api/build/{bid}").json()
-    assert um["tema"] == "militar"
+    assert "exercito" in um["tema"]
     p = auth_client.get("/api/build/plugin")
     assert p.status_code == 200
     assert "Construir agora" in p.text and "X-Arkher-Token" in p.text
@@ -323,7 +323,7 @@ def test_comando_construir(auth_client):
     auth_client.post("/api/tools/build_gen/authorize")
     ev = _feito_sse(auth_client, "/construir base militar 5")
     assert ev.get("kind") == "arquivo"
-    assert ev["arquivo"]["nome"] == "arkher_militar_seed5.rbxlx"
+    assert ev["arquivo"]["nome"] == "arkher_base_militar_seed5.rbxlx"
     assert ev["arquivo"]["conteudo"].startswith("<?xml")
 
 
@@ -331,7 +331,41 @@ def test_intencao_base_exercito(auth_client):
     auth_client.post("/api/tools/build_gen/authorize")
     ev = _feito_sse(auth_client, "crie uma base do exercito brasileiro no roblox studio")
     assert ev.get("kind") == "arquivo"
-    assert ev["arquivo"]["nome"].startswith("arkher_militar")
+    assert ev["arquivo"]["nome"].endswith(".rbxlx")
+    assert ev["arquivo"]["conteudo"].count("<Item class=\"Part\"") > 60
+
+
+def test_compositor_aberto_sem_lista_fixa():
+    """O compositor interpreta pedidos livres — estruturas + quantidades."""
+    from backend.app.tools import build_gen
+
+    assert build_gen.interpretar("3 torres e 2 casas") == {"torre": 3, "casa": 2}
+    assert build_gen.interpretar("quatro árvores e um heliponto") == {"arvore": 4, "heliponto": 1}
+    ops = build_gen.compor("construa uma vila com 4 casas e 3 árvores", 9)
+    nomes = [o["nome"] for o in ops]
+    assert sum(n.startswith("Casa") for n in nomes) >= 4 * 8  # paredes/teto/porta…
+    assert sum(n == "Copa" for n in nomes) == 3
+    assert build_gen.compor("construa uma vila com 4 casas e 3 árvores", 9) == ops
+    import pytest as _pt
+    with _pt.raises(ValueError):
+        build_gen.compor("zzz qqq nada reconhecível", 1)
+
+
+def test_build_pede_permissao_para_ponte(auth_client):
+    ev = _feito_sse(auth_client, "construa uma base militar no roblox")
+    assert ev.get("kind") == "erro"
+    assert "permissão" in ev["content"]
+
+
+def test_addon_blender_servido_e_compila(auth_client, tmp_path):
+    import py_compile
+    auth_client.post("/api/tools/build_gen/authorize")
+    r = auth_client.get("/api/build/plugin-blender")
+    assert r.status_code == 200
+    assert "ARKHER Ponte" in r.text and "from_pydata" in r.text
+    alvo = tmp_path / "addon.py"
+    alvo.write_text(r.text)
+    py_compile.compile(str(alvo), doraise=True)  # sintaxe Python válida
 
 
 # ------------------------------------------------------- place nativo Roblox

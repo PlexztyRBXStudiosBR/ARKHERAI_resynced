@@ -174,6 +174,7 @@ _TOOL_CMDS = {
     "/blender": ("blender_gen", "cena"),
     "/place": ("rbxlx_gen", "tipo"),
     "/construir": ("build_gen", "tema"),
+    "/ponte": ("ponte_instalar", None),
 }
 
 
@@ -191,10 +192,17 @@ def _detectar_tarefa(texto: str) -> tuple[str, dict] | None:
         return None
     seed_m = re.search(r"(?:seed|semente)[^0-9]{0,8}(\d{1,6})", t) or re.search(r"\b(\d{1,6})\s*$", t)
     seed = seed_m.group(1) if seed_m else "42"
-    # construção ao vivo (build_gen): exige verbo de pedido + tema
+    # construção ao vivo (build_gen): compositor aberto — verbo de pedido +
+    # qualquer estrutura conhecida (sem lista fixa de temas)
     pedido = re.search(r"\b(crie|cria|criar|construa|construir|constrói|gera|gerar|faz|fazer|faça|monta|montar)\b", t)
-    if pedido and ("militar" in t or "exercito" in t or "quartel" in t):
-        return ("build_gen", {"tema": "militar", "seed": seed})
+    estrutura = re.search(
+        r"\b(torre|torres|quartel|quarteis|predio|predios|casa|casas|arvore|arvores|"
+        r"heliponto|heliporto|mastro|bandeira|antena|radar|veiculo|veiculos|jipe|jipes|"
+        r"carro|carros|sacos|trincheira|muro|muralha|cerco|base|cidade|vila|militar|exercito)\b", t)
+    if pedido and estrutura:
+        return ("build_gen", {"tema": texto, "seed": seed})
+    if pedido and re.search(r"\b(ponte|plugin)\b", t) and re.search(r"\b(instal|ativa|ativação|ligar)\w*\b", t):
+        return ("ponte_instalar", {})
     # place nativo do Roblox Studio (.rbxlx): obby/arena/base
     if "obby" in t or "parkour" in t:
         return ("rbxlx_gen", {"tipo": "obby", "seed": seed})
@@ -265,15 +273,21 @@ def _formatar_ferramenta(tool_id: str, result: dict) -> tuple[str, str, dict | N
     if tool_id == "build_gen":
         corpo = (
             f"{result['descricao']}\n\n"
-            "Construção ao vivo no Studio:\n"
-            "1. Baixe o plugin-ponte em `/api/build/plugin` (com seu token na URL ou cabeçalho);\n"
-            "2. Salve em `Plugins/ArkherPonte.lua` do seu Roblox Studio;\n"
-            "3. Na aba ARKHER do plugin, cole o endereço do servidor e o token;\n"
-            "4. Clique em **Construir agora** — ela monta peça por peça, em tempo real, na place aberta.\n\n"
-            "Alternativa sem plugin: baixe o .rbxlx anexo e abra no Studio.\n\n"
+            "Construção ao vivo nos programas abertos:\n"
+            "1. Peça uma vez 'instalar a ponte' e autorize (eu entrego plugin do Studio + addon do Blender);\n"
+            "2. No painel da ponte, cole o endereço do servidor e o token;\n"
+            "3. Clique em **Construir agora** — ela monta peça por peça, em tempo real, "
+            "no Roblox Studio (peças) ou no Blender (meshes reais com material e cor).\n\n"
+            "Sem ponte instalada? Baixe o .rbxlx anexo e abra direto no Studio.\n\n"
             f"Como usar: {result['como_usar']}"
         )
         return corpo, "arquivo", result["arquivo"]
+    if tool_id == "ponte_instalar":
+        return (
+            f"{result['descricao']}\n\n{result['como_usar']}\n\n"
+            "Com a ponte conectada, basta pedir a construção no chat — sem lista fixa: "
+            "descreva o que quiser (torres, casas, quartéis, árvores, muros…)."
+        ), "ferramenta", None
     if tool_id == "file_read":
         conteudo = result["conteudo"][:8000]
         return f"Conteúdo de `{result['nome']}` ({result['caracteres']} caracteres):\n\n```\n{conteudo}\n```", "ferramenta", None
@@ -287,6 +301,15 @@ def executar_ferramenta(user_id: str, tool_id: str, args: dict) -> tuple[str, st
         corpo, kind, arquivo = _formatar_ferramenta(tool_id, result)
         return corpo, kind, [tool_id], arquivo
     except tools.ToolError as e:
+        if e.code == "NOT_AUTHORIZED" and tool_id == "build_gen":
+            return (
+                "Para construir dentro do seu programa, preciso da sua permissão para usar a ponte.\n\n"
+                "1. Autorize a ferramenta **Construção ao vivo** na aba Ferramentas;\n"
+                "2. Peça a construção de novo — se a ponte ainda não estiver instalada, "
+                "eu te entrego o plugin (Studio) e o addon (Blender) para você instalar.\n\n"
+                "Você mantém o controle dos programas; eu só construo.",
+                "erro", [], None,
+            )
         return f"Ferramenta bloqueada: {e.message}", "erro", [], None
 
 

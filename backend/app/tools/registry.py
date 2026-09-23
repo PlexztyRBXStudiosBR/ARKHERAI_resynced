@@ -92,10 +92,17 @@ TOOLS: dict[str, dict] = {
     },
     "build_gen": {
         "id": "build_gen",
-        "nome": "Construção ao vivo (plugin-ponte Roblox Studio)",
-        "descricao": "Gera construções temáticas paramétricas (base militar) como stream de operações: o plugin-ponte monta peça por peça dentro do Studio aberto, em tempo real. Também entrega .rbxlx como alternativa.",
-        "permissoes": ["geracao_de_stream_de_construcao", "geracao_de_place_roblox"],
+        "nome": "Construção ao vivo (pontes Roblox Studio + Blender)",
+        "descricao": "Interpreta seu pedido em linguagem natural (sem lista fixa: torres, quartéis, casas, árvores, veículos, muros, heliponto…) e compõe a construção peça por peça. As pontes montam em tempo real dentro do Studio/Blender abertos; também entrega .rbxlx.",
+        "permissoes": ["geracao_de_stream_de_construcao", "geracao_de_place_roblox", "modelagem_no_blender"],
         "confirmacao": False,
+    },
+    "ponte_instalar": {
+        "id": "ponte_instalar",
+        "nome": "Instalação das pontes (Studio + Blender)",
+        "descricao": "Com sua permissão, libera o plugin do Roblox Studio e o addon do Blender para a ARKHER construir/modelar ao vivo nos programas abertos.",
+        "permissoes": ["instalacao_assistida_da_ponte"],
+        "confirmacao": True,
     },
 }
 
@@ -278,17 +285,30 @@ def run(user_id: str, tool_id: str, args: dict) -> dict:
             except ValueError as e:
                 raise ToolError("INVALID_ARG", str(e))
             xml = rbxlx_gen.renderizar_ops(build["ops"])
+            nome_seguro = re.sub(r"[^a-z0-9]+", "_", build["tema"].lower()).strip("_")[:32] or "build"
             result = {
                 "descricao": (
                     f"Construção '{build['tema']}' gerada (seed {build['seed']}, "
                     f"{len(build['ops'])} peças, build `{build['build_id']}`)."
                 ),
                 "como_usar": (
-                    "Com o plugin-ponte ARKHER no Studio (baixe em /api/build/plugin), "
-                    "clique em 'Construir agora' e ela monta peça por peça na sua place aberta. "
-                    "Sem plugin? Baixe o .rbxlx anexo e abra direto no Studio."
+                    "Com uma ponte ARKHER conectada (Studio ou Blender), clique em "
+                    "'Construir agora' e ela monta peça por peça no programa aberto. "
+                    "Sem ponte? Baixe o .rbxlx anexo e abra direto no Studio."
                 ),
-                "arquivo": {"nome": f"arkher_{build['tema']}_seed{build['seed']}.rbxlx", "conteudo": xml},
+                "arquivo": {"nome": f"arkher_{nome_seguro}_seed{build['seed']}.rbxlx", "conteudo": xml},
+            }
+        elif tool_id == "ponte_instalar":
+            result = {
+                "descricao": "Permissão registrada. As pontes estão liberadas para construir ao vivo.",
+                "como_usar": (
+                    "Roblox Studio: baixe o plugin em /api/build/plugin e salve em "
+                    "%LOCALAPPDATA%/Roblox/Plugins/ArkherPonte.lua (ou arraste para o Studio).\n"
+                    "Blender: baixe o addon em /api/build/plugin-blender e instale em "
+                    "Edit → Preferences → Add-ons → Install.\n"
+                    "Nos dois painéis, cole o endereço do servidor ARKHER e o seu token. "
+                    "Depois é só pedir a construção no chat e clicar em 'Construir agora'."
+                ),
             }
         else:
             raise ToolError("UNKNOWN_TOOL", "Ferramenta desconhecida.")

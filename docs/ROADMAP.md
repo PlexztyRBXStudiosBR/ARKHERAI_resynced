@@ -41,11 +41,13 @@ persistindo no checkpoint, sem nenhuma máquina precisando ficar ligada para sem
 1. ✅ **Conector Blender (já implementado)**: gera scripts Python do Blender e,
    com o Blender instalado no servidor ou na máquina do usuário, executa em modo
    headless e devolve 3D real (.glb + render). Sem controle remoto escondido.
-2. ✅ **Conector Roblox Studio (já implementado)**: sistemas Luau, **places nativos
-   .rbxlx** (obby, arena, base) e **construção ao vivo via plugin-ponte**: a ARKHER
-   gera um stream de operações e o plugin (instalado pelo usuário) monta peça por
-   peça, em tempo real, dentro da place aberta (`/construir base militar`). O
-   usuário controla o programa; a ARKHER só constrói.
+2. ✅ **Conectores Roblox Studio + Blender (já implementados)**: sistemas Luau,
+   places nativos .rbxlx e **construção ao vivo com compositor aberto** (sem lista
+   fixa: o pedido em linguagem natural vira stream de operações). Duas pontes
+   instaladas com permissão do usuário montam em tempo real: plugin do Roblox
+   Studio (peças na place aberta) e addon do Blender (meshes reais com material e
+   cor). O usuário controla os programas; a ARKHER constrói. Criatividade livre
+   além das estruturas conhecidas acompanha o crescimento do modelo (rede workers).
 3. **Conector de animação**: geração de blocos de keyframes/dados de animação em
    formatos abertos para uso em ferramentas do usuário.
 4. **Sinal de uso**: o feedback 👍/👎 (já implementado) alimenta os ciclos de treino.
