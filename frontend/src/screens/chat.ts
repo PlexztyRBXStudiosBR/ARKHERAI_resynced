@@ -2,6 +2,8 @@
 
 import { renderMarkdown } from "../app/md";
 import { confirmDialog, copyText, el, promptDialog, toast } from "../components/ui";
+import { icon } from "../components/icons";
+import { openViewer } from "../components/viewer3d";
 import type { ApiError, Message } from "../services/api";
 import { t } from "../services/i18n";
 import type { Ctx } from "../app/app";
@@ -170,16 +172,25 @@ function messageEl(ctx: Ctx, m: Message, streaming: boolean): HTMLElement {
         actions.append(regen);
       }
       if (m.hash) {
-        const up = el("button", { class: "mini", title: "Boa resposta — ajuda o treino" }, "👍");
+        const up = el("button", { class: "mini", title: "Boa resposta — ajuda o treino" });
+        up.append(icon("thumbUp", 15));
         up.onclick = () => void ctx.rate(m.hash!, 1, up);
-        const down = el("button", { class: "mini", title: "Resposta ruim — ajuda o treino" }, "👎");
+        const down = el("button", { class: "mini", title: "Resposta ruim — ajuda o treino" });
+        down.append(icon("thumbDown", 15));
         down.onclick = () => void ctx.rate(m.hash!, -1, down);
         actions.append(up, down);
       }
       if (m.arquivo) {
-        const dl = el("button", { class: "mini pri" }, "⤓ baixar " + m.arquivo.nome);
+        const dl = el("button", { class: "mini pri" });
+        dl.append(icon("download", 15), " baixar " + m.arquivo.nome);
         dl.onclick = () => ctx.download(m.arquivo!.nome, m.arquivo!.conteudo ?? "", m.arquivo!.conteudo_b64);
         actions.append(dl);
+        if (m.arquivo.nome.endsWith(".obj") && m.arquivo.conteudo) {
+          const ver3d = el("button", { class: "mini pri", title: "Pré-visualizar o 3D gerado" });
+          ver3d.append(icon("cube", 15), " " + t("view_3d", lang));
+          ver3d.onclick = () => openViewer(m.arquivo!.nome, m.arquivo!.conteudo!);
+          actions.append(ver3d);
+        }
       }
     }
     wrap.append(bubble, actions);
@@ -216,7 +227,8 @@ function renderComposer(ctx: Ctx): HTMLElement {
   const cancel = el("button", { class: "danger" }, t("cancel", lang));
   cancel.onclick = () => void ctx.cancel();
 
-  const exportBtn = el("button", { class: "ghost", title: t("export_chat", lang) }, "⤓");
+  const exportBtn = el("button", { class: "ghost", title: t("export_chat", lang) });
+  exportBtn.append(icon("download", 15));
   exportBtn.onclick = () => ctx.exportSession();
 
   bar.append(input, el("div", { class: "composer-btns" }, s.ui === "generating" ? cancel : send, exportBtn));

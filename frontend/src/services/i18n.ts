@@ -28,6 +28,7 @@ const STRINGS = {
     rename: "Renomear",
     delete: "Excluir",
     export_chat: "Exportar conversa",
+    view_3d: "Ver em 3D",
     confirm_delete_chat: "Excluir esta conversa? Essa ação não pode ser desfeita.",
     examples: "Exemplos para começar",
     model_quality_note:
@@ -99,6 +100,7 @@ const STRINGS = {
     rename: "Rename",
     delete: "Delete",
     export_chat: "Export conversation",
+    view_3d: "View in 3D",
     confirm_delete_chat: "Delete this conversation? This cannot be undone.",
     examples: "Examples to get started",
     model_quality_note:

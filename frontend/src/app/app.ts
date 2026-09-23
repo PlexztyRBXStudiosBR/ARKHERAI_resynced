@@ -7,6 +7,7 @@ import type { ApiError, Message } from "../services/api";
 import { t } from "../services/i18n";
 import type { StringKey } from "../services/i18n";
 import { el, toast } from "../components/ui";
+import { icon } from "../components/icons";
 import { renderChat, afterChatRender } from "../screens/chat";
 import { renderMemory } from "../screens/memory";
 import { renderTools } from "../screens/tools";
@@ -247,7 +248,7 @@ export async function boot(container: HTMLElement): Promise<void> {
     try {
       await api.feedback(store.state.currentSessionId ?? "", rating, hash);
       btn.disabled = true;
-      btn.textContent = rating === 1 ? "👍 ✓" : "👎 ✓";
+      btn.textContent = "✓";
       store.log(`feedback ${rating === 1 ? "positivo" : "negativo"} registrado`);
     } catch (e) {
       toast((e as ApiError).message ?? "erro");
@@ -276,8 +277,10 @@ export async function boot(container: HTMLElement): Promise<void> {
   function renderShell(host: HTMLElement, c: Ctx): void {
     host.textContent = "";
     const header = el("header", { class: "topbar" });
+    const mark = el("span", { class: "mark" });
+    mark.append(icon("logo", 20));
     header.append(
-      el("div", { class: "logo" }, el("span", { class: "mark" }, "◆"), el("span", {}, "ARKHER AI")),
+      el("div", { class: "logo" }, mark, el("span", {}, "ARKHER AI")),
       el("div", { class: "sp" }),
       statusPill(c),
     );
@@ -289,8 +292,12 @@ export async function boot(container: HTMLElement): Promise<void> {
       ["training", "tab_training"],
       ["settings", "tab_settings"],
     ];
+    const ICONES: Record<ScreenId, string> = {
+      chat: "chat", memory: "memory", tools: "tools", training: "training", settings: "settings",
+    };
     for (const [id, key] of screens) {
-      const b = el("button", { class: "tab" + (c.store.state.screen === id ? " on" : ""), "data-tab": id }, t(key, c.store.state.settings.lang));
+      const b = el("button", { class: "tab" + (c.store.state.screen === id ? " on" : ""), "data-tab": id });
+      b.append(icon(ICONES[id], 15), el("span", { class: "lab" }, t(key, c.store.state.settings.lang)));
       b.onclick = () => {
         c.store.set({ screen: id as typeof c.store.state.screen });
         render();
@@ -328,7 +335,8 @@ export async function boot(container: HTMLElement): Promise<void> {
       const id = (b as HTMLElement).dataset["tab"];
       b.classList.toggle("on", id === s.screen);
       const key = TAB_KEYS[id as keyof typeof TAB_KEYS];
-      b.textContent = t(key, s.settings.lang);
+      const lab = (b as HTMLElement).querySelector(".lab");
+      if (lab) lab.textContent = t(key, s.settings.lang);
     });
     const pillHost = document.querySelector(".topbar .chip.status");
     if (pillHost) {

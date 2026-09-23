@@ -219,3 +219,32 @@ select.input { appearance: auto; }
   .msg { max-width: 96%; }
   .msg-actions { opacity: 1; }
 }
+
+/* ----------------------------- ícones próprios ---------------------------- */
+.ic { display: inline-block; flex: none; vertical-align: -2px; }
+.logo .mark { display: inline-flex; align-items: center; justify-content: center; }
+.tabs .tab { display: inline-flex; align-items: center; gap: 7px; }
+.msg-actions .mini, .composer-btns .ghost { display: inline-flex; align-items: center; gap: 5px; }
+
+/* ------------------------ visualizador 3D (WebGL) ------------------------- */
+.viewer-overlay {
+  position: fixed; inset: 0; z-index: 60; display: flex; flex-direction: column;
+  background: rgba(6, 9, 15, 0.94); backdrop-filter: blur(3px);
+}
+.viewer-head { display: flex; align-items: center; gap: 10px; padding: 12px 16px; color: var(--tx); }
+.viewer-head b { flex: 1; font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.viewer-canvas { flex: 1; width: 100%; min-height: 0; touch-action: none; cursor: grab; }
+.viewer-canvas:active { cursor: grabbing; }
+.viewer-hint { position: absolute; bottom: 14px; left: 50%; transform: translateX(-50%);
+  font-size: 11px; color: var(--tx-dim, #9aa3b5); opacity: 0.8; pointer-events: none; }
+.viewer-erro { padding: 24px; color: var(--tx); }
+
+/* ------------------------------- mobile RPA ------------------------------ */
+@media (max-width: 640px) {
+  .tabs { gap: 2px; padding: 6px 8px 0; }
+  .tabs .tab { padding: 7px 9px; }
+  .tabs .tab .lab { display: none; }
+  .tabs .tab.on .lab { display: inline; }
+  .topbar { padding: 8px 10px; }
+  .msg-actions .mini { padding: 7px 10px; }
+}
