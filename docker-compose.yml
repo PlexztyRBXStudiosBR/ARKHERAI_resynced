@@ -1,0 +1,16 @@
+# Desenvolvimento/implantação do ARKHER AI em um único serviço.
+# Arquitetura: navegador → backend próprio → modelo próprio.
+services:
+  arkher:
+    build: .
+    ports:
+      - "8710:8710"
+    environment:
+      ARKHER_CORS_ORIGINS: "http://localhost:5173,http://127.0.0.1:5173"
+      ARKHER_SERVE_FRONTEND: "1"
+    volumes:
+      - arkher-data:/app/data
+    restart: unless-stopped
+
+volumes:
+  arkher-data:

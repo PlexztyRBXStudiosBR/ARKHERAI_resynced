@@ -1,0 +1,200 @@
+PERGUNTA: O que é uma pipeline 3D completa?
+RESPOSTA: A pipeline 3D tem etapas claras: conceito, modelagem, retopologia, abertura de UVs, baking de mapas, texturização, rigging, animação e exportação para a engine. Cada etapa gera um arquivo versionado. Pular etapas cobra caro depois.
+
+PERGUNTA: O que é retopologia e por que importa?
+RESPOSTA: Retopologia é reconstruir a malha de um modelo com polígonos organizados em anéis e loops. Ela importa porque animação e deformação exigem topologia limpa. Um escaneado de milhões de polígonos vira uma malha leve de alguns milhares.
+
+PERGUNTA: O que são UVs?
+RESPOSTA: UV é o mapa que liga a superfície 3D a uma textura 2D. Abrir UVs é cortar a malha em ilhas e achatá-las sem esticar. Ilhas bem empacotadas e sem sobreposição desperdiçam menos textura.
+
+PERGUNTA: O que é baking de mapas?
+RESPOSTA: Baking transfere detalhe de uma malha de alta resolução para mapas de uma malha leve: normal map guarda relevo, ambient occlusion guarda sombras de contato, curvature guarda bordas. Assim o modelo leve parece pesado.
+
+PERGUNTA: O que faz um normal map?
+RESPOSTA: O normal map engana a luz: cada pixel guarda uma direção de superfície. Com ele, uma malha simples exibe ranhuras, parafusos e costuras sem polígonos extras. É a base do visual de jogos modernos.
+
+PERGUNTA: Quais são os princípios da animação?
+RESPOSTA: Os princípios clássicos incluem squash and stretch, antecipação, staging, follow through, arcs, secondary action e timing. Animação profissional nasce deles: pose clara, transição com peso e leitura instantânea.
+
+PERGUNTA: Como funciona uma animação AAA?
+RESPOSTA: Animação AAA combina captura de movimento, keyframe artesanal e camadas procedurais. O animador bloqueia as poses principais, refina o timing e depois corrige pés, mãos e física de tecido. Rig facial leva dezenas de controles.
+
+PERGUNTA: O que é capture de movimento?
+RESPOSTA: Mocap grava o movimento de um ator com sensores ou vídeo e aplica no esqueleto digital. O dado bruto sempre precisa de limpeza: corrigir pés deslizando, ajustar ritmo e re-targetar para o personagem do jogo.
+
+PERGUNTA: O que é re-targeting de animação?
+RESPOSTA: Re-targeting adapta uma animação de um esqueleto para outro, mapeando ossos equivalentes. As proporções diferentes exigem ajuste de pés, mãos e quadril para o movimento não quebrar.
+
+PERGUNTA: O que é blend tree?
+RESPOSTA: Blend tree mistura animações por parâmetro, como velocidade do personagem. Em vez de trocar de animação com corte, o sistema interpola entre andar e correr. O resultado é movimento contínuo e natural.
+
+PERGUNTA: O que é inverse kinematics?
+RESPOSTA: Cinemática inversa calcula as rotações dos ossos para alcançar um alvo, como o pé se adaptar ao degrau. IK resolve contato com o chão, mirar com a cabeça e apoiar as mãos, sem animar tudo na mão.
+
+PERGUNTA: O que é um state machine de animação?
+RESPOSTA: A máquina de estados de animação organiza clipes em estados com transições: parado, andar, correr, pular. Cada transição tem duração e condição. É o coração do controle de personagem em engines modernas.
+
+PERGUNTA: O que é a linguagem Luau?
+RESPOSTA: Luau é a linguagem de script do Roblox, derivada do Lua, com tipagem opcional e desempenho melhorado. Scripts no Roblox rodam no servidor ou no cliente, e a comunicação entre eles usa RemoteEvents e RemoteFunctions.
+
+PERGUNTA: Como estruturar um jogo no Roblox?
+RESPOSTA: Estruture o projeto em ServerScriptService para lógica de servidor, ReplicatedStorage para código compartilhado e StarterPlayer para scripts de cliente. Mantenha dados em ModuleScripts e nunca confie no cliente para regras importantes.
+
+PERGUNTA: Como funciona cliente e servidor no Roblox?
+RESPOSTA: O servidor é a autoridade: valida ações, guarda progresso e evita trapaça. O cliente prevê movimento e envia entradas. RemoteEvents levam mensagens nos dois sentidos, e toda vinda do cliente precisa ser validada no servidor.
+
+PERGUNTA: O que é DataStore no Roblox?
+RESPOSTA: DataStore é o armazenamento persistente do Roblox para progresso do jogador. Use RetryUntilSafe para lidar com limite de requisições, guarde tabelas serializadas e trate erro de leitura com fallback para não perder o save.
+
+PERGUNTA: Como publicar um jogo no Roblox com qualidade?
+RESPOSTA: Publique cedo e itere: configure ícone, descrição e thumbnail, teste em celular antes de divulgar, acompanhe retenção nas análises e responda o feedback. Atualizações pequenas e frequentes superam um lançamento perfeito que nunca chega.
+
+PERGUNTA: O que é otimização de malha para mobile?
+RESPOSTA: Para mobile, mire poucos draw calls e poucos polígonos por tela. Combine materiais, use atlas de textura, evite transparências sobrepostas e faça LOD para objetos distantes. Meça no aparelho antes de cortar.
+
+PERGUNTA: O que é LOD?
+RESPOSTA: LOD é nível de detalhe: o mesmo objeto ganha versões com menos polígonos, trocadas pela distância da câmera. Perto, a malha completa; longe, a versão barata. O jogador não percebe e o framerate agradece.
+
+PERGUNTA: O que é draw call?
+RESPOSTA: Draw call é uma ordem de desenho enviada à placa gráfica. Muitos objetos com materiais diferentes geram muitas chamadas e custam caro. Reduzir materiais, combinar malhas e instanciar objetos diminui draw calls.
+
+PERGUNTA: O que é instancing?
+RESPOSTA: Instancing desenha o mesmo objeto várias vezes enviando os dados uma vez só. Grama, pedras e postes repetidos são o caso clássico. A placa gráfica multiplica a instância por posição, quase de graça.
+
+PERGUNTA: O que é shader de água?
+RESPOSTA: Shader de água combina ondas por seno ou mapa de normal, reflexo aproximado e transparência com profundidade. Em mobile, usa-se versão barata com textura animada; em AAA, simulação e refração de tela.
+
+PERGUNTA: O que é physically based rendering?
+RESPOSTA: PBR descreve materiais com propriedades físicas: albedo, metalicidade e rugosidade. Com isso, o material reage bem a qualquer luz. Texturas PBR são o padrão da indústria de jogos atual.
+
+PERGUNTA: O que é um pipeline de assets de personagem?
+RESPOSTA: O personagem nasce no conceito, ganha escultura de alta resolução, passa por retopologia e UVs, recebe texturas PBR, é rigado com controles claros e entra na engine com esqueleto compatível. Cada etapa tem checklist de qualidade.
+
+PERGUNTA: O que são morph targets?
+RESPOSTA: Morph targets são poses de vértices salvas, muito usadas para expressão facial. O rosto combina dezenas de shapes, como sorriso e sobrancelha, e a engine mistura os pesos por fonema ou emoção.
+
+PERGUNTA: Como planejar a arte de um jogo indie?
+RESPOSTA: Defina um estilo que a equipe consiga produzir em volume: paleta limitada, silhuetas fortes e poucos materiais. Faça um vertical slice com a arte final antes de produzir o resto. Consistência vence detalhe isolado.
+
+PERGUNTA: O que é game feel?
+RESPOSTA: Game feel é a resposta sensorial do jogo ao input: camera shake, partículas, freeze frame, som e aceleração de animação. Pequenos exageros calculados fazem o toque parecer impacto. É o que separa protótipo de produto.
+
+PERGUNTA: O que é juice em jogos?
+RESPOSTA: Juice são os efeitos de feedback que amplificam ações: brilho ao coletar, tremor ao bater, som crocante ao pisar. A regra é feedback imediato, legível e proporcional. Juice demais vira ruído.
+
+PERGUNTA: O que é netcode?
+RESPOSTA: Netcode é o conjunto de técnicas para o jogo online parecer justo: predição de cliente, reconciliação, interpolação de entidades e rollback. Cada escolha troca latência por consistência. Jogos de luta e tiro exigem abordagens diferentes.
+
+PERGUNTA: O que é rollback netcode?
+RESPOSTA: Rollback prevê a entrada do adversário, simula na frente e corrige quando a entrada real chega. O jogador sente resposta imediata. É o padrão ouro para jogos de luta online.
+
+PERGUNTA: O que é anti-cheat?
+RESPOSTA: Anti-cheat protege o jogo de trapaça: validar ações no servidor, detectar valores impossíveis e assinar comunicação. A ARKHER ajuda a construir defesas, mas não cria trapaças nem exploits.
+
+PERGUNTA: O que é um vertical slice?
+RESPOSTA: Vertical slice é uma fatia completa e jogável do jogo final: uma fase com arte, som, código e polimento de verdade. Ela prova a qualidade do produto e calibra o custo real de produção antes do investimento grande.
+
+PERGUNTA: O que é engine headless?
+RESPOSTA: Execução headless roda a engine sem janela gráfica, útil para servidor dedicado, testes automatizados e builds em linha de comando. Automatizar builds assim garante pacotes reproduzíveis.
+
+PERGUNTA: O que é build pipeline?
+RESPOSTA: Build pipeline é o caminho automático do código ao pacote jogável: compila, roda testes, assina e gera a versão numerada. Com pipeline, qualquer pessoa do time gera o mesmo build, e regressões aparecem cedo.
+
+PERGUNTA: O que são testes automatizados em jogos?
+RESPOSTA: Testes automatizados verificam regras do jogo sem jogar: dano calculado, inventário, economia. Testes de unidade rodam rápido; testes de integração validam sistemas juntos; smoke tests abrem a fase e conferem o essencial.
+
+PERGUNTA: O que é profiling de jogo?
+RESPOSTA: Profiling mede onde o tempo é gasto: CPU, GPU, memória e alocações por quadro. O perfil mostra o gargalo real, que quase nunca é o que a intuição aponta. Otimize depois de medir.
+
+PERGUNTA: O que é texture streaming?
+RESPOSTA: Texture streaming carrega texturas por demanda conforme a câmera chega perto, mantendo mipmaps baixos para o que está longe. Isso reduz memória em mundos grandes sem perder qualidade percebida.
+
+PERGUNTA: O que é um tech artist?
+RESPOSTA: O tech artist liga arte e código: cria shaders, ferramentas, pipelines de exportação e garante desempenho. É quem transforma a visão visual em algo que roda no hardware alvo.
+
+PERGUNTA: O que é procedural generation?
+RESPOSTA: Geração procedural cria conteúdo por regras e aleatoriedade controlada por seed: fases, terrenos, dungeons. Com seed fixa o resultado é reproduzível, o que ajuda a depurar e compartilhar.
+
+PERGUNTA: O que é wave function collapse?
+RESPOSTA: Wave function collapse gera mapas a partir de regras de adjacência entre peças. Cada célula começa com todas as possibilidades e vai colapsando para a opção válida. Gera níveis coerentes com aparência artesanal.
+
+PERGUNTA: O que é iluminação global?
+RESPOSTA: Iluminação global calcula como a luz rebate nas superfícies, criando sombras suaves e cor ambiente realista. Em tempo real usa-se baking, sondas ou soluções dinâmicas aproximadas, conforme o hardware.
+
+PERGUNTA: O que é lightmap?
+RESPOSTA: Lightmap é uma textura com iluminação pré-calculada aplicada nas superfícies. Custa memória, mas traz qualidade alta por preço baixo. Cenários estáticos usam lightmap; objetos dinâmicos usam luz em tempo real.
+
+PERGUNTA: O que é particle system?
+RESPOSTA: Particle system emite elementos baratos para simular fogo, fumaça, poeira e magia. Parâmetros de vida, velocidade, cor e tamanho ao longo do tempo criam efeitos ricos. Partículas demais custam overdraw.
+
+PERGUNTA: O que é overdraw?
+RESPOSTA: Overdraw acontece quando o mesmo pixel é desenhado várias vezes, comum com transparências sobrepostas. Ele enche o gargalo de fillrate, principalmente em mobile. Reduzir camadas transparentes resolve.
+
+PERGUNTA: O que é skinned mesh?
+RESPOSTA: Skinned mesh é uma malha deformada por ossos: cada vértice segue um ou mais ossos com pesos. É assim que personagens articulam. Pesos bem pintados evitam dobras estranhas nas juntas.
+
+PERGUNTA: O que é physics asset?
+RESPOSTA: Physics asset é a versão simplificada da malha usada pela física: caixas, esferas e cápsulas no lugar dos polígonos. Colisão precisa e barata nasce dessa simplificação, nunca da malha visual completa.
+
+PERGUNTA: O que é ragdoll?
+RESPOSTA: Ragdoll entrega o corpo à física, com juntas e limites por osso. Serve para mortes, impactos e transições de animação. Limites bem configurados evitam poses impossíveis e estiramentos.
+
+PERGUNTA: O que é hitbox?
+RESPOSTA: Hitbox é o volume que valida acertos, separado da malha visual. Em jogos competitivos, hitboxes precisas e consistentes são questão de justiça. A caixa deve acompanhar a animação real do golpe.
+
+PERGUNTA: O que é frame data?
+RESPOSTA: Frame data descreve golpes em quadros: startup, ativos e recovery. Jogadores avançados decidem pressão com base nisso. Balancear frame data é balancear o jogo inteiro de luta.
+
+PERGUNTA: O que é localização de jogos?
+RESPOSTA: Localização adapta texto, áudio e interface para outros idiomas: strings externas, fontes com suporte a acentos, espaço para textos maiores e formatos de data. Começar com strings em tabela evita retrabalho enorme.
+
+PERGUNTA: O que é acessibilidade em jogos?
+RESPOSTA: Acessibilidade remove barreiras: remapeamento completo de controles, opções de daltonismo, legendas, tamanho de texto e dificuldade ajustável. Acessibilidade amplia o público e melhora o jogo para todo mundo.
+
+PERGUNTA: O que é live ops?
+RESPOSTA: Live ops é operar o jogo depois do lançamento: eventos sazônicos, passe de batalha, economia e comunicação com a comunidade. Dados de retenção e receita guiam o calendário de conteúdo.
+
+PERGUNTA: O que é game economy?
+RESPOSTA: Game economy equilibra fontes e gastos de recursos do jogador. Torneiras demais geram inflação e tédio; de menos, frustração. Simule o jogador médio e o hardcore antes de definir números.
+
+PERGUNTA: O que é retention?
+RESPOSTA: Retention mede quantos jogadores voltam: D1, D7 e D30. A primeira sessão define o D1; progressão e conteúdo definem o resto. Melhorar retenção custa menos do que comprar novos jogadores.
+
+PERGUNTA: Como aprender modelagem 3D para jogos?
+RESPOSTA: Comece com formas simples, domine topologia e UVs antes de escultura detalhada. Faça props completos até o fim, do modelo à engine. Um portfólio com cinco props finalizados vale mais que trinta inacabados.
+
+PERGUNTA: O que é PBR texturizing?
+RESPOSTA: Texturizar em PBR é pintar os mapas de albedo, rugosidade e metal de forma consistente, com variação sutil e desgaste nos lugares certos. A leitura do material sob luz diferente é o teste final.
+
+PERGUNTA: O que é um asset pack?
+RESPOSTA: Asset pack é um conjunto de modelos, materiais e sons prontos para uso. Usar packs acelera protótipos, mas o estilo do jogo ganha quando a equipe adapta e unifica os assets comprados.
+
+PERGUNTA: O que é um gameplay programmer?
+RESPOSTA: O gameplay programmer transforma regras de design em código jogável: personagens, habilidades, interface e sistemas. Trabalha colado com designers e artistas, e mede sucesso pela diversão, não só pela ausência de bugs.
+
+PERGUNTA: O que é tools programming?
+RESPOSTA: Tools programming cria ferramentas internas: editores de fase, importadores, validadores de conteúdo. Ferramenta boa multiplica a equipe inteira e costuma ser o diferencial de estúdios eficientes.
+
+PERGUNTA: O que é multiplayer em Roblox?
+RESPOSTA: No Roblox, o servidor autoritativo roda a lógica e cada cliente vê uma réplica. Filtre eventos de cliente, valide valores e use RemoteEvents com moderação. StreamingEnabled carrega o mundo por região para economizar memória.
+
+PERGUNTA: O que é StreamingEnabled?
+RESPOSTA: StreamingEnabled faz o Roblox carregar e descarregar partes do mundo conforme o jogador se move. Mapas grandes ficam viáveis, mas o código precisa tolerar objetos que ainda não carregaram.
+
+PERGUNTA: O que são ModuleScripts no Roblox?
+RESPOSTA: ModuleScripts guardam código reutilizável que retorna funções e dados. Eles rodam uma vez e ficam em cache, perfeitos para bibliotecas, configurações e serviços compartilhados entre cliente e servidor.
+
+PERGUNTA: O que é Roblox Studio?
+RESPOSTA: Roblox Studio é o editor oficial do Roblox: terreno, iluminação, interface, física e scripts num lugar só. Dominar o Studio, seus painéis e o fluxo de publicação é o primeiro passo para criar jogos na plataforma.
+
+PERGUNTA: O que é terrain no Roblox?
+RESPOSTA: O sistema de terrain do Roblox esculpe montanhas, água e cavernas por voxels, com materiais prontos e API para gerar por código. Para mundos grandes, gere terreno por script com seed fixa e otimize o alcance de renderização.
+
+PERGUNTA: O que é UI no desenvolvimento de jogos?
+RESPOSTA: UI de jogo comunica estado e permite ação: vida, inventário, mapas e menus. Boa UI some quando não é necessária, responde com feedback imediato e escala para telas pequenas. Menos elementos, mais clareza.
+
+PERGUNTA: O que é som adaptativo?
+RESPOSTA: Som adaptativo muda com o estado do jogo: camadas entram em combate, a música acelera na perseguição. Transições suaves por compasso e mixagem por prioridade mantêm tudo coeso.
+
+PERGUNTA: O que é áudio em camadas?
+RESPOSTA: Áudio em camadas empilha faixas sincronizadas que ligam e desligam por intensidade. A mesma música cresce do exploração ao chefe sem corte. É técnica padrão em trilhas interativas.

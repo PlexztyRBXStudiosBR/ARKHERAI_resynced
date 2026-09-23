@@ -1,0 +1,223 @@
+"""Ferramentas do ARKHER — autorizadas pelo backend, validadas e auditadas.
+
+Primeira versão (sem shell, sem controle remoto, sem instalação de programas):
+  calc          — calculadora segura (AST, sem eval);
+  file_read     — leitura de arquivos enviados pelo usuário (sandbox por usuário);
+  text_analysis — análise de texto;
+  data_export   — exportação dos dados do usuário;
+  memory_query  — consulta à memória própria.
+"""
+from __future__ import annotations
+
+import ast
+import base64
+import json
+import re
+import secrets
+import time
+from datetime import datetime, timezone
+from pathlib import Path
+
+from backend.app import config
+from backend.app.memory import service as memory_service
+from backend.app.storage import db
+
+MAX_UPLOAD_BYTES = 2 * 1024 * 1024
+MAX_READ_CHARS = 200_000
+
+TOOLS: dict[str, dict] = {
+    "calc": {
+        "id": "calc",
+        "nome": "Calculadora segura",
+        "descricao": "Avalia expressões aritméticas simples usando AST (nunca eval).",
+        "permissoes": ["nenhuma_permissao_externa"],
+        "confirmacao": False,
+    },
+    "file_read": {
+        "id": "file_read",
+        "nome": "Leitura de arquivos do usuário",
+        "descricao": "Lê apenas arquivos que o próprio usuário enviou ao servidor (sandbox por usuário).",
+        "permissoes": ["leitura_da_sandbox_do_usuario"],
+        "confirmacao": True,
+    },
+    "text_analysis": {
+        "id": "text_analysis",
+        "nome": "Análise de texto",
+        "descricao": "Contagens, palavras mais frequentes e estimativa de leitura.",
+        "permissoes": ["nenhuma_permissao_externa"],
+        "confirmacao": False,
+    },
+    "data_export": {
+        "id": "data_export",
+        "nome": "Exportação de dados",
+        "descricao": "Exporta conversas e memórias do usuário em JSON.",
+        "permissoes": ["leitura_dos_dados_do_usuario"],
+        "confirmacao": True,
+    },
+    "memory_query": {
+        "id": "memory_query",
+        "nome": "Consulta à memória própria",
+        "descricao": "Busca textual local nas memórias salvas com consentimento.",
+        "permissoes": ["leitura_da_memoria_do_usuario"],
+        "confirmacao": False,
+    },
+}
+
+
+class ToolError(Exception):
+    def __init__(self, code: str, message: str):
+        self.code = code
+        self.message = message
+        super().__init__(message)
+
+
+def _now() -> str:
+    return datetime.now(timezone.utc).isoformat()
+
+
+def is_authorized(user_id: str, tool_id: str) -> bool:
+    rows = db.query(
+        "SELECT 1 FROM tool_auth WHERE user_id = ? AND tool_id = ?", (user_id, tool_id)
+    )
+    return bool(rows)
+
+
+def authorize(user_id: str, tool_id: str) -> None:
+    if tool_id not in TOOLS:
+        raise ToolError("UNKNOWN_TOOL", "Ferramenta desconhecida.")
+    db.execute(
+        "INSERT OR REPLACE INTO tool_auth (user_id, tool_id, authorized_at) VALUES (?, ?, ?)",
+        (user_id, tool_id, _now()),
+    )
+
+
+def revoke(user_id: str, tool_id: str) -> None:
+    db.execute("DELETE FROM tool_auth WHERE user_id = ? AND tool_id = ?", (user_id, tool_id))
+
+
+def history(user_id: str, limit: int = 100) -> list[dict]:
+    rows = db.query(
+        "SELECT tool_id, ok, arg_summary, ms, created_at FROM tool_log "
+        "WHERE user_id = ? ORDER BY id DESC LIMIT ?",
+        (user_id, limit),
+    )
+    return [dict(r) for r in rows]
+
+
+def _audit(user_id: str, tool_id: str, ok: bool, arg_summary: str, ms: int) -> None:
+    db.execute(
+        "INSERT INTO tool_log (user_id, tool_id, ok, arg_summary, ms, created_at) VALUES (?, ?, ?, ?, ?, ?)",
+        (user_id, tool_id, int(ok), arg_summary[:120], ms, _now()),
+    )
+
+
+# --------------------------------------------------------------- executores
+_ALLOWED_NODES = (
+    ast.Expression, ast.BinOp, ast.UnaryOp, ast.Constant,
+    ast.Add, ast.Sub, ast.Mult, ast.Div, ast.FloorDiv, ast.Mod, ast.Pow,
+    ast.USub, ast.UAdd,
+)
+
+
+def _calc(expr: str) -> dict:
+    expr = expr.strip().replace(",", ".")
+    if len(expr) > 200:
+        raise ToolError("TOO_LONG", "Expressão longa demais.")
+    try:
+        tree = ast.parse(expr, mode="eval")
+    except SyntaxError:
+        raise ToolError("INVALID_EXPR", "Expressão inválida.")
+    for node in ast.walk(tree):
+        if not isinstance(node, _ALLOWED_NODES):
+            raise ToolError("FORBIDDEN_EXPR", "A expressão usa operadores não permitidos.")
+    try:
+        value = eval(compile(tree, "<calc>", "eval"), {"__builtins__": {}}, {})  # noqa: S307 — AST validado, sem nomes
+    except ZeroDivisionError:
+        raise ToolError("DIV_ZERO", "Divisão por zero.")
+    except Exception:
+        raise ToolError("INVALID_EXPR", "Não consegui avaliar a expressão.")
+    return {"expressao": expr, "resultado": value}
+
+
+def _text_analysis(text: str) -> dict:
+    words = re.findall(r"\w+", text.lower())
+    freq: dict[str, int] = {}
+    for w in words:
+        freq[w] = freq.get(w, 0) + 1
+    top = sorted(freq.items(), key=lambda kv: -kv[1])[:10]
+    return {
+        "caracteres": len(text),
+        "palavras": len(words),
+        "linhas": text.count("\n") + 1,
+        "palavras_unicas": len(freq),
+        "mais_frequentes": [{"palavra": w, "vezes": n} for w, n in top],
+        "tempo_leitura_min": round(len(words) / 200, 1),
+    }
+
+
+def uploads_dir(user_id: str) -> Path:
+    d = config.DATA_DIR / "uploads" / user_id
+    d.mkdir(parents=True, exist_ok=True)
+    return d
+
+
+def save_upload(user_id: str, name: str, content_b64: str) -> dict:
+    raw = base64.b64decode(content_b64, validate=True)
+    if len(raw) > MAX_UPLOAD_BYTES:
+        raise ToolError("TOO_BIG", "Arquivo maior que 2 MB.")
+    safe = re.sub(r"[^\w.\-]", "_", name)[:80] or "arquivo.txt"
+    path = uploads_dir(user_id) / safe
+    path.write_bytes(raw)
+    return {"nome": safe, "bytes": len(raw)}
+
+
+def _file_read(user_id: str, name: str) -> dict:
+    base = uploads_dir(user_id).resolve()
+    alvo = (base / name).resolve()
+    if not str(alvo).startswith(str(base)) or not alvo.is_file():
+        raise ToolError("NOT_FOUND", "Arquivo não encontrado na sua sandbox.")
+    text = alvo.read_text(encoding="utf-8", errors="replace")[:MAX_READ_CHARS]
+    return {"nome": name, "caracteres": len(text), "conteudo": text}
+
+
+def run(user_id: str, tool_id: str, args: dict) -> dict:
+    """Valida autorização, executa e registra a ação."""
+    if tool_id not in TOOLS:
+        raise ToolError("UNKNOWN_TOOL", "Ferramenta desconhecida.")
+    if not is_authorized(user_id, tool_id):
+        raise ToolError("NOT_AUTHORIZED", "Ferramenta sem autorização. Autorize na tela Ferramentas.")
+    t0 = time.monotonic()
+    try:
+        if tool_id == "calc":
+            result = _calc(str(args.get("expressao", "")))
+        elif tool_id == "text_analysis":
+            result = _text_analysis(str(args.get("texto", ""))[:20_000])
+        elif tool_id == "file_read":
+            result = _file_read(user_id, str(args.get("nome", "")))
+        elif tool_id == "data_export":
+            result = _data_export(user_id)
+        elif tool_id == "memory_query":
+            result = {"resultados": memory_service.search(user_id, str(args.get("q", "")))}
+        else:
+            raise ToolError("UNKNOWN_TOOL", "Ferramenta desconhecida.")
+        _audit(user_id, tool_id, True, json.dumps(args, ensure_ascii=False), int((time.monotonic() - t0) * 1000))
+        return result
+    except ToolError as e:
+        _audit(user_id, tool_id, False, json.dumps(args, ensure_ascii=False), int((time.monotonic() - t0) * 1000))
+        raise e
+
+
+def _data_export(user_id: str) -> dict:
+    sessions = [dict(r) for r in db.query(
+        "SELECT id, title, created_at, updated_at FROM sessions WHERE user_id = ?", (user_id,)
+    )]
+    for s in sessions:
+        s["mensagens"] = [dict(r) for r in db.query(
+            "SELECT role, content, kind, created_at FROM messages WHERE session_id = ? ORDER BY created_at",
+            (s["id"],),
+        )]
+    return {
+        "exportado_em": _now(),
+        "conversas": sessions,
+        "memorias": memory_service.export(user_id),
+    }

@@ -1,0 +1,1380 @@
+Fatos aritméticos sintéticos gerados pelo projeto ARKHER (sem fontes externas).
+PERGUNTA: Quanto é 81 mais 14?
+RESPOSTA: 81 mais 14 é 95.
+
+PERGUNTA: Quanto é 3 mais 94?
+RESPOSTA: 3 mais 94 é 97.
+
+PERGUNTA: Quanto é 35 mais 31?
+RESPOSTA: 35 mais 31 é 66.
+
+PERGUNTA: Quanto é 28 mais 17?
+RESPOSTA: 28 mais 17 é 45.
+
+PERGUNTA: Quanto é 94 mais 13?
+RESPOSTA: 94 mais 13 é 107.
+
+PERGUNTA: Quanto é 86 mais 94?
+RESPOSTA: 86 mais 94 é 180.
+
+PERGUNTA: Quanto é 69 mais 11?
+RESPOSTA: 69 mais 11 é 80.
+
+PERGUNTA: Quanto é 75 mais 54?
+RESPOSTA: 75 mais 54 é 129.
+
+PERGUNTA: Quanto é 4 mais 3?
+RESPOSTA: 4 mais 3 é 7.
+
+PERGUNTA: Quanto é 11 mais 27?
+RESPOSTA: 11 mais 27 é 38.
+
+PERGUNTA: Quanto é 29 mais 64?
+RESPOSTA: 29 mais 64 é 93.
+
+PERGUNTA: Quanto é 77 mais 3?
+RESPOSTA: 77 mais 3 é 80.
+
+PERGUNTA: Quanto é 71 mais 25?
+RESPOSTA: 71 mais 25 é 96.
+
+PERGUNTA: Quanto é 91 mais 83?
+RESPOSTA: 91 mais 83 é 174.
+
+PERGUNTA: Quanto é 89 mais 69?
+RESPOSTA: 89 mais 69 é 158.
+
+PERGUNTA: Quanto é 53 mais 28?
+RESPOSTA: 53 mais 28 é 81.
+
+PERGUNTA: Quanto é 57 mais 75?
+RESPOSTA: 57 mais 75 é 132.
+
+PERGUNTA: Quanto é 35 mais 0?
+RESPOSTA: 35 mais 0 é 35.
+
+PERGUNTA: Quanto é 97 mais 20?
+RESPOSTA: 97 mais 20 é 117.
+
+PERGUNTA: Quanto é 89 mais 54?
+RESPOSTA: 89 mais 54 é 143.
+
+PERGUNTA: Quanto é 43 mais 35?
+RESPOSTA: 43 mais 35 é 78.
+
+PERGUNTA: Quanto é 19 mais 27?
+RESPOSTA: 19 mais 27 é 46.
+
+PERGUNTA: Quanto é 97 mais 43?
+RESPOSTA: 97 mais 43 é 140.
+
+PERGUNTA: Quanto é 13 mais 11?
+RESPOSTA: 13 mais 11 é 24.
+
+PERGUNTA: Quanto é 48 mais 12?
+RESPOSTA: 48 mais 12 é 60.
+
+PERGUNTA: Quanto é 45 mais 44?
+RESPOSTA: 45 mais 44 é 89.
+
+PERGUNTA: Quanto é 77 mais 33?
+RESPOSTA: 77 mais 33 é 110.
+
+PERGUNTA: Quanto é 5 mais 93?
+RESPOSTA: 5 mais 93 é 98.
+
+PERGUNTA: Quanto é 58 mais 68?
+RESPOSTA: 58 mais 68 é 126.
+
+PERGUNTA: Quanto é 15 mais 48?
+RESPOSTA: 15 mais 48 é 63.
+
+PERGUNTA: Quanto é 10 mais 70?
+RESPOSTA: 10 mais 70 é 80.
+
+PERGUNTA: Quanto é 37 mais 80?
+RESPOSTA: 37 mais 80 é 117.
+
+PERGUNTA: Quanto é 79 mais 46?
+RESPOSTA: 79 mais 46 é 125.
+
+PERGUNTA: Quanto é 73 mais 24?
+RESPOSTA: 73 mais 24 é 97.
+
+PERGUNTA: Quanto é 90 mais 8?
+RESPOSTA: 90 mais 8 é 98.
+
+PERGUNTA: Quanto é 5 mais 84?
+RESPOSTA: 5 mais 84 é 89.
+
+PERGUNTA: Quanto é 29 mais 98?
+RESPOSTA: 29 mais 98 é 127.
+
+PERGUNTA: Quanto é 37 mais 10?
+RESPOSTA: 37 mais 10 é 47.
+
+PERGUNTA: Quanto é 29 mais 12?
+RESPOSTA: 29 mais 12 é 41.
+
+PERGUNTA: Quanto é 48 mais 35?
+RESPOSTA: 48 mais 35 é 83.
+
+PERGUNTA: Quanto é 58 mais 81?
+RESPOSTA: 58 mais 81 é 139.
+
+PERGUNTA: Quanto é 46 mais 20?
+RESPOSTA: 46 mais 20 é 66.
+
+PERGUNTA: Quanto é 47 mais 45?
+RESPOSTA: 47 mais 45 é 92.
+
+PERGUNTA: Quanto é 26 mais 85?
+RESPOSTA: 26 mais 85 é 111.
+
+PERGUNTA: Quanto é 34 mais 89?
+RESPOSTA: 34 mais 89 é 123.
+
+PERGUNTA: Quanto é 87 mais 82?
+RESPOSTA: 87 mais 82 é 169.
+
+PERGUNTA: Quanto é 9 mais 77?
+RESPOSTA: 9 mais 77 é 86.
+
+PERGUNTA: Quanto é 81 mais 21?
+RESPOSTA: 81 mais 21 é 102.
+
+PERGUNTA: Quanto é 68 mais 93?
+RESPOSTA: 68 mais 93 é 161.
+
+PERGUNTA: Quanto é 31 mais 20?
+RESPOSTA: 31 mais 20 é 51.
+
+PERGUNTA: Quanto é 59 mais 48?
+RESPOSTA: 59 mais 48 é 107.
+
+PERGUNTA: Quanto é 34 mais 81?
+RESPOSTA: 34 mais 81 é 115.
+
+PERGUNTA: Quanto é 88 mais 71?
+RESPOSTA: 88 mais 71 é 159.
+
+PERGUNTA: Quanto é 28 mais 87?
+RESPOSTA: 28 mais 87 é 115.
+
+PERGUNTA: Quanto é 41 mais 98?
+RESPOSTA: 41 mais 98 é 139.
+
+PERGUNTA: Quanto é 99 mais 7?
+RESPOSTA: 99 mais 7 é 106.
+
+PERGUNTA: Quanto é 29 mais 4?
+RESPOSTA: 29 mais 4 é 33.
+
+PERGUNTA: Quanto é 40 mais 51?
+RESPOSTA: 40 mais 51 é 91.
+
+PERGUNTA: Quanto é 34 mais 8?
+RESPOSTA: 34 mais 8 é 42.
+
+PERGUNTA: Quanto é 27 mais 72?
+RESPOSTA: 27 mais 72 é 99.
+
+PERGUNTA: Quanto é 91 mais 40?
+RESPOSTA: 91 mais 40 é 131.
+
+PERGUNTA: Quanto é 27 mais 83?
+RESPOSTA: 27 mais 83 é 110.
+
+PERGUNTA: Quanto é 63 mais 50?
+RESPOSTA: 63 mais 50 é 113.
+
+PERGUNTA: Quanto é 82 mais 58?
+RESPOSTA: 82 mais 58 é 140.
+
+PERGUNTA: Quanto é 18 mais 33?
+RESPOSTA: 18 mais 33 é 51.
+
+PERGUNTA: Quanto é 17 mais 31?
+RESPOSTA: 17 mais 31 é 48.
+
+PERGUNTA: Quanto é 95 mais 71?
+RESPOSTA: 95 mais 71 é 166.
+
+PERGUNTA: Quanto é 68 mais 33?
+RESPOSTA: 68 mais 33 é 101.
+
+PERGUNTA: Quanto é 95 mais 74?
+RESPOSTA: 95 mais 74 é 169.
+
+PERGUNTA: Quanto é 54 mais 74?
+RESPOSTA: 54 mais 74 é 128.
+
+PERGUNTA: Quanto é 51 mais 46?
+RESPOSTA: 51 mais 46 é 97.
+
+PERGUNTA: Quanto é 28 mais 17?
+RESPOSTA: 28 mais 17 é 45.
+
+PERGUNTA: Quanto é 65 mais 63?
+RESPOSTA: 65 mais 63 é 128.
+
+PERGUNTA: Quanto é 11 mais 96?
+RESPOSTA: 11 mais 96 é 107.
+
+PERGUNTA: Quanto é 6 mais 14?
+RESPOSTA: 6 mais 14 é 20.
+
+PERGUNTA: Quanto é 19 mais 80?
+RESPOSTA: 19 mais 80 é 99.
+
+PERGUNTA: Quanto é 20 mais 87?
+RESPOSTA: 20 mais 87 é 107.
+
+PERGUNTA: Quanto é 54 mais 76?
+RESPOSTA: 54 mais 76 é 130.
+
+PERGUNTA: Quanto é 8 mais 49?
+RESPOSTA: 8 mais 49 é 57.
+
+PERGUNTA: Quanto é 48 mais 76?
+RESPOSTA: 48 mais 76 é 124.
+
+PERGUNTA: Quanto é 59 mais 67?
+RESPOSTA: 59 mais 67 é 126.
+
+PERGUNTA: Quanto é 32 mais 70?
+RESPOSTA: 32 mais 70 é 102.
+
+PERGUNTA: Quanto é 1 mais 87?
+RESPOSTA: 1 mais 87 é 88.
+
+PERGUNTA: Quanto é 92 mais 14?
+RESPOSTA: 92 mais 14 é 106.
+
+PERGUNTA: Quanto é 87 mais 68?
+RESPOSTA: 87 mais 68 é 155.
+
+PERGUNTA: Quanto é 96 mais 34?
+RESPOSTA: 96 mais 34 é 130.
+
+PERGUNTA: Quanto é 98 mais 82?
+RESPOSTA: 98 mais 82 é 180.
+
+PERGUNTA: Quanto é 43 mais 14?
+RESPOSTA: 43 mais 14 é 57.
+
+PERGUNTA: Quanto é 37 mais 55?
+RESPOSTA: 37 mais 55 é 92.
+
+PERGUNTA: Quanto é 20 mais 58?
+RESPOSTA: 20 mais 58 é 78.
+
+PERGUNTA: Quanto é 0 mais 92?
+RESPOSTA: 0 mais 92 é 92.
+
+PERGUNTA: Quanto é 92 mais 33?
+RESPOSTA: 92 mais 33 é 125.
+
+PERGUNTA: Quanto é 64 mais 97?
+RESPOSTA: 64 mais 97 é 161.
+
+PERGUNTA: Quanto é 22 mais 64?
+RESPOSTA: 22 mais 64 é 86.
+
+PERGUNTA: Quanto é 13 mais 80?
+RESPOSTA: 13 mais 80 é 93.
+
+PERGUNTA: Quanto é 38 mais 81?
+RESPOSTA: 38 mais 81 é 119.
+
+PERGUNTA: Quanto é 64 mais 77?
+RESPOSTA: 64 mais 77 é 141.
+
+PERGUNTA: Quanto é 25 mais 19?
+RESPOSTA: 25 mais 19 é 44.
+
+PERGUNTA: Quanto é 47 mais 97?
+RESPOSTA: 47 mais 97 é 144.
+
+PERGUNTA: Quanto é 20 mais 69?
+RESPOSTA: 20 mais 69 é 89.
+
+PERGUNTA: Quanto é 99 mais 67?
+RESPOSTA: 99 mais 67 é 166.
+
+PERGUNTA: Quanto é 0 mais 76?
+RESPOSTA: 0 mais 76 é 76.
+
+PERGUNTA: Quanto é 41 mais 62?
+RESPOSTA: 41 mais 62 é 103.
+
+PERGUNTA: Quanto é 2 mais 14?
+RESPOSTA: 2 mais 14 é 16.
+
+PERGUNTA: Quanto é 46 mais 39?
+RESPOSTA: 46 mais 39 é 85.
+
+PERGUNTA: Quanto é 30 mais 7?
+RESPOSTA: 30 mais 7 é 37.
+
+PERGUNTA: Quanto é 30 mais 72?
+RESPOSTA: 30 mais 72 é 102.
+
+PERGUNTA: Quanto é 10 mais 10?
+RESPOSTA: 10 mais 10 é 20.
+
+PERGUNTA: Quanto é 93 mais 62?
+RESPOSTA: 93 mais 62 é 155.
+
+PERGUNTA: Quanto é 8 mais 97?
+RESPOSTA: 8 mais 97 é 105.
+
+PERGUNTA: Quanto é 68 mais 98?
+RESPOSTA: 68 mais 98 é 166.
+
+PERGUNTA: Quanto é 16 mais 16?
+RESPOSTA: 16 mais 16 é 32.
+
+PERGUNTA: Quanto é 84 mais 60?
+RESPOSTA: 84 mais 60 é 144.
+
+PERGUNTA: Quanto é 70 mais 21?
+RESPOSTA: 70 mais 21 é 91.
+
+PERGUNTA: Quanto é 33 mais 67?
+RESPOSTA: 33 mais 67 é 100.
+
+PERGUNTA: Quanto é 77 mais 54?
+RESPOSTA: 77 mais 54 é 131.
+
+PERGUNTA: Quanto é 27 mais 69?
+RESPOSTA: 27 mais 69 é 96.
+
+PERGUNTA: Quanto é 96 mais 93?
+RESPOSTA: 96 mais 93 é 189.
+
+PERGUNTA: Quanto é 88 mais 25?
+RESPOSTA: 88 mais 25 é 113.
+
+PERGUNTA: Quanto é 91 mais 39?
+RESPOSTA: 91 mais 39 é 130.
+
+PERGUNTA: Quanto é 51 mais 85?
+RESPOSTA: 51 mais 85 é 136.
+
+PERGUNTA: Quanto é 83 mais 47?
+RESPOSTA: 83 mais 47 é 130.
+
+PERGUNTA: Quanto é 56 mais 66?
+RESPOSTA: 56 mais 66 é 122.
+
+PERGUNTA: Quanto é 57 mais 15?
+RESPOSTA: 57 mais 15 é 72.
+
+PERGUNTA: Quanto é 31 mais 28?
+RESPOSTA: 31 mais 28 é 59.
+
+PERGUNTA: Quanto é 8 mais 43?
+RESPOSTA: 8 mais 43 é 51.
+
+PERGUNTA: Quanto é 2 mais 75?
+RESPOSTA: 2 mais 75 é 77.
+
+PERGUNTA: Quanto é 70 mais 29?
+RESPOSTA: 70 mais 29 é 99.
+
+PERGUNTA: Quanto é 75 mais 28?
+RESPOSTA: 75 mais 28 é 103.
+
+PERGUNTA: Quanto é 0 mais 9?
+RESPOSTA: 0 mais 9 é 9.
+
+PERGUNTA: Quanto é 90 mais 80?
+RESPOSTA: 90 mais 80 é 170.
+
+PERGUNTA: Quanto é 7 mais 29?
+RESPOSTA: 7 mais 29 é 36.
+
+PERGUNTA: Quanto é 8 mais 4?
+RESPOSTA: 8 mais 4 é 12.
+
+PERGUNTA: Quanto é 42 mais 9?
+RESPOSTA: 42 mais 9 é 51.
+
+PERGUNTA: Quanto é 65 mais 30?
+RESPOSTA: 65 mais 30 é 95.
+
+PERGUNTA: Quanto é 35 mais 85?
+RESPOSTA: 35 mais 85 é 120.
+
+PERGUNTA: Quanto é 62 mais 27?
+RESPOSTA: 62 mais 27 é 89.
+
+PERGUNTA: Quanto é 69 mais 16?
+RESPOSTA: 69 mais 16 é 85.
+
+PERGUNTA: Quanto é 92 mais 73?
+RESPOSTA: 92 mais 73 é 165.
+
+PERGUNTA: Quanto é 73 mais 60?
+RESPOSTA: 73 mais 60 é 133.
+
+PERGUNTA: Quanto é 31 mais 60?
+RESPOSTA: 31 mais 60 é 91.
+
+PERGUNTA: Quanto é 52 mais 24?
+RESPOSTA: 52 mais 24 é 76.
+
+PERGUNTA: Quanto é 12 mais 12?
+RESPOSTA: 12 mais 12 é 24.
+
+PERGUNTA: Quanto é 84 mais 55?
+RESPOSTA: 84 mais 55 é 139.
+
+PERGUNTA: Quanto é 45 mais 54?
+RESPOSTA: 45 mais 54 é 99.
+
+PERGUNTA: Quanto é 52 mais 59?
+RESPOSTA: 52 mais 59 é 111.
+
+PERGUNTA: Quanto é 93 mais 6?
+RESPOSTA: 93 mais 6 é 99.
+
+PERGUNTA: Quanto é 86 mais 83?
+RESPOSTA: 86 mais 83 é 169.
+
+PERGUNTA: Quanto é 82 mais 12?
+RESPOSTA: 82 mais 12 é 94.
+
+PERGUNTA: Quanto é 7 mais 51?
+RESPOSTA: 7 mais 51 é 58.
+
+PERGUNTA: Quanto é 93 mais 43?
+RESPOSTA: 93 mais 43 é 136.
+
+PERGUNTA: Quanto é 13 mais 31?
+RESPOSTA: 13 mais 31 é 44.
+
+PERGUNTA: Quanto é 24 mais 24?
+RESPOSTA: 24 mais 24 é 48.
+
+PERGUNTA: Quanto é 68 mais 57?
+RESPOSTA: 68 mais 57 é 125.
+
+PERGUNTA: Quanto é 17 mais 54?
+RESPOSTA: 17 mais 54 é 71.
+
+PERGUNTA: Quanto é 23 mais 35?
+RESPOSTA: 23 mais 35 é 58.
+
+PERGUNTA: Quanto é 59 mais 31?
+RESPOSTA: 59 mais 31 é 90.
+
+PERGUNTA: Quanto é 9 mais 56?
+RESPOSTA: 9 mais 56 é 65.
+
+PERGUNTA: Quanto é 70 mais 12?
+RESPOSTA: 70 mais 12 é 82.
+
+PERGUNTA: Quanto é 6 mais 83?
+RESPOSTA: 6 mais 83 é 89.
+
+PERGUNTA: Quanto é 79 menos 1?
+RESPOSTA: 79 menos 1 é 78.
+
+PERGUNTA: Quanto é 21 menos 7?
+RESPOSTA: 21 menos 7 é 14.
+
+PERGUNTA: Quanto é 31 menos 26?
+RESPOSTA: 31 menos 26 é 5.
+
+PERGUNTA: Quanto é 72 menos 61?
+RESPOSTA: 72 menos 61 é 11.
+
+PERGUNTA: Quanto é 37 menos 25?
+RESPOSTA: 37 menos 25 é 12.
+
+PERGUNTA: Quanto é 17 menos 5?
+RESPOSTA: 17 menos 5 é 12.
+
+PERGUNTA: Quanto é 58 menos 0?
+RESPOSTA: 58 menos 0 é 58.
+
+PERGUNTA: Quanto é 59 menos 16?
+RESPOSTA: 59 menos 16 é 43.
+
+PERGUNTA: Quanto é 68 menos 36?
+RESPOSTA: 68 menos 36 é 32.
+
+PERGUNTA: Quanto é 64 menos 62?
+RESPOSTA: 64 menos 62 é 2.
+
+PERGUNTA: Quanto é 29 menos 6?
+RESPOSTA: 29 menos 6 é 23.
+
+PERGUNTA: Quanto é 47 menos 13?
+RESPOSTA: 47 menos 13 é 34.
+
+PERGUNTA: Quanto é 17 menos 17?
+RESPOSTA: 17 menos 17 é 0.
+
+PERGUNTA: Quanto é 17 menos 10?
+RESPOSTA: 17 menos 10 é 7.
+
+PERGUNTA: Quanto é 17 menos 1?
+RESPOSTA: 17 menos 1 é 16.
+
+PERGUNTA: Quanto é 84 menos 61?
+RESPOSTA: 84 menos 61 é 23.
+
+PERGUNTA: Quanto é 74 menos 67?
+RESPOSTA: 74 menos 67 é 7.
+
+PERGUNTA: Quanto é 30 menos 1?
+RESPOSTA: 30 menos 1 é 29.
+
+PERGUNTA: Quanto é 75 menos 10?
+RESPOSTA: 75 menos 10 é 65.
+
+PERGUNTA: Quanto é 33 menos 4?
+RESPOSTA: 33 menos 4 é 29.
+
+PERGUNTA: Quanto é 86 menos 8?
+RESPOSTA: 86 menos 8 é 78.
+
+PERGUNTA: Quanto é 96 menos 30?
+RESPOSTA: 96 menos 30 é 66.
+
+PERGUNTA: Quanto é 61 menos 7?
+RESPOSTA: 61 menos 7 é 54.
+
+PERGUNTA: Quanto é 82 menos 31?
+RESPOSTA: 82 menos 31 é 51.
+
+PERGUNTA: Quanto é 84 menos 76?
+RESPOSTA: 84 menos 76 é 8.
+
+PERGUNTA: Quanto é 15 menos 2?
+RESPOSTA: 15 menos 2 é 13.
+
+PERGUNTA: Quanto é 63 menos 40?
+RESPOSTA: 63 menos 40 é 23.
+
+PERGUNTA: Quanto é 43 menos 13?
+RESPOSTA: 43 menos 13 é 30.
+
+PERGUNTA: Quanto é 95 menos 91?
+RESPOSTA: 95 menos 91 é 4.
+
+PERGUNTA: Quanto é 50 menos 15?
+RESPOSTA: 50 menos 15 é 35.
+
+PERGUNTA: Quanto é 43 menos 25?
+RESPOSTA: 43 menos 25 é 18.
+
+PERGUNTA: Quanto é 26 menos 21?
+RESPOSTA: 26 menos 21 é 5.
+
+PERGUNTA: Quanto é 92 menos 38?
+RESPOSTA: 92 menos 38 é 54.
+
+PERGUNTA: Quanto é 68 menos 40?
+RESPOSTA: 68 menos 40 é 28.
+
+PERGUNTA: Quanto é 19 menos 0?
+RESPOSTA: 19 menos 0 é 19.
+
+PERGUNTA: Quanto é 68 menos 12?
+RESPOSTA: 68 menos 12 é 56.
+
+PERGUNTA: Quanto é 19 menos 17?
+RESPOSTA: 19 menos 17 é 2.
+
+PERGUNTA: Quanto é 37 menos 32?
+RESPOSTA: 37 menos 32 é 5.
+
+PERGUNTA: Quanto é 43 menos 8?
+RESPOSTA: 43 menos 8 é 35.
+
+PERGUNTA: Quanto é 54 menos 4?
+RESPOSTA: 54 menos 4 é 50.
+
+PERGUNTA: Quanto é 41 menos 23?
+RESPOSTA: 41 menos 23 é 18.
+
+PERGUNTA: Quanto é 46 menos 10?
+RESPOSTA: 46 menos 10 é 36.
+
+PERGUNTA: Quanto é 66 menos 38?
+RESPOSTA: 66 menos 38 é 28.
+
+PERGUNTA: Quanto é 88 menos 83?
+RESPOSTA: 88 menos 83 é 5.
+
+PERGUNTA: Quanto é 77 menos 1?
+RESPOSTA: 77 menos 1 é 76.
+
+PERGUNTA: Quanto é 95 menos 70?
+RESPOSTA: 95 menos 70 é 25.
+
+PERGUNTA: Quanto é 48 menos 42?
+RESPOSTA: 48 menos 42 é 6.
+
+PERGUNTA: Quanto é 23 menos 4?
+RESPOSTA: 23 menos 4 é 19.
+
+PERGUNTA: Quanto é 43 menos 7?
+RESPOSTA: 43 menos 7 é 36.
+
+PERGUNTA: Quanto é 23 menos 23?
+RESPOSTA: 23 menos 23 é 0.
+
+PERGUNTA: Quanto é 80 menos 19?
+RESPOSTA: 80 menos 19 é 61.
+
+PERGUNTA: Quanto é 44 menos 18?
+RESPOSTA: 44 menos 18 é 26.
+
+PERGUNTA: Quanto é 87 menos 26?
+RESPOSTA: 87 menos 26 é 61.
+
+PERGUNTA: Quanto é 53 menos 13?
+RESPOSTA: 53 menos 13 é 40.
+
+PERGUNTA: Quanto é 97 menos 81?
+RESPOSTA: 97 menos 81 é 16.
+
+PERGUNTA: Quanto é 43 menos 32?
+RESPOSTA: 43 menos 32 é 11.
+
+PERGUNTA: Quanto é 72 menos 32?
+RESPOSTA: 72 menos 32 é 40.
+
+PERGUNTA: Quanto é 16 menos 2?
+RESPOSTA: 16 menos 2 é 14.
+
+PERGUNTA: Quanto é 91 menos 54?
+RESPOSTA: 91 menos 54 é 37.
+
+PERGUNTA: Quanto é 45 menos 2?
+RESPOSTA: 45 menos 2 é 43.
+
+PERGUNTA: Quanto é 10 menos 5?
+RESPOSTA: 10 menos 5 é 5.
+
+PERGUNTA: Quanto é 26 menos 20?
+RESPOSTA: 26 menos 20 é 6.
+
+PERGUNTA: Quanto é 43 menos 10?
+RESPOSTA: 43 menos 10 é 33.
+
+PERGUNTA: Quanto é 66 menos 54?
+RESPOSTA: 66 menos 54 é 12.
+
+PERGUNTA: Quanto é 81 menos 1?
+RESPOSTA: 81 menos 1 é 80.
+
+PERGUNTA: Quanto é 24 menos 2?
+RESPOSTA: 24 menos 2 é 22.
+
+PERGUNTA: Quanto é 98 menos 19?
+RESPOSTA: 98 menos 19 é 79.
+
+PERGUNTA: Quanto é 79 menos 4?
+RESPOSTA: 79 menos 4 é 75.
+
+PERGUNTA: Quanto é 57 menos 37?
+RESPOSTA: 57 menos 37 é 20.
+
+PERGUNTA: Quanto é 80 menos 18?
+RESPOSTA: 80 menos 18 é 62.
+
+PERGUNTA: Quanto é 65 menos 16?
+RESPOSTA: 65 menos 16 é 49.
+
+PERGUNTA: Quanto é 15 menos 9?
+RESPOSTA: 15 menos 9 é 6.
+
+PERGUNTA: Quanto é 56 menos 50?
+RESPOSTA: 56 menos 50 é 6.
+
+PERGUNTA: Quanto é 15 menos 11?
+RESPOSTA: 15 menos 11 é 4.
+
+PERGUNTA: Quanto é 36 menos 15?
+RESPOSTA: 36 menos 15 é 21.
+
+PERGUNTA: Quanto é 95 menos 13?
+RESPOSTA: 95 menos 13 é 82.
+
+PERGUNTA: Quanto é 55 menos 49?
+RESPOSTA: 55 menos 49 é 6.
+
+PERGUNTA: Quanto é 81 menos 52?
+RESPOSTA: 81 menos 52 é 29.
+
+PERGUNTA: Quanto é 89 menos 19?
+RESPOSTA: 89 menos 19 é 70.
+
+PERGUNTA: Quanto é 40 menos 10?
+RESPOSTA: 40 menos 10 é 30.
+
+PERGUNTA: Quanto é 32 menos 26?
+RESPOSTA: 32 menos 26 é 6.
+
+PERGUNTA: Quanto é 13 menos 2?
+RESPOSTA: 13 menos 2 é 11.
+
+PERGUNTA: Quanto é 52 menos 50?
+RESPOSTA: 52 menos 50 é 2.
+
+PERGUNTA: Quanto é 62 menos 51?
+RESPOSTA: 62 menos 51 é 11.
+
+PERGUNTA: Quanto é 95 menos 94?
+RESPOSTA: 95 menos 94 é 1.
+
+PERGUNTA: Quanto é 41 menos 17?
+RESPOSTA: 41 menos 17 é 24.
+
+PERGUNTA: Quanto é 30 menos 25?
+RESPOSTA: 30 menos 25 é 5.
+
+PERGUNTA: Quanto é 99 menos 13?
+RESPOSTA: 99 menos 13 é 86.
+
+PERGUNTA: Quanto é 58 menos 55?
+RESPOSTA: 58 menos 55 é 3.
+
+PERGUNTA: Quanto é 14 menos 13?
+RESPOSTA: 14 menos 13 é 1.
+
+PERGUNTA: Quanto é 70 menos 28?
+RESPOSTA: 70 menos 28 é 42.
+
+PERGUNTA: Quanto é 35 menos 29?
+RESPOSTA: 35 menos 29 é 6.
+
+PERGUNTA: Quanto é 54 menos 19?
+RESPOSTA: 54 menos 19 é 35.
+
+PERGUNTA: Quanto é 39 menos 14?
+RESPOSTA: 39 menos 14 é 25.
+
+PERGUNTA: Quanto é 13 menos 10?
+RESPOSTA: 13 menos 10 é 3.
+
+PERGUNTA: Quanto é 34 menos 25?
+RESPOSTA: 34 menos 25 é 9.
+
+PERGUNTA: Quanto é 52 menos 17?
+RESPOSTA: 52 menos 17 é 35.
+
+PERGUNTA: Quanto é 18 menos 8?
+RESPOSTA: 18 menos 8 é 10.
+
+PERGUNTA: Quanto é 54 menos 41?
+RESPOSTA: 54 menos 41 é 13.
+
+PERGUNTA: Quanto é 75 menos 51?
+RESPOSTA: 75 menos 51 é 24.
+
+PERGUNTA: Quanto é 96 menos 68?
+RESPOSTA: 96 menos 68 é 28.
+
+PERGUNTA: Quanto é 52 menos 1?
+RESPOSTA: 52 menos 1 é 51.
+
+PERGUNTA: Quanto é 24 menos 8?
+RESPOSTA: 24 menos 8 é 16.
+
+PERGUNTA: Quanto é 32 menos 16?
+RESPOSTA: 32 menos 16 é 16.
+
+PERGUNTA: Quanto é 14 menos 1?
+RESPOSTA: 14 menos 1 é 13.
+
+PERGUNTA: Quanto é 86 menos 55?
+RESPOSTA: 86 menos 55 é 31.
+
+PERGUNTA: Quanto é 54 menos 46?
+RESPOSTA: 54 menos 46 é 8.
+
+PERGUNTA: Quanto é 50 menos 27?
+RESPOSTA: 50 menos 27 é 23.
+
+PERGUNTA: Quanto é 87 menos 65?
+RESPOSTA: 87 menos 65 é 22.
+
+PERGUNTA: Quanto é 24 menos 12?
+RESPOSTA: 24 menos 12 é 12.
+
+PERGUNTA: Quanto é 83 menos 24?
+RESPOSTA: 83 menos 24 é 59.
+
+PERGUNTA: Quanto é 42 menos 2?
+RESPOSTA: 42 menos 2 é 40.
+
+PERGUNTA: Quanto é 65 menos 0?
+RESPOSTA: 65 menos 0 é 65.
+
+PERGUNTA: Quanto é 76 menos 68?
+RESPOSTA: 76 menos 68 é 8.
+
+PERGUNTA: Quanto é 97 menos 92?
+RESPOSTA: 97 menos 92 é 5.
+
+PERGUNTA: Quanto é 95 menos 25?
+RESPOSTA: 95 menos 25 é 70.
+
+PERGUNTA: Quanto é 56 menos 27?
+RESPOSTA: 56 menos 27 é 29.
+
+PERGUNTA: Quanto é 18 menos 10?
+RESPOSTA: 18 menos 10 é 8.
+
+PERGUNTA: Quanto é 89 menos 40?
+RESPOSTA: 89 menos 40 é 49.
+
+PERGUNTA: Quanto é 94 menos 15?
+RESPOSTA: 94 menos 15 é 79.
+
+PERGUNTA: Quanto é 6 vezes 10?
+RESPOSTA: 6 vezes 10 é 60.
+
+PERGUNTA: Quanto é 6 vezes 12?
+RESPOSTA: 6 vezes 12 é 72.
+
+PERGUNTA: Quanto é 8 vezes 7?
+RESPOSTA: 8 vezes 7 é 56.
+
+PERGUNTA: Quanto é 8 vezes 6?
+RESPOSTA: 8 vezes 6 é 48.
+
+PERGUNTA: Quanto é 10 vezes 4?
+RESPOSTA: 10 vezes 4 é 40.
+
+PERGUNTA: Quanto é 5 vezes 8?
+RESPOSTA: 5 vezes 8 é 40.
+
+PERGUNTA: Quanto é 12 vezes 8?
+RESPOSTA: 12 vezes 8 é 96.
+
+PERGUNTA: Quanto é 12 vezes 4?
+RESPOSTA: 12 vezes 4 é 48.
+
+PERGUNTA: Quanto é 11 vezes 11?
+RESPOSTA: 11 vezes 11 é 121.
+
+PERGUNTA: Quanto é 6 vezes 8?
+RESPOSTA: 6 vezes 8 é 48.
+
+PERGUNTA: Quanto é 10 vezes 2?
+RESPOSTA: 10 vezes 2 é 20.
+
+PERGUNTA: Quanto é 6 vezes 6?
+RESPOSTA: 6 vezes 6 é 36.
+
+PERGUNTA: Quanto é 5 vezes 8?
+RESPOSTA: 5 vezes 8 é 40.
+
+PERGUNTA: Quanto é 11 vezes 11?
+RESPOSTA: 11 vezes 11 é 121.
+
+PERGUNTA: Quanto é 12 vezes 7?
+RESPOSTA: 12 vezes 7 é 84.
+
+PERGUNTA: Quanto é 9 vezes 9?
+RESPOSTA: 9 vezes 9 é 81.
+
+PERGUNTA: Quanto é 9 vezes 12?
+RESPOSTA: 9 vezes 12 é 108.
+
+PERGUNTA: Quanto é 5 vezes 10?
+RESPOSTA: 5 vezes 10 é 50.
+
+PERGUNTA: Quanto é 9 vezes 4?
+RESPOSTA: 9 vezes 4 é 36.
+
+PERGUNTA: Quanto é 12 vezes 3?
+RESPOSTA: 12 vezes 3 é 36.
+
+PERGUNTA: Quanto é 6 vezes 10?
+RESPOSTA: 6 vezes 10 é 60.
+
+PERGUNTA: Quanto é 12 vezes 12?
+RESPOSTA: 12 vezes 12 é 144.
+
+PERGUNTA: Quanto é 11 vezes 7?
+RESPOSTA: 11 vezes 7 é 77.
+
+PERGUNTA: Quanto é 3 vezes 5?
+RESPOSTA: 3 vezes 5 é 15.
+
+PERGUNTA: Quanto é 12 vezes 6?
+RESPOSTA: 12 vezes 6 é 72.
+
+PERGUNTA: Quanto é 5 vezes 5?
+RESPOSTA: 5 vezes 5 é 25.
+
+PERGUNTA: Quanto é 4 vezes 2?
+RESPOSTA: 4 vezes 2 é 8.
+
+PERGUNTA: Quanto é 2 vezes 5?
+RESPOSTA: 2 vezes 5 é 10.
+
+PERGUNTA: Quanto é 9 vezes 11?
+RESPOSTA: 9 vezes 11 é 99.
+
+PERGUNTA: Quanto é 3 vezes 9?
+RESPOSTA: 3 vezes 9 é 27.
+
+PERGUNTA: Quanto é 8 vezes 12?
+RESPOSTA: 8 vezes 12 é 96.
+
+PERGUNTA: Quanto é 11 vezes 5?
+RESPOSTA: 11 vezes 5 é 55.
+
+PERGUNTA: Quanto é 8 vezes 9?
+RESPOSTA: 8 vezes 9 é 72.
+
+PERGUNTA: Quanto é 8 vezes 5?
+RESPOSTA: 8 vezes 5 é 40.
+
+PERGUNTA: Quanto é 4 vezes 12?
+RESPOSTA: 4 vezes 12 é 48.
+
+PERGUNTA: Quanto é 2 vezes 3?
+RESPOSTA: 2 vezes 3 é 6.
+
+PERGUNTA: Quanto é 8 vezes 5?
+RESPOSTA: 8 vezes 5 é 40.
+
+PERGUNTA: Quanto é 4 vezes 10?
+RESPOSTA: 4 vezes 10 é 40.
+
+PERGUNTA: Quanto é 9 vezes 2?
+RESPOSTA: 9 vezes 2 é 18.
+
+PERGUNTA: Quanto é 10 vezes 5?
+RESPOSTA: 10 vezes 5 é 50.
+
+PERGUNTA: Quanto é 3 vezes 9?
+RESPOSTA: 3 vezes 9 é 27.
+
+PERGUNTA: Quanto é 4 vezes 9?
+RESPOSTA: 4 vezes 9 é 36.
+
+PERGUNTA: Quanto é 12 vezes 10?
+RESPOSTA: 12 vezes 10 é 120.
+
+PERGUNTA: Quanto é 10 vezes 11?
+RESPOSTA: 10 vezes 11 é 110.
+
+PERGUNTA: Quanto é 7 vezes 9?
+RESPOSTA: 7 vezes 9 é 63.
+
+PERGUNTA: Quanto é 11 vezes 10?
+RESPOSTA: 11 vezes 10 é 110.
+
+PERGUNTA: Quanto é 8 vezes 10?
+RESPOSTA: 8 vezes 10 é 80.
+
+PERGUNTA: Quanto é 9 vezes 4?
+RESPOSTA: 9 vezes 4 é 36.
+
+PERGUNTA: Quanto é 9 vezes 9?
+RESPOSTA: 9 vezes 9 é 81.
+
+PERGUNTA: Quanto é 6 vezes 5?
+RESPOSTA: 6 vezes 5 é 30.
+
+PERGUNTA: Quanto é 12 vezes 6?
+RESPOSTA: 12 vezes 6 é 72.
+
+PERGUNTA: Quanto é 10 vezes 9?
+RESPOSTA: 10 vezes 9 é 90.
+
+PERGUNTA: Quanto é 12 vezes 5?
+RESPOSTA: 12 vezes 5 é 60.
+
+PERGUNTA: Quanto é 6 vezes 9?
+RESPOSTA: 6 vezes 9 é 54.
+
+PERGUNTA: Quanto é 3 vezes 6?
+RESPOSTA: 3 vezes 6 é 18.
+
+PERGUNTA: Quanto é 5 vezes 6?
+RESPOSTA: 5 vezes 6 é 30.
+
+PERGUNTA: Quanto é 7 vezes 7?
+RESPOSTA: 7 vezes 7 é 49.
+
+PERGUNTA: Quanto é 10 vezes 3?
+RESPOSTA: 10 vezes 3 é 30.
+
+PERGUNTA: Quanto é 4 vezes 4?
+RESPOSTA: 4 vezes 4 é 16.
+
+PERGUNTA: Quanto é 5 vezes 8?
+RESPOSTA: 5 vezes 8 é 40.
+
+PERGUNTA: Quanto é 4 vezes 5?
+RESPOSTA: 4 vezes 5 é 20.
+
+PERGUNTA: Quanto é 3 vezes 8?
+RESPOSTA: 3 vezes 8 é 24.
+
+PERGUNTA: Quanto é 8 vezes 7?
+RESPOSTA: 8 vezes 7 é 56.
+
+PERGUNTA: Quanto é 10 vezes 9?
+RESPOSTA: 10 vezes 9 é 90.
+
+PERGUNTA: Quanto é 8 vezes 2?
+RESPOSTA: 8 vezes 2 é 16.
+
+PERGUNTA: Quanto é 5 vezes 8?
+RESPOSTA: 5 vezes 8 é 40.
+
+PERGUNTA: Quanto é 8 vezes 11?
+RESPOSTA: 8 vezes 11 é 88.
+
+PERGUNTA: Quanto é 2 vezes 11?
+RESPOSTA: 2 vezes 11 é 22.
+
+PERGUNTA: Quanto é 8 vezes 9?
+RESPOSTA: 8 vezes 9 é 72.
+
+PERGUNTA: Quanto é 2 vezes 7?
+RESPOSTA: 2 vezes 7 é 14.
+
+PERGUNTA: Quanto é 6 vezes 8?
+RESPOSTA: 6 vezes 8 é 48.
+
+PERGUNTA: Quanto é 8 vezes 10?
+RESPOSTA: 8 vezes 10 é 80.
+
+PERGUNTA: Quanto é 10 vezes 11?
+RESPOSTA: 10 vezes 11 é 110.
+
+PERGUNTA: Quanto é 5 vezes 9?
+RESPOSTA: 5 vezes 9 é 45.
+
+PERGUNTA: Quanto é 5 vezes 6?
+RESPOSTA: 5 vezes 6 é 30.
+
+PERGUNTA: Quanto é 8 vezes 9?
+RESPOSTA: 8 vezes 9 é 72.
+
+PERGUNTA: Quanto é 2 vezes 8?
+RESPOSTA: 2 vezes 8 é 16.
+
+PERGUNTA: Quanto é 7 vezes 12?
+RESPOSTA: 7 vezes 12 é 84.
+
+PERGUNTA: Quanto é 12 vezes 8?
+RESPOSTA: 12 vezes 8 é 96.
+
+PERGUNTA: Quanto é 4 vezes 9?
+RESPOSTA: 4 vezes 9 é 36.
+
+PERGUNTA: Quanto é 4 vezes 11?
+RESPOSTA: 4 vezes 11 é 44.
+
+PERGUNTA: Quanto é 10 vezes 2?
+RESPOSTA: 10 vezes 2 é 20.
+
+PERGUNTA: Quanto é 8 vezes 11?
+RESPOSTA: 8 vezes 11 é 88.
+
+PERGUNTA: Quanto é 11 vezes 12?
+RESPOSTA: 11 vezes 12 é 132.
+
+PERGUNTA: Quanto é 2 vezes 3?
+RESPOSTA: 2 vezes 3 é 6.
+
+PERGUNTA: Quanto é 12 vezes 8?
+RESPOSTA: 12 vezes 8 é 96.
+
+PERGUNTA: Quanto é 4 vezes 9?
+RESPOSTA: 4 vezes 9 é 36.
+
+PERGUNTA: Quanto é 4 vezes 2?
+RESPOSTA: 4 vezes 2 é 8.
+
+PERGUNTA: Quanto é 6 vezes 8?
+RESPOSTA: 6 vezes 8 é 48.
+
+PERGUNTA: Quanto é 7 vezes 5?
+RESPOSTA: 7 vezes 5 é 35.
+
+PERGUNTA: Quanto é 9 vezes 7?
+RESPOSTA: 9 vezes 7 é 63.
+
+PERGUNTA: Quanto é 7 vezes 8?
+RESPOSTA: 7 vezes 8 é 56.
+
+PERGUNTA: Quanto é 6 vezes 8?
+RESPOSTA: 6 vezes 8 é 48.
+
+PERGUNTA: Quanto é 6 vezes 3?
+RESPOSTA: 6 vezes 3 é 18.
+
+PERGUNTA: Quanto é 9 vezes 2?
+RESPOSTA: 9 vezes 2 é 18.
+
+PERGUNTA: Quanto é 10 vezes 2?
+RESPOSTA: 10 vezes 2 é 20.
+
+PERGUNTA: Quanto é 7 vezes 5?
+RESPOSTA: 7 vezes 5 é 35.
+
+PERGUNTA: Quanto é 12 vezes 3?
+RESPOSTA: 12 vezes 3 é 36.
+
+PERGUNTA: Quanto é 12 vezes 2?
+RESPOSTA: 12 vezes 2 é 24.
+
+PERGUNTA: Quanto é 2 vezes 5?
+RESPOSTA: 2 vezes 5 é 10.
+
+PERGUNTA: Quanto é 5 vezes 2?
+RESPOSTA: 5 vezes 2 é 10.
+
+PERGUNTA: Quanto é 11 vezes 4?
+RESPOSTA: 11 vezes 4 é 44.
+
+PERGUNTA: Quanto é 5 vezes 4?
+RESPOSTA: 5 vezes 4 é 20.
+
+PERGUNTA: Quanto é 9 vezes 12?
+RESPOSTA: 9 vezes 12 é 108.
+
+PERGUNTA: Quanto é 3 vezes 11?
+RESPOSTA: 3 vezes 11 é 33.
+
+PERGUNTA: Quanto é 5 vezes 9?
+RESPOSTA: 5 vezes 9 é 45.
+
+PERGUNTA: Quanto é 6 vezes 7?
+RESPOSTA: 6 vezes 7 é 42.
+
+PERGUNTA: Quanto é 4 vezes 11?
+RESPOSTA: 4 vezes 11 é 44.
+
+PERGUNTA: Quanto é 11 vezes 3?
+RESPOSTA: 11 vezes 3 é 33.
+
+PERGUNTA: Quanto é 4 vezes 6?
+RESPOSTA: 4 vezes 6 é 24.
+
+PERGUNTA: Quanto é 3 vezes 11?
+RESPOSTA: 3 vezes 11 é 33.
+
+PERGUNTA: Quanto é 2 vezes 6?
+RESPOSTA: 2 vezes 6 é 12.
+
+PERGUNTA: Quanto é 11 vezes 12?
+RESPOSTA: 11 vezes 12 é 132.
+
+PERGUNTA: Quanto é 8 vezes 8?
+RESPOSTA: 8 vezes 8 é 64.
+
+PERGUNTA: Quanto é 5 vezes 3?
+RESPOSTA: 5 vezes 3 é 15.
+
+PERGUNTA: Quanto é 11 vezes 12?
+RESPOSTA: 11 vezes 12 é 132.
+
+PERGUNTA: Quanto é 5 vezes 3?
+RESPOSTA: 5 vezes 3 é 15.
+
+PERGUNTA: Quanto é 6 vezes 12?
+RESPOSTA: 6 vezes 12 é 72.
+
+PERGUNTA: Quanto é 11 vezes 3?
+RESPOSTA: 11 vezes 3 é 33.
+
+PERGUNTA: Quanto é 11 vezes 2?
+RESPOSTA: 11 vezes 2 é 22.
+
+QUESTION: What is 22 plus 34?
+ANSWER: 22 plus 34 is 56.
+
+QUESTION: What is 27 plus 42?
+ANSWER: 27 plus 42 is 69.
+
+QUESTION: What is 23 plus 4?
+ANSWER: 23 plus 4 is 27.
+
+QUESTION: What is 32 plus 41?
+ANSWER: 32 plus 41 is 73.
+
+QUESTION: What is 21 plus 0?
+ANSWER: 21 plus 0 is 21.
+
+QUESTION: What is 26 plus 31?
+ANSWER: 26 plus 31 is 57.
+
+QUESTION: What is 6 plus 27?
+ANSWER: 6 plus 27 is 33.
+
+QUESTION: What is 23 plus 40?
+ANSWER: 23 plus 40 is 63.
+
+QUESTION: What is 29 plus 45?
+ANSWER: 29 plus 45 is 74.
+
+QUESTION: What is 9 plus 27?
+ANSWER: 9 plus 27 is 36.
+
+QUESTION: What is 11 plus 46?
+ANSWER: 11 plus 46 is 57.
+
+QUESTION: What is 33 plus 41?
+ANSWER: 33 plus 41 is 74.
+
+QUESTION: What is 17 plus 39?
+ANSWER: 17 plus 39 is 56.
+
+QUESTION: What is 34 plus 49?
+ANSWER: 34 plus 49 is 83.
+
+QUESTION: What is 30 plus 29?
+ANSWER: 30 plus 29 is 59.
+
+QUESTION: What is 27 plus 46?
+ANSWER: 27 plus 46 is 73.
+
+QUESTION: What is 37 plus 17?
+ANSWER: 37 plus 17 is 54.
+
+QUESTION: What is 20 plus 15?
+ANSWER: 20 plus 15 is 35.
+
+QUESTION: What is 5 plus 17?
+ANSWER: 5 plus 17 is 22.
+
+QUESTION: What is 28 plus 15?
+ANSWER: 28 plus 15 is 43.
+
+QUESTION: What is 48 plus 29?
+ANSWER: 48 plus 29 is 77.
+
+QUESTION: What is 36 plus 39?
+ANSWER: 36 plus 39 is 75.
+
+QUESTION: What is 42 plus 24?
+ANSWER: 42 plus 24 is 66.
+
+QUESTION: What is 21 plus 1?
+ANSWER: 21 plus 1 is 22.
+
+QUESTION: What is 31 plus 20?
+ANSWER: 31 plus 20 is 51.
+
+QUESTION: What is 11 plus 31?
+ANSWER: 11 plus 31 is 42.
+
+QUESTION: What is 13 plus 22?
+ANSWER: 13 plus 22 is 35.
+
+QUESTION: What is 16 plus 21?
+ANSWER: 16 plus 21 is 37.
+
+QUESTION: What is 17 plus 38?
+ANSWER: 17 plus 38 is 55.
+
+QUESTION: What is 44 plus 17?
+ANSWER: 44 plus 17 is 61.
+
+QUESTION: What is 35 plus 0?
+ANSWER: 35 plus 0 is 35.
+
+QUESTION: What is 33 plus 12?
+ANSWER: 33 plus 12 is 45.
+
+QUESTION: What is 5 plus 15?
+ANSWER: 5 plus 15 is 20.
+
+QUESTION: What is 46 plus 26?
+ANSWER: 46 plus 26 is 72.
+
+QUESTION: What is 31 plus 35?
+ANSWER: 31 plus 35 is 66.
+
+QUESTION: What is 48 plus 15?
+ANSWER: 48 plus 15 is 63.
+
+QUESTION: What is 44 plus 30?
+ANSWER: 44 plus 30 is 74.
+
+QUESTION: What is 41 plus 45?
+ANSWER: 41 plus 45 is 86.
+
+QUESTION: What is 31 plus 28?
+ANSWER: 31 plus 28 is 59.
+
+QUESTION: What is 50 plus 1?
+ANSWER: 50 plus 1 is 51.
+
+QUESTION: What is 5 plus 18?
+ANSWER: 5 plus 18 is 23.
+
+QUESTION: What is 14 plus 25?
+ANSWER: 14 plus 25 is 39.
+
+QUESTION: What is 44 plus 15?
+ANSWER: 44 plus 15 is 59.
+
+QUESTION: What is 19 plus 42?
+ANSWER: 19 plus 42 is 61.
+
+QUESTION: What is 37 plus 23?
+ANSWER: 37 plus 23 is 60.
+
+QUESTION: What is 30 plus 35?
+ANSWER: 30 plus 35 is 65.
+
+QUESTION: What is 33 plus 22?
+ANSWER: 33 plus 22 is 55.
+
+QUESTION: What is 27 plus 47?
+ANSWER: 27 plus 47 is 74.
+
+QUESTION: What is 35 plus 21?
+ANSWER: 35 plus 21 is 56.
+
+QUESTION: What is 22 plus 44?
+ANSWER: 22 plus 44 is 66.
+
+QUESTION: What is 29 plus 17?
+ANSWER: 29 plus 17 is 46.
+
+QUESTION: What is 19 plus 16?
+ANSWER: 19 plus 16 is 35.
+
+QUESTION: What is 14 plus 7?
+ANSWER: 14 plus 7 is 21.
+
+QUESTION: What is 46 plus 12?
+ANSWER: 46 plus 12 is 58.
+
+QUESTION: What is 20 plus 7?
+ANSWER: 20 plus 7 is 27.
+
+QUESTION: What is 47 plus 34?
+ANSWER: 47 plus 34 is 81.
+
+QUESTION: What is 48 plus 44?
+ANSWER: 48 plus 44 is 92.
+
+QUESTION: What is 11 plus 12?
+ANSWER: 11 plus 12 is 23.
+
+QUESTION: What is 13 plus 47?
+ANSWER: 13 plus 47 is 60.
+
+QUESTION: What is 30 plus 17?
+ANSWER: 30 plus 17 is 47.

@@ -1,0 +1,46 @@
+# ============================================================
+# ARKHER-1 — configuração e documentação oficial do modelo próprio
+# ============================================================
+# Este arquivo é a fonte de verdade da arquitetura. O código em
+# model/architecture/transformer.py lê estes valores como padrão.
+
+model:
+  name: "ARKHER-1 mini"
+  family: "transformer-decoder"
+  version: "0.1.0"
+  # Janela de contexto (tokens)
+  context_window: 160
+  # Arquitetura
+  n_layers: 4
+  n_heads: 4
+  d_model: 256
+  d_ff: 1024
+  dropout: 0.1
+  tie_embeddings: true
+  # Tokenizer
+  tokenizer:
+    type: "bpe"
+    version: "bpe_v1"
+    vocab_size: 3072
+    min_frequency: 2
+  # Limites de geração aplicados pelo runtime
+  limits:
+    max_input_tokens: 140
+    max_new_tokens: 224
+    generation_timeout_seconds: 120
+
+training:
+  optimizer: "adamw"
+  learning_rate: 0.0006
+  weight_decay: 0.01
+  batch_size: 16
+  warmup_steps: 60
+  gradient_clip: 1.0
+  seed: 42
+
+checkpoints:
+  # Checkpoint atual versionado (commit de pesos real do projeto).
+  latest: "arkher1-mini-v0.1.0-gamedev.pt"
+  # Estado honesto: modelo em escala de demonstração, treinado em CPU no
+  # dataset semente do projeto com foco em game dev. Ainda NÃO é conversacional amplo.
+  quality: "experimental"

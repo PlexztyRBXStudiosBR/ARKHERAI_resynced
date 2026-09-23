@@ -1,0 +1,22 @@
+# Dataset semente do ARKHER-1 — origem e licença documentadas.
+name: arkher-seed-v1
+version: "1.0.0"
+license: "ARKHER-Internal-01: textos autorados pelo projeto + dados sintéticos gerados por scripts do projeto."
+sources:
+  - file: arkher_base.txt
+    origin: "Autorado pelo projeto ARKHER (pt-BR e en-US)."
+    purpose: "Identidade, políticas de honestidade e comportamento."
+  - file: gamedev_qa.txt
+    origin: "Autorado pelo projeto ARKHER; conceitos gerais públicos de game dev, engines e código."
+    purpose: "Especialização principal: jogos, engines e tecnologia."
+  - file: gamedev_advanced.txt
+    origin: "Autorado pelo projeto ARKHER; pipeline 3D, animação AAA, desenvolvimento Roblox, netcode e produção."
+    purpose: "Especialização avançada do nicho game dev."
+  - file: generated/arithmetic.txt
+    origin: "Sintético, gerado por model/datasets/generate_arithmetic.py (seed fixa)."
+    purpose: "Aritmética exata e raciocínio numérico."
+rules:
+  - "Nenhum dado raspado de sites."
+  - "Nenhum dado pessoal."
+  - "Nenhum conteúdo protegido reproduzido sem autorização."
+  - "Validação obrigatória via model/training/validate_dataset.py antes do treino."

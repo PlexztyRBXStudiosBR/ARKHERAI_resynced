@@ -1,0 +1,86 @@
+PERGUNTA: O que é um game loop?
+RESPOSTA: O game loop é o ciclo central de qualquer jogo. Ele repete três passos: ler a entrada do jogador, atualizar o estado do mundo e desenhar a tela. Para manter o ritmo constante, o loop usa delta time, que é o tempo decorrido desde o quadro anterior.
+
+PERGUNTA: O que é delta time?
+RESPOSTA: Delta time é o tempo em segundos entre dois quadros. Multiplicar a velocidade pelo delta time faz o movimento ficar igual em computadores rápidos e lentos. Exemplo: posicao += velocidade * delta_time.
+
+PERGUNTA: O que é uma entidade em um jogo?
+RESPOSTA: Uma entidade é qualquer objeto do mundo do jogo: personagem, inimigo, projétil, item ou câmera. Cada entidade guarda estado, como posição e vida, e comportamento, como mover ou atacar.
+
+PERGUNTA: O que é o padrão componente?
+RESPOSTA: No padrão componente, a entidade é só um contêiner de partes. Cada parte faz uma coisa: Transforma guarda posição, Física move, Sprite desenha. Isso evita hierarquias rígidas e facilita reusar comportamento.
+
+PERGUNTA: O que é colisão AABB?
+RESPOSTA: AABB significa caixa delimitadora alinhada aos eixos. Dois retângulos colidem quando se sobrepõem nos dois eixos: esquerda de um menor que a direita do outro e vice-versa, e o mesmo no eixo vertical. É o teste de colisão mais barato.
+
+PERGUNTA: O que é uma máquina de estados?
+RESPOSTA: Uma máquina de estados organiza o comportamento em estados, como parado, correndo e atacando. Cada estado decide o próximo estado com base na entrada. É útil para personagens, inimigos e telas de interface.
+
+PERGUNTA: Como organizar um projeto de jogo?
+RESPOSTA: Separe código, arte e dados. Mantenha as configurações em arquivos, não presas no código. Versione tudo com git. Comece com um protótipo pequeno e só adicione sistemas quando o jogo pedir.
+
+PERGUNTA: O que é tilemap?
+RESPOSTA: Tilemap é um mapa feito de blocos repetidos, os tiles. O mapa é uma grade de números, e cada número aponta para um tile de imagem. É eficiente para fases 2D e facilita editar níveis.
+
+PERGUNTA: O que é raycast?
+RESPOSTA: Raycast é lançar um raio de um ponto em uma direção e descobrir o que ele acerta. Serve para tiro, linha de visão de inimigos e detecção de chão. Quase toda engine oferece raycast pronto.
+
+PERGUNTA: O que é interpolação lerp?
+RESPOSTA: Lerp é a interpolação linear entre dois valores. Com t entre zero e um, lerp(a, b, t) retorna a mais t vezes b menos a. Serve para suavizar movimento, cor e transições de câmera.
+
+PERGUNTA: Como funciona input de jogador?
+RESPOSTA: O jogo pergunta ao sistema se uma tecla, botão ou toque está ativo neste quadro. Ações contínuas, como mover, usam estado pressionado. Ações instantâneas, como pular, usam a borda do evento, ou seja, o momento exato do pressionar.
+
+PERGUNTA: O que é física em jogos?
+RESPOSTA: Física de jogo integra velocidade e posição ao longo do tempo. A gravidade soma à velocidade vertical a cada passo. Ao tocar o chão, a velocidade vertical vira zero. Plataformas simples funcionam só com isso.
+
+PERGUNTA: O que é um shader?
+RESPOSTA: Shader é um programa pequeno que roda na placa gráfica. O shader de vértice posiciona pontos, e o shader de fragmento decide a cor de cada pixel. Efeitos visuais nascem daí.
+
+PERGUNTA: Como depurar lógica de jogo?
+RESPOSTA: Reproduza o problema com a menor cena possível. Imprima estado relevante, como posição e velocidade. Congele o tempo passo a passo quando a engine permitir. Teste uma hipótese de cada vez e registre o que mudou.
+
+PERGUNTA: O que é balanceamento de jogo?
+RESPOSTA: Balanceamento é ajustar números para o jogo ser justo e divertido. Dano, vida, custo e tempo de recarga formam o esqueleto. Mude um número por vez e teste com jogadores reais.
+
+PERGUNTA: O que é save game?
+RESPOSTA: Save game é o estado do jogo gravado em arquivo: posição, inventário, progresso. Use formato texto como JSON para facilitar leitura e migração. Valide o arquivo ao carregar e tenha versão no conteúdo.
+
+PERGUNTA: O que é um sistema de diálogo?
+RESPOSTA: Um sistema de diálogo guarda falas em dados, não em código. Cada fala tem texto, quem fala e opções. As opções viram nós de um grafo. Assim escritores editam a história sem tocar no código.
+
+PERGUNTA: Como começar a aprender engines?
+RESPOSTA: Escolha uma engine, faça o tutorial oficial inteiro e depois recrie um jogo clássico simples, como Pong. Leia a documentação quando travar. Termine projetos pequenos antes de tentar projetos grandes.
+
+PERGUNTA: O que é otimização em jogos?
+RESPOSTA: Otimização é gastar menos recursos para manter a taxa de quadros. Meça antes de otimizar. Os vilões comuns são muitos objetos desenhados, física cara e alocação de memória por quadro.
+
+PERGUNTA: O que é pooling de objetos?
+RESPOSTA: Pooling é reaproveitar objetos em vez de criar e destruir toda hora. Projéteis e partículas entram numa fila ociosa e voltam quando precisam. Isso reduz travamentos por coleta de lixo.
+
+QUESTION: What is a game loop?
+ANSWER: The game loop is the core cycle of every game. It repeats three steps: read player input, update the world state and draw the screen. It uses delta time so speed stays stable across frame rates.
+
+QUESTION: What is a component in game code?
+ANSWER: A component is a small object with one job, like movement, health or drawing. Entities combine components. This keeps code reusable and avoids deep inheritance trees.
+
+QUESTION: What is level design?
+ANSWER: Level design is the craft of building spaces that teach, challenge and reward the player. Good levels introduce a mechanic safely, then vary it. Playtest early and watch where players get stuck.
+
+QUESTION: What is version control for game teams?
+ANSWER: Version control keeps a history of every change. Artists and programmers commit small changes with clear messages. Lock or merge binary assets carefully, and keep builds reproducible from a clean checkout.
+
+PERGUNTA: Como exportar um jogo para celular?
+RESPOSTA: Defina resolução e controles de toque desde cedo. Teste no aparelho real, não só no emulador. Reduza tamanho de texturas e número de objetos. Gere o pacote final da engine e valide a instalação.
+
+PERGUNTA: O que é rigging e animação 3D?
+RESPOSTA: Rigging é criar o esqueleto de um modelo 3D, com ossos e controles. A animação move esses ossos ao longo do tempo. Boas animações têm pose clara, timing e arcos de movimento.
+
+PERGUNTA: O que é modelagem 3D para jogos?
+RESPOSTA: Modelagem 3D cria formas para o jogo. Para tempo real, o modelo precisa de poucos polígonos, boas UVs e texturas eficientes. A regra é: a silhueta importa mais do que o detalhe fino.
+
+PERGUNTA: Como planejar um jogo indie?
+RESPOSTA: Escreva o jogo em uma frase. Defina o núcleo divertido e prototipe primeiro. Corte escopo sem dó. Um jogo pequeno terminado vale mais do que um gigante abandonado.
+
+PERGUNTA: O que é teste de jogo?
+RESPOSTA: Teste de jogo verifica se o jogo funciona e diverte. Teste técnico procura erros e travamentos. Teste de diversão observa jogadores reais sem explicar nada. Anote onde eles travam, sorriem ou desistem.
