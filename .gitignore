@@ -32,3 +32,6 @@ model/training/runs/*
 Thumbs.db
 .idea/
 .vscode/
+
+# dados externos baixados (grandes, recriáveis)
+model/datasets/externos/

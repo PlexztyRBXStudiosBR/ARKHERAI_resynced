@@ -36,3 +36,26 @@ Estado ao vivo em `model/checkpoints/training_state.json` — é o que a aba
 O demo foi treinado em CPU num corpus de ~40 mil tokens. Para evoluir a qualidade
 mantendo o mesmo pipeline, aumente dataset autorizado e compute — ver `HARDWARE.md`.
 Nada disso muda o contrato: o modelo continua 100% próprio, sem pesos externos.
+
+## Fontes externas com licença (conhecimento da web para o auto-treino)
+A ARKHER pode aprender com conteúdo da web **somente por fontes oficiais com
+licença declarada** (regra do projeto: nada de scraping de conteúdo protegido
+ou pessoal). Catálogo em `model/datasets/fontes.py`:
+
+| fonte | licença | uso |
+|---|---|---|
+| Project Gutenberg | domínio público (EUA) | texto corrido |
+| Wikipédia PT (dumps oficiais) | CC-BY-SA 4.0 | pares pergunta/resposta |
+| Stack Exchange gamedev (dump oficial) | CC-BY-SA 3.0 | especialidade game dev |
+
+Fluxo (numa máquina com rede — seu PC ou um nó de `workers/`):
+
+```bash
+python -m model.datasets.fontes listar
+python -m model.datasets.fontes baixar gutenberg
+python -m model.datasets.fontes integrar   # gera treino_extra.txt
+python -m model.training.prepare_dataset   # incorpora ao corpus
+```
+
+Cada download registra licença + URL + SHA-256 em `MANIFESTO.json`; o passo
+`integrar` recusa qualquer arquivo sem registro — a prova de origem fica no repo.

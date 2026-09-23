@@ -50,7 +50,8 @@ persistindo no checkpoint, sem nenhuma máquina precisando ficar ligada para sem
    além das estruturas conhecidas acompanha o crescimento do modelo (rede workers).
 3. **Conector de animação**: geração de blocos de keyframes/dados de animação em
    formatos abertos para uso em ferramentas do usuário.
-4. **Sinal de uso**: o feedback 👍/👎 (já implementado) alimenta os ciclos de treino.
+4. ✅ **Fontes externas licenciadas**: Wikipédia/Gutenberg/Stack Exchange gamedev entram no auto-treino com licença registrada (`model/datasets/fontes.py`).
+5. **Sinal de uso**: o feedback 👍/👎 (já implementado) alimenta os ciclos de treino.
 
 Esses conectores são o substituto legítimo de "controlar VMs": a ARKHER ganha
 capacidade real de produção mantendo o usuário no controle e dentro dos termos

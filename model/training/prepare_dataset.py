@@ -14,6 +14,7 @@ import sys
 from model.training.common import GENERATED_DIR, PREPARED_PATH, SEED_DIR, log, seed_texts
 
 AUTORAL_REPEAT = 8
+EXTERNO_PATH = SEED_DIR.parent / "externos" / "treino_extra.txt"
 
 
 def main() -> None:
@@ -45,6 +46,14 @@ def main() -> None:
             linhas.append(ln)
         partes.append("\n".join(linhas))
         log("sintético: arithmetic.txt (deduplicado)")
+
+    # 4) conhecimento externo licenciado (Wikipédia CC-BY-SA, Gutenberg
+    # domínio público etc.) — só entra se existir e com licença registrada
+    if EXTERNO_PATH.exists():
+        extra = EXTERNO_PATH.read_text(encoding="utf-8").strip()
+        if extra:
+            partes.append(extra)
+            log(f"externo licenciado: treino_extra.txt ({EXTERNO_PATH.stat().st_size} bytes)")
 
     GENERATED_DIR.mkdir(parents=True, exist_ok=True)
     PREPARED_PATH.write_text("\n\n".join(partes), encoding="utf-8")
