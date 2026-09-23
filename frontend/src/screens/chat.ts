@@ -169,6 +169,13 @@ function messageEl(ctx: Ctx, m: Message, streaming: boolean): HTMLElement {
         regen.onclick = () => void ctx.regenerate();
         actions.append(regen);
       }
+      if (m.hash) {
+        const up = el("button", { class: "mini", title: "Boa resposta — ajuda o treino" }, "👍");
+        up.onclick = () => void ctx.rate(m.hash!, 1, up);
+        const down = el("button", { class: "mini", title: "Resposta ruim — ajuda o treino" }, "👎");
+        down.onclick = () => void ctx.rate(m.hash!, -1, down);
+        actions.append(up, down);
+      }
     }
     wrap.append(bubble, actions);
   } else {

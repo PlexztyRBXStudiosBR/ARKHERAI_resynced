@@ -40,7 +40,7 @@ training:
 
 checkpoints:
   # Checkpoint atual versionado (commit de pesos real do projeto).
-  latest: "arkher1-mini-v0.1.0-gamedev.pt"
+  latest: "arkher1-mini-v0.1.0-gamedev2.pt"
   # Estado honesto: modelo em escala de demonstração, treinado em CPU no
   # dataset semente do projeto com foco em game dev. Ainda NÃO é conversacional amplo.
   quality: "experimental"

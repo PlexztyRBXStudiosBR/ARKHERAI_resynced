@@ -82,6 +82,8 @@ export function makeApi(baseUrl: () => string, token: () => string | null) {
     toolHistory: () => http<{ history: ToolLogEntry[] }>("GET", "/api/tools/history"),
     runTool: (id: string, args: Record<string, unknown>) =>
       http<{ result: unknown }>("POST", `/api/tools/${id}/run`, args),
+    feedback: (sessionId: string, rating: number, contentHash: string) =>
+      http<{ ok: boolean }>("POST", "/api/feedback", { session_id: sessionId, rating, content_hash: contentHash }),
     trainingStatus: () => http<TrainingStatus>("GET", "/api/training/status", undefined, 8000),
     trainingStart: (step: string) => http<TrainingStatus>("POST", "/api/training/start", { step }),
     diagnostics: () => http<Record<string, unknown>>("GET", "/api/diagnostics"),
@@ -157,6 +159,7 @@ export interface Message {
   content: string;
   kind: string;
   created_at: string;
+  hash?: string;
 }
 
 export interface Memory {

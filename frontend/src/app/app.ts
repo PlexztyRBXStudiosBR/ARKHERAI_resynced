@@ -28,6 +28,7 @@ export interface Ctx {
   refreshSessions: () => Promise<void>;
   exportSession: () => void;
   download: (name: string, content: string) => void;
+  rate: (hash: string, rating: number, btn: HTMLButtonElement) => Promise<void>;
 }
 
 export async function boot(container: HTMLElement): Promise<void> {
@@ -49,6 +50,7 @@ export async function boot(container: HTMLElement): Promise<void> {
     refreshSessions,
     exportSession,
     download,
+    rate,
   };
 
   applyTheme(store);
@@ -137,6 +139,7 @@ export async function boot(container: HTMLElement): Promise<void> {
     let collected = "";
     let erro: ApiError | null = null;
     let doneKind = "texto";
+    let doneHash: string | undefined;
 
     try {
       for await (const ev of api.chat(text, session, store.state.settings.memoryEnabled, aborter.signal, replaceLastUser)) {
@@ -150,6 +153,7 @@ export async function boot(container: HTMLElement): Promise<void> {
         } else if (ev.event === "done") {
           collected = String(ev.data["content"] ?? collected);
           doneKind = String(ev.data["kind"] ?? "texto");
+          if (typeof ev.data["content_hash"] === "string") doneHash = ev.data["content_hash"];
         } else if (ev.event === "error") {
           erro = { code: String(ev.data["code"]), message: String(ev.data["message"]), status: 0 };
         }
@@ -171,7 +175,7 @@ export async function boot(container: HTMLElement): Promise<void> {
       finalMessages.push({ role: "assistant", content: `⚠ ${honest}`, kind: "erro", created_at: "" });
       store.log(`chat erro: ${erro.code}`);
     } else if (collected) {
-      finalMessages.push({ role: "assistant", content: collected, kind: doneKind, created_at: "" });
+      finalMessages.push({ role: "assistant", content: collected, kind: doneKind, created_at: "", hash: doneHash });
     }
     store.set({ messages: finalMessages, streamingContent: "", ui: "ready", genId: null });
     void refreshSessions().then(render);
@@ -225,6 +229,17 @@ export async function boot(container: HTMLElement): Promise<void> {
       mensagens: s.messages.map((m) => ({ papel: m.role, conteudo: m.content })),
     };
     download("arkher-conversa.json", JSON.stringify(payload, null, 2));
+  }
+
+  async function rate(hash: string, rating: number, btn: HTMLButtonElement): Promise<void> {
+    try {
+      await api.feedback(store.state.currentSessionId ?? "", rating, hash);
+      btn.disabled = true;
+      btn.textContent = rating === 1 ? "👍 ✓" : "👎 ✓";
+      store.log(`feedback ${rating === 1 ? "positivo" : "negativo"} registrado`);
+    } catch (e) {
+      toast((e as ApiError).message ?? "erro");
+    }
   }
 
   function download(name: string, content: string): void {

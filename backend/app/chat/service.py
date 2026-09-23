@@ -17,6 +17,7 @@ import time
 from datetime import datetime, timezone
 
 from backend.app import config
+from backend.app.chat import feedback as feedback_service
 from backend.app.chat import knowledge
 from backend.app.memory import service as memory_service
 from backend.app.model import runtime as model_runtime
@@ -305,7 +306,12 @@ def chat_stream(user_id: str, session_id: str | None, message: str, memory_enabl
         add_message(sid, "assistant", final, kind="modelo")
         ms = int((time.monotonic() - t0) * 1000)
         _record_metric(user_id, sid, len(prompt) // 4, len(final) // 4, ms, "cancelado" if cancelled else "ok")
-        yield sse("done", {"content": final, "cancelled": cancelled, "metrics": {"ms": ms}})
+        yield sse("done", {
+            "content": final,
+            "cancelled": cancelled,
+            "metrics": {"ms": ms},
+            "content_hash": feedback_service.hash_content(final),
+        })
     finally:
         with _CANCEL_LOCK:
             _CANCELS.pop(gen_id, None)

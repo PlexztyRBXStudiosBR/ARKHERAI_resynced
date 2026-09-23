@@ -190,6 +190,26 @@ def test_log_redige_segredos(caplog):
     assert "[REDACTED]" in joined
 
 
+# ------------------------------------------------------------- feedback
+def test_feedback_registra_sinal_de_treino(auth_client):
+    r = auth_client.post("/api/feedback", json={"session_id": "s_x", "rating": 1, "content_hash": "abc123"})
+    assert r.json()["ok"]
+    r = auth_client.post("/api/feedback", json={"session_id": "s_x", "rating": -1, "note": "resposta incompleta"})
+    assert r.json()["ok"]
+    stats = auth_client.get("/api/feedback").json()["stats"]
+    assert stats["bons"] >= 1 and stats["ruins"] >= 1
+
+
+def test_feedback_rejeita_rating_invalido(auth_client):
+    r = auth_client.post("/api/feedback", json={"rating": 0})
+    assert r.status_code == 400
+
+
+def test_feedback_exige_auth(client):
+    r = client.post("/api/feedback", json={"rating": 1})
+    assert r.status_code == 401
+
+
 # ------------------------------------------------------------- diagnóstico
 def test_diagnostico_sem_segredos(auth_client):
     r = auth_client.get("/api/diagnostics")

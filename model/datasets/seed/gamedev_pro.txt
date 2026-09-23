@@ -1,0 +1,134 @@
+PERGUNTA: Como planejar um jogo 3D do zero?
+RESPOSTA: Comece pela câmera e pelo controle do personagem antes de qualquer arte. Defina escala do mundo em metros, bloqueie níveis com formas simples e só então produza a arte final. Um protótipo cinza jogável vale mais que cenários lindos sem jogo.
+
+PERGUNTA: O que é greyboxing?
+RESPOSTA: Greyboxing é construir a fase inteira com blocos cinzas, sem textura, para testar escala, ritmo e diversão. Se o nível é divertido cinza, ele será incrível com arte. Se não é, nenhuma textura resolve.
+
+PERGUNTA: O que é escala em jogos 3D?
+RESPOSTA: Escala define quanto vale uma unidade no mundo, normalmente um metro. Personagem, portas, escadas e velocidade de caminhada dependem dela. Definir escala cedo evita retrabalho enorme de modelagem e física.
+
+PERGUNTA: O que é modelagem box modeling?
+RESPOSTA: Box modeling começa de um cubo e extrai a forma aos poucos, mantendo topologia quad. É o caminho clássico para props e cenários. Extrusões, cortes e loops de aresta constroem quase qualquer forma dura.
+
+PERGUNTA: O que é escultura digital?
+RESPOSTA: Escultura digital modela como argila, sem se preocupar com topologia, ideal para formas orgânicas. Depois a peça passa por retopologia para virar malha leve animável. Os dois mundos se completam.
+
+PERGUNTA: O que são edge loops?
+RESPOSTA: Edge loops são anéis de arestas que circulam áreas de deformação, como olhos, boca e juntas. Eles fazem a superfície dobrar de forma natural quando o personagem se move. Topologia sem loops vira amassado feio.
+
+PERGUNTA: O que é um rig de personagem?
+RESPOSTA: Um rig é o esqueleto mais os controles do personagem: ossos para deformação e controles amigáveis para o animador. Um bom rig tem FK para arcos e IK para apoios, com limites que impedem poses impossíveis.
+
+PERGUNTA: O que é FK e IK na animação?
+RESPOSTA: FK rota os ossos um a um, ótimo para arcos de braço no vazio. IK fixa a ponta, como pé no chão, e resolve o resto sozinho. Animação profissional troca entre os dois conforme a necessidade.
+
+PERGUNTA: O que são poses chave?
+RESPOSTA: Poses chave são os extremos que contam a ação: preparação, impacto e recuperação. Se a história se lê só com as chaves, a animação tem base sólida. Depois entram as passagens e o polimento.
+
+PERGUNTA: O que é spacing em animação?
+RESPOSTA: Spacing é a distância entre posições consecutivas do objeto. Espaços que crescem aceleram, que diminuem desaceleram. É o spacing, não o tempo sozinho, que cria peso e personalidade.
+
+PERGUNTA: O que é overlap e follow through?
+RESPOSTA: Overlap é quando partes diferentes chegam em tempos diferentes: o braço para, a mão continua, o cabelo vem depois. Follow through é a continuação após o corpo parar. Isso vende flexibilidade e massa.
+
+PERGUNTA: O que é animação de ciclo de caminhada?
+RESPOSTA: O ciclo de caminhada tem contato, descida, passagem e subida, alternando as pernas. Quadril desce e sobe, braços balançam em oposição e a cabeça estabiliza. Um ciclo limpo de oito a doze quadros sustenta o personagem.
+
+PERGUNTA: O que é polimento de animação?
+RESPOSTA: Polimento corrige deslizamento de pé, arcos quebrados e poses fracas, adiciona secundários e micro variações. É a etapa que separa animação funcional de animação profissional, e costuma levar um terço do tempo total.
+
+PERGUNTA: O que é um shader toon?
+RESPOSTA: Shader toon troca o degradê de luz por faixas duras, criando visual de desenho. Um mapa de rampa controla as faixas e uma linha de contorno fecha o estilo. É barato e muito usado em jogos estilizados.
+
+PERGUNTA: O que é um shader de dissolução?
+RESPOSTA: Dissolução usa uma textura de ruído como máscara: valores abaixo do limite recortam o material, com borda emissiva no corte. Animando o limite, o objeto derrete ou se materializa. Efeito caro na sensação, barato na GPU.
+
+PERGUNTA: O que é vertex color?
+RESPOSTA: Vertex color pinta cor direto nos vértices, sem textura. Serve para variação de terreno, máscara de efeito e mix de materiais. Em mobile é alternativa leve e rápida.
+
+PERGUNTA: O que é ECS?
+RESPOSTA: ECS organiza o jogo em entidades, componentes e sistemas: dados puros separados da lógica que age sobre eles. Sistemas processam lotes de componentes, o que é cache-friendly e rápido. É a arquitetura por trás de engines modernas de alta performance.
+
+PERGUNTA: O que é data oriented design?
+RESPOSTA: Data oriented design estrutura os dados para o hardware trabalhar bem: arrays contíguos, poucos ponteiros, processamento em lote. Menos cache miss significa mais desempenho. É a filosofia por trás do ECS.
+
+PERGUNTA: O que é object pooling em engine?
+RESPOSTA: Object pooling mantém objetos criados e desativados em vez de destruir e recriar. Ativar do pool é quase de graça; instanciar custa caro. Projéteis, inimigos e efeitos usam pool sempre.
+
+PERGUNTA: O que é um sistema de eventos em jogos?
+RESPOSTA: Sistema de eventos desacopla quem avisa de quem reage: a moeda avisa que foi coletada e placar, som e conquista escutam. Ninguém depende de ninguém diretamente. Menos acoplamento, menos bug em cascata.
+
+PERGUNTA: O que é fixed timestep?
+RESPOSTA: Fixed timestep roda a lógica em passos fixos, acumulando o tempo real e simulando quantos passos couberem. A física fica determinística e estável em qualquer framerate. Renderização interpola entre passos para suavizar.
+
+PERGUNTA: O que é sweep de colisão?
+RESPOSTA: Sweep testa o movimento inteiro entre a posição atual e a futura, evitando atravessar parede fina em alta velocidade. É mais caro que o teste pontual, então usa só em objetos rápidos, como projéteis e personagens velozes.
+
+PERGUNTA: O que é character controller?
+RESPOSTA: Character controller é o código que move o personagem com regras de jogo: gravidade, passos, rampas, escorregões e colisão com o mundo. Não é física pura; é física ajustada para o jogo parecer certo.
+
+PERGUNTA: O que é coyote time?
+RESPOSTA: Coyote time permite pular por alguns quadros depois de sair da plataforma. Parece trapaça, mas é justiça: o jogador sente o controle responsivo em vez de punido por milissegundos. Todo plataforma bom usa.
+
+PERGUNTA: O que é input buffering?
+RESPOSTA: Input buffering guarda o comando dado pouco antes de ser possível executar, como pulo antes de tocar o chão. Sem buffer o jogador sente que o jogo comeu a entrada. Com buffer, o jogo parece ler a mente.
+
+PERGUNTA: O que é câmera de terceira pessoa?
+RESPOSTA: Câmera de terceira pessoa segue o personagem com braço de mola, colisão com cenário e ajuste de enquadramento em cobertura. Ela comunica posição e intenção, e um bom ajuste de câmera define o conforto do jogo inteiro.
+
+PERGUNTA: O que é aim assist?
+RESPOSTA: Aim assist ajuda o jogador de controle a acertar: desacelera a mira sobre o alvo e puxa levemente para ele. Bem calibrado, parece justiça; mal calibrado, parece trapaça. Acessibilidade e competitividade pedem intensidades diferentes.
+
+PERGUNTA: O que é economia de passe de batalha?
+RESPOSTA: Passe de batalha troca tempo por recompensas em trilhas gratuita e paga. O ritmo de XP precisa dar vitória diária visível, e as recompensas têm que ser desejadas sem invalidar as anteriores. Simular a progressão antes de lançar evita desastre.
+
+PERGUNTA: O que é um loop de engajamento?
+RESPOSTA: Loop de engajamento é o ciclo que faz voltar: meta curta, recompensa, nova meta. Diário segura o hábito, semanal a rotina, seasonal o compromisso. Cada camada precisa de recompensa proporcional ao esforço.
+
+PERGUNTA: O que é onboarding de jogo?
+RESPOSTA: Onboarding ensina jogando: apresenta uma mecânica por vez, deixa praticar em segurança e só então cobra. Tutorial em texto derruba retenção; tutorial em ação segura jogador. Os primeiros dez minutos decidem o destino do jogo.
+
+PERGUNTA: O que é monetização justa?
+RESPOSTA: Monetização justa vende conveniência, expressão e progresso opcional, nunca poder obrigatório. O jogador gratuito precisa sentir o jogo completo, e o pagante, vantagem honesta. Pay to win quebra a comunidade mais rápido que qualquer bug.
+
+PERGUNTA: O que é playtest estruturado?
+RESPOSTA: Playtest estruturado observa sem explicar: o jogador recebe o controle e você anota onde trava, onde sorri e onde desiste. Perguntas vêm depois. Cada sessão testa uma hipótese, e o resultado vira mudança concreta.
+
+PERGUNTA: O que é design por restrição?
+RESPOSTA: Design por restrição transforma limites em estilo: pouca memória vira pixel art, time pequeno vira mecânica única, escopo curto vira foco. Restrição bem abraçada diferencia o jogo mais do que orçamento.
+
+PERGUNTA: O que é jogo de escopo pequeno?
+RESPOSTA: Jogo de escopo pequeno tem uma mecânica central forte, poucas fases polidas e fim definido. Terminar um jogo pequeno ensina produção inteira, do conceito à publicação. É o melhor começo para qualquer desenvolvedor.
+
+PERGUNTA: O que é versionamento para times de jogo?
+RESPOSTA: Versionamento guarda o histórico de tudo: código em commits pequenos e binários com estratégia definida. Nomeie branches por tarefa, escreva mensagens claras e gere builds a partir do mesmo commit. Time sem versionamento perde trabalho toda semana.
+
+PERGUNTA: O que é depurar com logs?
+RESPOSTA: Logs bem feitos mostram estado sem precisar reproduzir tudo: o que mudou, quando e com qual valor. Logue entrada e saída de sistemas importantes, com contexto, e trate log como ferramenta de design, não como rodapé.
+
+PERGUNTA: O que é assertividade em código de jogo?
+RESPOSTA: Asserts verificam suposições na hora: vida nunca negativa, índice dentro da lista, estado válido. Em desenvolvimento eles explodem cedo e barato; em produção viram métricas. Código que confia no impossível quebra no pior momento.
+
+PERGUNTA: O que é hot reload?
+RESPOSTA: Hot reload aplica mudanças sem reiniciar o jogo, essencial para iterar rápido: valores de design, shaders e interfaces recarregam ao vivo. Cada segundo economizado por iteração volta como polimento no produto final.
+
+PERGUNTA: O que é debug draw?
+RESPOSTA: Debug draw desenha informação invisível direto na cena: caixas de colisão, raios, caminhos de inimigo, estados. Ver o que o código acredita torna a depuração imediata. Todo estúdio sério tem um modo debug rico.
+
+PERGUNTA: O que é um pipeline de localização de strings?
+RESPOSTA: Pipeline de localização extrai todo texto para tabelas com chave única, exporta para tradução e reintegra com verificações: texto cortado, caractere sem suporte e variável perdida. Automatizar isso cedo evita relançamento caro.
+
+PERGUNTA: O que é certificação de plataforma?
+RESPOSTA: Certificação é o teste oficial da loja: o jogo precisa cumprir regras de save, conquista, suspensão e privacidade. Cada plataforma tem checklist próprio, e reprovar custa semanas. Prepare o checklist junto com o desenvolvimento, não depois.
+
+PERGUNTA: O que é save robusto?
+RESPOSTA: Save robusto escreve em arquivo temporário e renomeia atomicamente, versiona o formato e migra saves antigos. Nunca confie em um único slot e trate arquivo corrompido com fallback. Perder save é perder jogador para sempre.
+
+PERGUNTA: O que é anti-frustração em design?
+RESPOSTA: Anti-frustração remove punição sem remover desafio: checkpoints generosos, dicas contextuais, dificuldade que se adapta e morte que ensina. O jogador quer vencer o desafio, não a interface. Dificuldade boa desafia, dificuldade ruim irrita.
+
+PERGUNTA: O que é feedback imediato?
+RESPOSTA: Feedback imediato responde toda ação em menos de cem milissegundos: som, partícula, animação ou número. Sem feedback o jogador não sabe se o jogo ouviu. Com feedback, até apertar botão fica divertido.
+
+PERGUNTA: Como a ARKHER ajuda com game dev?
+RESPOSTA: A ARKHER explica conceitos de jogo, código, 3D, animação e produção, revisa ideias de mecânica e ajuda a planejar escopo. Ela trabalha com o backend e o modelo próprios do projeto, com memória autorizada e ferramentas auditadas. O que ela não sabe, ela diz que não sabe.

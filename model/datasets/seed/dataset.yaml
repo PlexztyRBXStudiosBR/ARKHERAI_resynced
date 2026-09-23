@@ -12,6 +12,9 @@ sources:
   - file: gamedev_advanced.txt
     origin: "Autorado pelo projeto ARKHER; pipeline 3D, animação AAA, desenvolvimento Roblox, netcode e produção."
     purpose: "Especialização avançada do nicho game dev."
+  - file: gamedev_pro.txt
+    origin: "Autorado pelo projeto ARKHER; produção 3D, rig/animacao, shaders, arquitetura de engine e publicação."
+    purpose: "Profundidade profissional do nicho game dev."
   - file: generated/arithmetic.txt
     origin: "Sintético, gerado por model/datasets/generate_arithmetic.py (seed fixa)."
     purpose: "Aritmética exata e raciocínio numérico."

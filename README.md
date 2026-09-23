@@ -7,7 +7,10 @@ modelo, tokenizer, memória e ferramentas pertencem ao ARKHER. O navegador conve
 **somente** com o backend oficial; não existe chamada a provedor de IA externo,
 fallback silencioso ou resposta simulada.
 
-Especialidade: **game dev, engines, código e tecnologia** — sem impedir outros assuntos.
+Especialidade: **game dev, engines, código e tecnologia** — 3D, animação, Roblox,
+netcode e produção — sem impedir outros assuntos. A força vem do modelo próprio +
+recuperação de conhecimento do projeto + ferramentas auditadas + feedback do usuário,
+não de poder bruto nem de serviços externos.
 
 ---
 
@@ -20,6 +23,7 @@ Especialidade: **game dev, engines, código e tecnologia** — sem impedir outro
 | Modelo próprio **ARKHER-1 mini** | ✅ instalado (checkpoint `v0.1.0-gamedev`) |
 | Qualidade do modelo | ⚠️ **experimental** — 3,98 M de parâmetros treinados em CPU num corpus semente de ~89 mil tokens, com foco em game dev. Responde bem os temas do corpus (3D, animação, Roblox, engines, netcode, identidade); fora disso, é limitada. |
 | Infraestrutura de treinamento | ✅ real e reproduzível (tokenizer próprio, treino com retomada, avaliação, relatório) |
+| Aprendizado com o uso | ✅ feedback 👍/👎 registrado por resposta (sinal para os próximos ciclos de treino) |
 | Camada extra de segurança/correção de resposta | ✅ ativa (recusas, verificação aritmética, alegações de ações, redação de logs) |
 
 **Nunca declaramos "IA própria pronta" além disso.** Um modelo conversacional amplo

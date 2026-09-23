@@ -11,6 +11,7 @@ from pydantic import BaseModel, Field
 from backend.app import config
 from backend.app import training as training_service
 from backend.app.auth import service as auth
+from backend.app.chat import feedback as feedback_service
 from backend.app.chat import service as chat
 from backend.app.memory import service as memory_service
 from backend.app.model import runtime as model_runtime
@@ -48,6 +49,13 @@ class MemoryIn(BaseModel):
     text: str = Field(min_length=1, max_length=1000)
     project: str = Field(default="", max_length=80)
     consent: bool
+
+
+class FeedbackIn(BaseModel):
+    session_id: str = ""
+    content_hash: str = ""
+    rating: int = Field(ge=-1, le=1)
+    note: str = Field(default="", max_length=400)
 
 
 # ------------------------------------------------------------------ público
@@ -175,6 +183,20 @@ def memory_export(user: dict = auth.CurrentUser):
     return {"ok": True, "memories": memory_service.export(user["id"])}
 
 
+# --------------------------------------------------------------- feedback
+@router.post("/api/feedback")
+def feedback_post(body: FeedbackIn, user: dict = auth.CurrentUser):
+    if body.rating not in (-1, 1):
+        raise HTTPException(status_code=400, detail={"ok": False, "code": "BAD_RATING", "message": "Use 1 ou -1."})
+    feedback_service.add(user["id"], body.session_id, body.rating, body.note, body.content_hash)
+    return {"ok": True}
+
+
+@router.get("/api/feedback")
+def feedback_get(user: dict = auth.CurrentUser):
+    return {"ok": True, "stats": feedback_service.stats(user["id"]), "items": feedback_service.export(user["id"])}
+
+
 # ------------------------------------------------------------- ferramentas
 @router.get("/api/tools")
 def tools_list(user: dict = auth.CurrentUser):
@@ -260,5 +282,6 @@ def diagnostics(user: dict = auth.CurrentUser):
         "uptime_s": int(time.time() - STARTED_AT),
         "model": model_runtime.status(),
         "geracoes_registradas": rows[0]["n"] if rows else 0,
+        "feedback": feedback_service.stats(user["id"]),
         "nota": "Este diagnóstico não contém segredos nem conteúdo de conversas.",
     }

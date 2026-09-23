@@ -29,6 +29,22 @@
 | Trapaças/exploits para jogos online (ex.: executores) | ❌ recusada | Prejudica outros jogadores e viola termos das plataformas; recusa implementada. |
 | Fallback silencioso para IA externa quando o modelo falha | ❌ recusada | O sistema informa o estado real em vez de fingir. |
 
+## Fase 2 planejada: conectores nativos de ferramentas (caminho aprovado)
+A potência por ferramentas — a ideia central do projeto — entra pela porta segura:
+
+1. **Conector Blender**: quando houver modelo base maduro, o backend conversa com o
+   Blender rodando na MÁQUINA DO USUÁRIO via API oficial, gerando scripts Python que o
+   usuário revisa e executa com confirmação. Nada de controle remoto escondido.
+2. **Conector Roblox Studio**: exportação de módulos Luau e assets gerados pela ARKHER
+   para o projeto do usuário, com revisão humana antes de publicar.
+3. **Conector de animação**: geração de blocos de keyframes/dados de animação em
+   formatos abertos para uso em ferramentas do usuário.
+4. **Sinal de uso**: o feedback 👍/👎 (já implementado) alimenta os ciclos de treino.
+
+Esses conectores são o substituto legítimo de "controlar VMs": a ARKHER ganha
+capacidade real de produção mantendo o usuário no controle e dentro dos termos
+das ferramentas.
+
 ## Ideias adiadas (viáveis só com base madura)
 - **Ambiente virtual isolado** para a IA experimentar com segurança: exige primeiro um
   modelo muito mais capaz e sandbox dedicado; hoje não há base para isso.
