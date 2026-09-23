@@ -16,9 +16,15 @@
 O ARKHER-1 cresce em camadas: a arquitetura aceita mais camadas/cabeças/contexto
 via `model/config.yaml` sem trocar runtime, API ou interface.
 
+## Rede de treinamento multi-nó (o caminho aprovado de "somar máquinas")
+O diretório `workers/` organiza a rede: seu PC, Kaggle, Colab e Lightning AI como
+nós de treino. Cada nó retoma do checkpoint versionado, treina e devolve o resultado
+— o aprendizado acumula entre sessões efêmeras. Detalhes em `workers/README.md`.
+
 ## O que NÃO é plano do projeto (e por quê)
-- **Fábrica de VMs em runners de CI** para treinar/servir: viola termos do serviço de
-  CI e não fornece compute estável. Treino sério usa hardware dedicado ou nuvem contratada.
+- **Runner de CI como VM persistente** (acesso remoto + religar por cron para burlar
+  o limite de horas): viola os termos do serviço e resulta em banimento de conta.
+  O compute de CI serve para testar o projeto, não como máquina de treino/servidor.
 - **Enxame de contas externas** como "operários": viola termos dos serviços e a
   política de dados do projeto.
 - **Raspagem em massa de sites/vídeos** para auto-treino: conflita com direitos

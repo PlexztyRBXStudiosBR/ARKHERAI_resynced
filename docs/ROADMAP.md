@@ -21,7 +21,7 @@
 ## Ideias avaliadas e RECUSADAS neste projeto (com motivo)
 | Ideia | Decisão | Motivo |
 | --- | --- | --- |
-| Usar runners de CI como "PCs de treino/servidor" | ❌ recusada | Viola os termos do serviço de CI; compute instável e não supervisionado. |
+| Runner de CI como VM persistente (túnel + acesso remoto + religar por cron) | ❌ recusada | Burla o limite de horas do serviço; resultado real é conta banida. Treino distribuído legítimo: `workers/` (Kaggle/Colab/Lightning). |
 | Enxame de contas externas ("operários") para treinar/avaliar | ❌ recusada | Viola termos de serviços de terceiros; dados sem licença. |
 | Raspar sites e transcrições de vídeo em massa para auto-treino | ❌ recusada | Direitos autorais e política do dataset; substituída por dados autorais/sintéticos. |
 | A IA controlar máquinas reais (instalar programas, acesso remoto, túneis) | ❌ recusada | Superfície de risco inaceitável; o projeto nasceu removendo exatamente isso. |
@@ -29,8 +29,14 @@
 | Trapaças/exploits para jogos online (ex.: executores) | ❌ recusada | Prejudica outros jogadores e viola termos das plataformas; recusa implementada. |
 | Fallback silencioso para IA externa quando o modelo falha | ❌ recusada | O sistema informa o estado real em vez de fingir. |
 
-## Fase 2 planejada: conectores nativos de ferramentas (caminho aprovado)
-A potência por ferramentas — a ideia central do projeto — entra pela porta segura:
+## Fase 2 planejada: rede de treino multi-nó + conectores nativos
+
+**Rede de treino (já preparada em `workers/`)**: Kaggle, Colab, Lightning AI e o seu
+PC como nós que retreinem o ARKHER-1 a partir do checkpoint versionado. É a versão
+legítima de "somar máquinas": cada serviço no uso para o qual existe, estado
+persistindo no checkpoint, sem nenhuma máquina precisando ficar ligada para sempre.
+
+**Conectores nativos (caminho aprovado para ferramentas pesadas)**:
 
 1. **Conector Blender**: quando houver modelo base maduro, o backend conversa com o
    Blender rodando na MÁQUINA DO USUÁRIO via API oficial, gerando scripts Python que o

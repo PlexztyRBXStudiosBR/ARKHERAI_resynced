@@ -78,6 +78,7 @@ Ou use a aba **Treino** do site (roda no servidor, nunca no navegador, com confi
 
 ## Documentação
 
+- `workers/` — **rede de treinamento multi-nó** (Kaggle, Colab, Lightning, seu PC)
 - `docs/ARCHITECTURE.md` — arquitetura e fluxo de dados
 - `docs/API.md` — referência da API própria
 - `docs/TRAINING.md` — dataset, tokenizer e treino
