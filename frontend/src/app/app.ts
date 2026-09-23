@@ -140,6 +140,7 @@ export async function boot(container: HTMLElement): Promise<void> {
     let erro: ApiError | null = null;
     let doneKind = "texto";
     let doneHash: string | undefined;
+    let doneArquivo: { nome: string; conteudo: string } | undefined;
 
     try {
       for await (const ev of api.chat(text, session, store.state.settings.memoryEnabled, aborter.signal, replaceLastUser)) {
@@ -154,6 +155,10 @@ export async function boot(container: HTMLElement): Promise<void> {
           collected = String(ev.data["content"] ?? collected);
           doneKind = String(ev.data["kind"] ?? "texto");
           if (typeof ev.data["content_hash"] === "string") doneHash = ev.data["content_hash"];
+          const arq = ev.data["arquivo"];
+          if (arq && typeof arq === "object" && "nome" in arq && "conteudo" in arq) {
+            doneArquivo = arq as { nome: string; conteudo: string };
+          }
         } else if (ev.event === "error") {
           erro = { code: String(ev.data["code"]), message: String(ev.data["message"]), status: 0 };
         }
@@ -175,7 +180,14 @@ export async function boot(container: HTMLElement): Promise<void> {
       finalMessages.push({ role: "assistant", content: `⚠ ${honest}`, kind: "erro", created_at: "" });
       store.log(`chat erro: ${erro.code}`);
     } else if (collected) {
-      finalMessages.push({ role: "assistant", content: collected, kind: doneKind, created_at: "", hash: doneHash });
+      finalMessages.push({
+        role: "assistant",
+        content: collected,
+        kind: doneKind,
+        created_at: "",
+        hash: doneHash,
+        arquivo: doneArquivo,
+      });
     }
     store.set({ messages: finalMessages, streamingContent: "", ui: "ready", genId: null });
     void refreshSessions().then(render);

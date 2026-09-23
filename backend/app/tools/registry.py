@@ -21,6 +21,7 @@ from pathlib import Path
 from backend.app import config
 from backend.app.memory import service as memory_service
 from backend.app.storage import db
+from backend.app.tools import generators
 
 MAX_UPLOAD_BYTES = 2 * 1024 * 1024
 MAX_READ_CHARS = 200_000
@@ -59,6 +60,20 @@ TOOLS: dict[str, dict] = {
         "nome": "Consulta à memória própria",
         "descricao": "Busca textual local nas memórias salvas com consentimento.",
         "permissoes": ["leitura_da_memoria_do_usuario"],
+        "confirmacao": False,
+    },
+    "roblox_gen": {
+        "id": "roblox_gen",
+        "nome": "Gerador de scripts Roblox (Luau)",
+        "descricao": "Gera scripts Luau prontos (leaderstats, salvamento, teleporte, dia/noite, checkpoint) para colar no Roblox Studio. Código gerado pelo projeto, revisado por você.",
+        "permissoes": ["geracao_de_codigo_local"],
+        "confirmacao": False,
+    },
+    "obj_gen": {
+        "id": "obj_gen",
+        "nome": "Gerador de terreno 3D (OBJ)",
+        "descricao": "Gera um terreno heightmap em formato OBJ para importar no Blender ou na sua engine. Determinístico pela seed.",
+        "permissoes": ["geracao_de_asset_local"],
         "confirmacao": False,
     },
 }
@@ -198,6 +213,16 @@ def run(user_id: str, tool_id: str, args: dict) -> dict:
             result = _data_export(user_id)
         elif tool_id == "memory_query":
             result = {"resultados": memory_service.search(user_id, str(args.get("q", "")))}
+        elif tool_id == "roblox_gen":
+            try:
+                result = generators.gerar_roblox(str(args.get("tipo", "")))
+            except ValueError as e:
+                raise ToolError("INVALID_ARG", str(e))
+        elif tool_id == "obj_gen":
+            try:
+                result = generators.gerar_terreno(args.get("seed"))
+            except ValueError as e:
+                raise ToolError("INVALID_ARG", str(e))
         else:
             raise ToolError("UNKNOWN_TOOL", "Ferramenta desconhecida.")
         _audit(user_id, tool_id, True, json.dumps(args, ensure_ascii=False), int((time.monotonic() - t0) * 1000))

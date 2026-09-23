@@ -168,11 +168,16 @@ _TOOL_CMDS = {
     "/ler": ("file_read", "nome"),
     "/exportar": ("data_export", None),
     "/memoria": ("memory_query", "q"),
+    "/roblox": ("roblox_gen", "tipo"),
+    "/terreno": ("obj_gen", "seed"),
 }
 
 
-def _run_tool_message(user_id: str, message: str) -> tuple[str, str, list[str]]:
-    """Executa comando de ferramenta explícito. Retorna (resposta, kind, tools_ran)."""
+def _run_tool_message(user_id: str, message: str) -> tuple[str, str, list[str], dict | None]:
+    """Executa comando de ferramenta explícito.
+
+    Retorna (resposta, kind, tools_ran, arquivo_para_download).
+    """
     parts = message.strip().split(maxsplit=1)
     cmd = parts[0].lower()
     arg = parts[1] if len(parts) > 1 else ""
@@ -183,15 +188,29 @@ def _run_tool_message(user_id: str, message: str) -> tuple[str, str, list[str]]:
         if tool_id == "data_export":
             return (
                 "Exportação pronta. Use o botão de download na resposta para salvar seus dados.",
-                "export",
+                "arquivo",
                 [tool_id],
+                {"nome": "arkher-dados.json", "conteudo": json.dumps(result, ensure_ascii=False, indent=1)},
             )
+        if tool_id == "roblox_gen":
+            corpo = (
+                f"{result['descricao']}\n\n"
+                f"```lua\n{result['codigo']}\n```\n\n"
+                f"Como usar: {result['como_usar']}"
+            )
+            return corpo, "ferramenta", [tool_id], None
+        if tool_id == "obj_gen":
+            corpo = (
+                f"{result['descricao']}\n\nComo usar: {result['como_usar']}\n\n"
+                "Use o botão de download na resposta para baixar o arquivo."
+            )
+            return corpo, "arquivo", [tool_id], result["arquivo"]
         if tool_id == "file_read":
             conteudo = result["conteudo"][:8000]
-            return f"Conteúdo de `{result['nome']}` ({result['caracteres']} caracteres):\n\n```\n{conteudo}\n```", "ferramenta", [tool_id]
-        return "Resultado da ferramenta `" + tool_id + "`:\n\n```json\n" + json.dumps(result, ensure_ascii=False, indent=1)[:6000] + "\n```", "ferramenta", [tool_id]
+            return f"Conteúdo de `{result['nome']}` ({result['caracteres']} caracteres):\n\n```\n{conteudo}\n```", "ferramenta", [tool_id], None
+        return "Resultado da ferramenta `" + tool_id + "`:\n\n```json\n" + json.dumps(result, ensure_ascii=False, indent=1)[:6000] + "\n```", "ferramenta", [tool_id], None
     except tools.ToolError as e:
-        return f"Ferramenta bloqueada: {e.message}", "erro", []
+        return f"Ferramenta bloqueada: {e.message}", "erro", [], None
 
 
 def chat_stream(user_id: str, session_id: str | None, message: str, memory_enabled: bool, replace_last_user: bool = False):
@@ -236,10 +255,13 @@ def chat_stream(user_id: str, session_id: str | None, message: str, memory_enabl
         # comando de ferramenta explícito
         first_word = message.split(maxsplit=1)[0].lower()
         if first_word in _TOOL_CMDS:
-            resposta, kind, ran = _run_tool_message(user_id, message)
+            resposta, kind, ran, arquivo = _run_tool_message(user_id, message)
             add_message(sid, "assistant", resposta, kind=kind)
             yield sse("token", {"t": resposta})
-            yield sse("done", {"content": resposta, "kind": kind, "tools": ran})
+            done_payload = {"content": resposta, "kind": kind, "tools": ran}
+            if arquivo is not None:
+                done_payload["arquivo"] = arquivo
+            yield sse("done", done_payload)
             return
 
         # modelo próprio — sem fallback, sem simulação

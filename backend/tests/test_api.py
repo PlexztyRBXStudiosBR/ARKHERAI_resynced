@@ -190,6 +190,39 @@ def test_log_redige_segredos(caplog):
     assert "[REDACTED]" in joined
 
 
+# ------------------------------------------------------ geradores game dev
+def test_roblox_gen_exige_autorizacao(auth_client):
+    r = auth_client.post("/api/tools/roblox_gen/run", json={"tipo": "leaderstats"})
+    assert r.status_code == 403
+
+
+def test_roblox_gen_produz_lua_valido(auth_client):
+    auth_client.post("/api/tools/roblox_gen/authorize")
+    r = auth_client.post("/api/tools/roblox_gen/run", json={"tipo": "salvamento"})
+    assert r.status_code == 200
+    codigo = r.json()["result"]["codigo"]
+    assert "DataStoreService" in codigo and "PlayerAdded" in codigo
+
+
+def test_roblox_gen_rejeita_tipo_invalido(auth_client):
+    auth_client.post("/api/tools/roblox_gen/authorize")
+    r = auth_client.post("/api/tools/roblox_gen/run", json={"tipo": "nao_existe"})
+    assert r.status_code == 400
+
+
+def test_obj_gen_produz_obj_valido(auth_client):
+    auth_client.post("/api/tools/obj_gen/authorize")
+    r = auth_client.post("/api/tools/obj_gen/run", json={"seed": 42})
+    assert r.status_code == 200
+    obj = r.json()["result"]["arquivo"]["conteudo"]
+    verts = [l for l in obj.splitlines() if l.startswith("v ")]
+    faces = [l for l in obj.splitlines() if l.startswith("f ")]
+    assert len(verts) == 256 and len(faces) == 225
+    # determinístico pela seed
+    r2 = auth_client.post("/api/tools/obj_gen/run", json={"seed": 42})
+    assert r2.json()["result"]["arquivo"]["conteudo"] == obj
+
+
 # ------------------------------------------------------------- feedback
 def test_feedback_registra_sinal_de_treino(auth_client):
     r = auth_client.post("/api/feedback", json={"session_id": "s_x", "rating": 1, "content_hash": "abc123"})

@@ -9,8 +9,8 @@ import type { Ctx } from "../app/app";
 const EXAMPLES = [
   "O que é uma pipeline 3D completa?",
   "Como estruturar um jogo no Roblox?",
-  "Como funciona uma animação AAA?",
-  "O que é rollback netcode?",
+  "/roblox salvamento",
+  "/terreno 42",
 ];
 
 export function renderChat(ctx: Ctx): HTMLElement {
@@ -175,6 +175,11 @@ function messageEl(ctx: Ctx, m: Message, streaming: boolean): HTMLElement {
         const down = el("button", { class: "mini", title: "Resposta ruim — ajuda o treino" }, "👎");
         down.onclick = () => void ctx.rate(m.hash!, -1, down);
         actions.append(up, down);
+      }
+      if (m.arquivo) {
+        const dl = el("button", { class: "mini pri" }, "⤓ baixar " + m.arquivo.nome);
+        dl.onclick = () => ctx.download(m.arquivo!.nome, m.arquivo!.conteudo);
+        actions.append(dl);
       }
     }
     wrap.append(bubble, actions);
