@@ -1,0 +1,29 @@
+[Unit]
+Description=ARKHER authorized Station game-dev worker
+After=arkher-agent.service
+Requires=arkher-agent.service
+
+[Service]
+Type=simple
+User=arkher
+Group=arkher
+WorkingDirectory=/opt/arkher
+EnvironmentFile=/etc/arkher/agent.env
+Environment=ARKHER_WORKSPACE=/var/lib/arkher/work
+ExecStart=/usr/bin/python3 /opt/arkher/arkher_station_worker.py --agent http://127.0.0.1:8765 --workspace /var/lib/arkher/work --artifact-root /var/lib/arkher/work/station-artifacts --allow-game-dev --kinds game-dev
+Restart=always
+RestartSec=5
+TimeoutStopSec=30
+KillMode=mixed
+MemoryMax=8G
+TasksMax=128
+LimitNOFILE=4096
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectHome=true
+ProtectSystem=strict
+ReadWritePaths=/var/lib/arkher
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+
+[Install]
+WantedBy=multi-user.target
