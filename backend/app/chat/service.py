@@ -173,6 +173,7 @@ _TOOL_CMDS = {
     "/terreno": ("obj_gen", "seed"),
     "/blender": ("blender_gen", "cena"),
     "/place": ("rbxlx_gen", "tipo"),
+    "/construir": ("build_gen", "tema"),
 }
 
 
@@ -190,6 +191,10 @@ def _detectar_tarefa(texto: str) -> tuple[str, dict] | None:
         return None
     seed_m = re.search(r"(?:seed|semente)[^0-9]{0,8}(\d{1,6})", t) or re.search(r"\b(\d{1,6})\s*$", t)
     seed = seed_m.group(1) if seed_m else "42"
+    # construção ao vivo (build_gen): exige verbo de pedido + tema
+    pedido = re.search(r"\b(crie|cria|criar|construa|construir|constrói|gera|gerar|faz|fazer|faça|monta|montar)\b", t)
+    if pedido and ("militar" in t or "exercito" in t or "quartel" in t):
+        return ("build_gen", {"tema": "militar", "seed": seed})
     # place nativo do Roblox Studio (.rbxlx): obby/arena/base
     if "obby" in t or "parkour" in t:
         return ("rbxlx_gen", {"tipo": "obby", "seed": seed})
@@ -257,6 +262,18 @@ def _formatar_ferramenta(tool_id: str, result: dict) -> tuple[str, str, dict | N
             "Use o botão de download na resposta para baixar o .rbxlx."
         )
         return corpo, "arquivo", result["arquivo"]
+    if tool_id == "build_gen":
+        corpo = (
+            f"{result['descricao']}\n\n"
+            "Construção ao vivo no Studio:\n"
+            "1. Baixe o plugin-ponte em `/api/build/plugin` (com seu token na URL ou cabeçalho);\n"
+            "2. Salve em `Plugins/ArkherPonte.lua` do seu Roblox Studio;\n"
+            "3. Na aba ARKHER do plugin, cole o endereço do servidor e o token;\n"
+            "4. Clique em **Construir agora** — ela monta peça por peça, em tempo real, na place aberta.\n\n"
+            "Alternativa sem plugin: baixe o .rbxlx anexo e abra no Studio.\n\n"
+            f"Como usar: {result['como_usar']}"
+        )
+        return corpo, "arquivo", result["arquivo"]
     if tool_id == "file_read":
         conteudo = result["conteudo"][:8000]
         return f"Conteúdo de `{result['nome']}` ({result['caracteres']} caracteres):\n\n```\n{conteudo}\n```", "ferramenta", None
@@ -288,6 +305,13 @@ def _run_tool_message(user_id: str, message: str) -> tuple[str, str, list[str], 
     elif tool_id == "rbxlx_gen":
         peda = arg.split()
         args = {"tipo": peda[0] if peda else "", "seed": peda[1] if len(peda) > 1 else "42"}
+    elif tool_id == "build_gen":
+        # "/construir base do exercito brasileiro 7" → tema + seed opcional no fim
+        peda = arg.split()
+        seed = "42"
+        if peda and peda[-1].isdigit():
+            seed = peda.pop()
+        args = {"tema": " ".join(peda), "seed": seed}
     else:
         args = {} if field is None else {field: arg}
     return executar_ferramenta(user_id, tool_id, args)

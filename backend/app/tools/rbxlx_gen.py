@@ -209,6 +209,35 @@ _DESCRICOES = {
 }
 
 
+def renderizar_ops(ops: list[dict], nome_camera_pos=(0, 40, -90)) -> str:
+    """Renderiza um stream de operações do build_gen para .rbxlx nativo.
+
+    Mesmo resultado do plugin-ponte, em arquivo: abre direto no Studio.
+    """
+    ref = _Ref()
+    partes = []
+    for op in ops:
+        if op.get("op") != "part":
+            continue
+        cor = op.get("cor")
+        cor_uint = None
+        if cor is not None and len(cor) == 3:
+            cor_uint = (int(cor[0]) << 16) | (int(cor[1]) << 8) | int(cor[2])
+        partes.append(_part(
+            ref.novo(),
+            op.get("nome", "Part"),
+            op["pos"][0], op["pos"][1], op["pos"][2],
+            op["size"][0], op["size"][1], op["size"][2],
+            cor=cor_uint,
+            ancorado=bool(op.get("ancorado", True)),
+        ))
+    cx, cy, cz = nome_camera_pos
+    return _finalizar(
+        _fechar_workspace(ref.novo(), "".join(partes), _camera(ref.novo(), cx, cy, cz))
+        + _lighting(ref.novo())
+    )
+
+
 def gerar_place(tipo: str, seed: int = 42) -> dict:
     """Gera um place .rbxlx nativo do Roblox Studio.
 

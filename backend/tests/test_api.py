@@ -280,6 +280,60 @@ def test_blender_executar_com_blender_instalado(tmp_path, monkeypatch):
     assert base64.b64decode(res["conteudo_b64"])[:2] == b"PK"
 
 
+# ------------------------------------------- construção ao vivo (plugin-ponte)
+def test_build_militar_ops_e_render():
+    import xml.etree.ElementTree as ET
+    from backend.app.tools import build_gen, rbxlx_gen
+
+    ops = build_gen.base_militar(5)
+    assert len(ops) > 60
+    for op in ops:
+        assert op["op"] == "part"
+        assert len(op["pos"]) == 3 and len(op["size"]) == 3 and len(op["cor"]) == 3
+        assert all(s > 0 for s in op["size"])
+    xml = rbxlx_gen.renderizar_ops(ops)
+    raiz = ET.fromstring(xml)
+    classes = [it.get("class") for it in raiz.iter("Item")]
+    assert classes.count("Part") == len(ops)
+    # determinismo
+    assert build_gen.base_militar(5) == ops
+    assert build_gen.base_militar(6) != ops
+
+
+def test_fluxo_build_api(auth_client):
+    auth_client.post("/api/tools/build_gen/authorize")
+    r = auth_client.post("/api/build/start", json={"tema": "base do exercito brasileiro", "seed": 8})
+    assert r.status_code == 200, r.text
+    bid = r.json()["build_id"]
+    prox = auth_client.get("/api/build/proximo").json()
+    assert prox.get("build_id") == bid and len(prox["ops"]) > 60
+    um = auth_client.get(f"/api/build/{bid}").json()
+    assert um["tema"] == "militar"
+    p = auth_client.get("/api/build/plugin")
+    assert p.status_code == 200
+    assert "Construir agora" in p.text and "X-Arkher-Token" in p.text
+
+
+def test_build_exige_autorizacao(auth_client):
+    r = auth_client.post("/api/build/start", json={"tema": "militar"})
+    assert r.status_code == 403
+
+
+def test_comando_construir(auth_client):
+    auth_client.post("/api/tools/build_gen/authorize")
+    ev = _feito_sse(auth_client, "/construir base militar 5")
+    assert ev.get("kind") == "arquivo"
+    assert ev["arquivo"]["nome"] == "arkher_militar_seed5.rbxlx"
+    assert ev["arquivo"]["conteudo"].startswith("<?xml")
+
+
+def test_intencao_base_exercito(auth_client):
+    auth_client.post("/api/tools/build_gen/authorize")
+    ev = _feito_sse(auth_client, "crie uma base do exercito brasileiro no roblox studio")
+    assert ev.get("kind") == "arquivo"
+    assert ev["arquivo"]["nome"].startswith("arkher_militar")
+
+
 # ------------------------------------------------------- place nativo Roblox
 def test_rbxlx_gerados_sao_xml_valido():
     """Todo place gerado precisa ser XML bem-formado no formato oficial."""

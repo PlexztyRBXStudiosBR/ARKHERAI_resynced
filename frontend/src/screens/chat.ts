@@ -7,10 +7,10 @@ import { t } from "../services/i18n";
 import type { Ctx } from "../app/app";
 
 const EXAMPLES = [
+  "Crie uma base do exército no Roblox Studio",
   "Crie um obby no Roblox Studio",
   "Crie um personagem 3D no Blender",
   "Gere um terreno com montanhas",
-  "Faça um sistema de salvamento para Roblox",
 ];
 
 export function renderChat(ctx: Ctx): HTMLElement {

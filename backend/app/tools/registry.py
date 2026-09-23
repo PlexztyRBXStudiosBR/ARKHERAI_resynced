@@ -21,7 +21,7 @@ from pathlib import Path
 from backend.app import config
 from backend.app.memory import service as memory_service
 from backend.app.storage import db
-from backend.app.tools import blender_gen, generators, rbxlx_gen
+from backend.app.tools import blender_gen, build_gen, generators, rbxlx_gen
 
 MAX_UPLOAD_BYTES = 2 * 1024 * 1024
 MAX_READ_CHARS = 200_000
@@ -88,6 +88,13 @@ TOOLS: dict[str, dict] = {
         "nome": "Gerador de place nativo Roblox Studio (.rbxlx)",
         "descricao": "Gera um place pronto no formato XML oficial do Roblox Studio (obby, arena, base). Você baixa e abre direto no Studio — a cena já vem construída.",
         "permissoes": ["geracao_de_place_roblox"],
+        "confirmacao": False,
+    },
+    "build_gen": {
+        "id": "build_gen",
+        "nome": "Construção ao vivo (plugin-ponte Roblox Studio)",
+        "descricao": "Gera construções temáticas paramétricas (base militar) como stream de operações: o plugin-ponte monta peça por peça dentro do Studio aberto, em tempo real. Também entrega .rbxlx como alternativa.",
+        "permissoes": ["geracao_de_stream_de_construcao", "geracao_de_place_roblox"],
         "confirmacao": False,
     },
 }
@@ -263,6 +270,26 @@ def run(user_id: str, tool_id: str, args: dict) -> dict:
                 result = rbxlx_gen.gerar_place(args.get("tipo", ""), seed)
             except ValueError as e:
                 raise ToolError("INVALID_ARG", str(e))
+        elif tool_id == "build_gen":
+            try:
+                tema = str(args.get("tema", ""))
+                seed = int(args.get("seed", 42))
+                build = build_gen.criar_build(user_id, tema, seed)
+            except ValueError as e:
+                raise ToolError("INVALID_ARG", str(e))
+            xml = rbxlx_gen.renderizar_ops(build["ops"])
+            result = {
+                "descricao": (
+                    f"Construção '{build['tema']}' gerada (seed {build['seed']}, "
+                    f"{len(build['ops'])} peças, build `{build['build_id']}`)."
+                ),
+                "como_usar": (
+                    "Com o plugin-ponte ARKHER no Studio (baixe em /api/build/plugin), "
+                    "clique em 'Construir agora' e ela monta peça por peça na sua place aberta. "
+                    "Sem plugin? Baixe o .rbxlx anexo e abra direto no Studio."
+                ),
+                "arquivo": {"nome": f"arkher_{build['tema']}_seed{build['seed']}.rbxlx", "conteudo": xml},
+            }
         else:
             raise ToolError("UNKNOWN_TOOL", "Ferramenta desconhecida.")
         _audit(user_id, tool_id, True, json.dumps(args, ensure_ascii=False), int((time.monotonic() - t0) * 1000))

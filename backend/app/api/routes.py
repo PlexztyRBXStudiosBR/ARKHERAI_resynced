@@ -5,7 +5,8 @@ import platform
 import time
 
 from fastapi import APIRouter, Body, HTTPException, Request
-from fastapi.responses import StreamingResponse
+from fastapi.responses import PlainTextResponse, StreamingResponse
+from pathlib import Path
 from pydantic import BaseModel, Field
 
 from backend.app import config
@@ -17,6 +18,7 @@ from backend.app.memory import service as memory_service
 from backend.app.model import runtime as model_runtime
 from backend.app.security import ratelimit
 from backend.app.storage import db
+from backend.app.tools import build_gen
 from backend.app.tools import registry as tools
 
 STARTED_AT = time.time()
@@ -268,6 +270,51 @@ def training_start(body: dict = Body(...), user: dict = auth.CurrentUser):
 @router.get("/api/training/log")
 def training_log(step: str = "train", user: dict = auth.CurrentUser):
     return {"ok": True, "lines": training_service.tail(step)}
+
+
+# ------------------------------------------------- construção ao vivo (ponte)
+class BuildStartIn(BaseModel):
+    tema: str = Field(min_length=1, max_length=200)
+    seed: int = Field(default=42, ge=0, le=999999)
+
+
+_PLUGIN_PATH = Path(__file__).resolve().parent.parent / "tools" / "arkher_ponte.lua"
+
+
+@router.post("/api/build/start")
+def build_start(body: BuildStartIn, user: dict = auth.CurrentUser):
+    if not tools.is_authorized(user["id"], "build_gen"):
+        raise HTTPException(status_code=403, detail={
+            "ok": False, "code": "NOT_AUTHORIZED",
+            "message": "Autorize a ferramenta build_gen na tela Ferramentas.",
+        })
+    try:
+        build = build_gen.criar_build(user["id"], body.tema, body.seed)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail={"ok": False, "code": "BAD_TEMA", "message": str(e)})
+    return {"ok": True, "build_id": build["build_id"], "tema": build["tema"], "pecas": len(build["ops"])}
+
+
+@router.get("/api/build/proximo")
+def build_proximo(user: dict = auth.CurrentUser):
+    """Plugin-ponte busca a construção mais recente do usuário."""
+    b = build_gen.build_pendente(user["id"])
+    if b is None:
+        return {}
+    return b
+
+
+@router.get("/api/build/plugin")
+def build_plugin(user: dict = auth.CurrentUser):
+    return PlainTextResponse(_PLUGIN_PATH.read_text(encoding="utf-8"))
+
+
+@router.get("/api/build/{build_id}")
+def build_get(build_id: str, user: dict = auth.CurrentUser):
+    b = build_gen.obter_build(user["id"], build_id)
+    if b is None:
+        raise HTTPException(status_code=404, detail={"ok": False, "code": "NOT_FOUND", "message": "Build não encontrado."})
+    return b
 
 
 # ------------------------------------------------------------- diagnóstico
