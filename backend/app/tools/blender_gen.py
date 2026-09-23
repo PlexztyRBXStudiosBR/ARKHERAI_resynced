@@ -18,7 +18,7 @@ import tempfile
 import zipfile
 from pathlib import Path
 
-GEN_TIMEOUT_S = 240
+GEN_TIMEOUT_S = 600
 
 
 # ------------------------------------------------------------------ scripts
@@ -133,7 +133,67 @@ chao = bpy.context.object
 chao.name = "Chao"
 '''
 
-_LUZ_CAMERA = '''
+_ANIMACAO = '''
+# ---- materiais com textura procedural (gerada pela ARKHER, sem assets externos)
+def material_ruido(nome, cor):
+    mat = bpy.data.materials.new(nome)
+    mat.use_nodes = True
+    no = mat.node_tree.nodes
+    li = mat.node_tree.links
+    no.clear()
+    saida = no.new("ShaderNodeOutputMaterial")
+    bsdf = no.new("ShaderNodeBsdfPrincipled")
+    ruido = no.new("ShaderNodeTexNoise")
+    rampa = no.new("ShaderNodeValToRGB")
+    ruido.inputs["Scale"].default_value = 6.0 + rng.random() * 6
+    li.new(ruido.outputs["Fac"], rampa.inputs["Fac"])
+    li.new(rampa.outputs["Color"], bsdf.inputs["Base Color"])
+    li.new(bsdf.outputs["BSDF"], saida.inputs["Surface"])
+    r, g, b, _ = cor
+    rampa.color_ramp.elements[0].color = (r * 0.4, g * 0.4, b * 0.4, 1)
+    rampa.color_ramp.elements[1].color = cor
+    bsdf.inputs["Roughness"].default_value = 0.45
+    return mat
+
+# palco
+bpy.ops.mesh.primitive_cylinder_add(radius=3.2, depth=0.4, location=(0, 0, 0.2))
+palco = bpy.context.object
+palco.name = "Palco"
+palco.data.materials.append(material_ruido("PalcoMat", (0.25, 0.27, 0.32, 1)))
+
+# cristal central animado (rotação + flutuação)
+bpy.ops.mesh.primitive_ico_sphere_add(subdivisions=2, radius=1.1, location=(0, 0, 2.2))
+cristal = bpy.context.object
+cristal.name = "Cristal"
+cristal.data.materials.append(material_ruido("CristalMat", (0.2, 0.85, 0.75, 1)))
+
+# satélite em órbita
+bpy.ops.mesh.primitive_cube_add(size=0.55, location=(2.6, 0, 2.2))
+sat = bpy.context.object
+sat.name = "Satelite"
+sat.data.materials.append(material_ruido("SateliteMat", (0.95, 0.75, 0.2, 1)))
+
+# ---- animação: 25 quadros, loop perfeito ----
+scene.frame_start = 1
+scene.frame_end = 25
+for f in range(1, 26):
+    t = (f - 1) / 24
+    scene.frame_set(f)
+    cristal.rotation_euler = (0, 0, t * 2 * math.pi)
+    cristal.location = (0, 0, 2.2 + 0.35 * math.sin(t * 2 * math.pi))
+    cristal.keyframe_insert("rotation_euler")
+    cristal.keyframe_insert("location")
+    sat.location = (2.6 * math.cos(t * 2 * math.pi), 2.6 * math.sin(t * 2 * math.pi), 2.2)
+    sat.rotation_euler = (t * 4 * math.pi, 0, t * 2 * math.pi)
+    sat.keyframe_insert("location")
+    sat.keyframe_insert("rotation_euler")
+
+bpy.ops.mesh.primitive_plane_add(size=16, location=(0, 0, 0))
+chao = bpy.context.object
+chao.name = "Chao"
+'''
+
+_LUZES = '''
 # ---- iluminação e câmera ----
 bpy.ops.object.light_add(type="SUN", location=(6, -4, 9))
 sol = bpy.context.object
@@ -147,7 +207,6 @@ preench.data.size = 4
 
 bpy.ops.object.camera_add(location=(8.5, -8.5, 5.2))
 cam = bpy.context.object
-direction = (0, 0, 1.0)
 cam.rotation_mode = "XYZ"
 cam.rotation_euler = (math.radians(68), 0, math.radians(45))
 scene.camera = cam
@@ -155,7 +214,9 @@ scene.camera = cam
 scene.world.use_nodes = True
 bg = scene.world.node_tree.nodes["Background"]
 bg.inputs["Color"].default_value = (0.06, 0.08, 0.12, 1)
+'''
 
+_SAIDA_IMAGEM = '''
 # ---- saída real: GLB + render ----
 scene.render.filepath = os.path.join(OUT, f"{NOME}_seed{SEED}.png")
 bpy.ops.render.render(write_still=True)
@@ -163,10 +224,23 @@ bpy.ops.export_scene.gltf(filepath=os.path.join(OUT, f"{NOME}_seed{SEED}.glb"))
 print("ARKHER_OK:", os.path.join(OUT, f"{NOME}_seed{SEED}.glb"))
 '''
 
+_SAIDA_ANIM = '''
+# ---- saída real: still + sequência animada + GLB com keyframes ----
+scene.render.filepath = os.path.join(OUT, f"{NOME}_seed{SEED}_quadro.png")
+bpy.ops.render.render(write_still=True)
+scene.render.filepath = os.path.join(OUT, f"{NOME}_seed{SEED}_frame_")
+bpy.ops.render.render(animation=True)
+bpy.ops.export_scene.gltf(filepath=os.path.join(OUT, f"{NOME}_seed{SEED}.glb"), export_animations=True)
+print("ARKHER_OK:", os.path.join(OUT, f"{NOME}_seed{SEED}.glb"))
+'''
+
+_LUZ_CAMERA = _LUZES + _SAIDA_IMAGEM
+
 CENAS = {
-    "terreno": (_TERRENO, "Terreno"),
-    "cena": (_CENA, "Cena"),
-    "personagem": (_PERSONAGEM, "Personagem"),
+    "terreno": (_TERRENO, "Terreno", "imagem"),
+    "cena": (_CENA, "Cena", "imagem"),
+    "personagem": (_PERSONAGEM, "Personagem", "imagem"),
+    "animacao": (_ANIMACAO, "Animacao", "anim"),
 }
 
 
@@ -174,8 +248,9 @@ def gerar_script(cena: str, seed: int) -> str:
     cena = (cena or "").strip().lower()
     if cena not in CENAS:
         raise ValueError(f"Cena desconhecida. Opções: {', '.join(sorted(CENAS))}")
-    corpo, nome = CENAS[cena]
-    script = _BASE_HEADER.format(seed=int(seed)) + corpo + _LUZ_CAMERA
+    corpo, nome, saida = CENAS[cena]
+    rodape = _LUZES + (_SAIDA_ANIM if saida == "anim" else _SAIDA_IMAGEM)
+    script = _BASE_HEADER.format(seed=int(seed)) + corpo + rodape
     return f'NOME = "{nome}"\n' + script
 
 

@@ -47,6 +47,7 @@ ou pessoal). Catálogo em `model/datasets/fontes.py`:
 | Project Gutenberg | domínio público (EUA) | texto corrido |
 | Wikipédia PT (dumps oficiais) | CC-BY-SA 4.0 | pares pergunta/resposta |
 | Stack Exchange gamedev (dump oficial) | CC-BY-SA 3.0 | especialidade game dev |
+| Internet Archive (`ia-buscar`/`ia-baixar`) | a licença declarada de cada item | textos com licença verificada por item — sem licença, não entra |
 
 Fluxo (numa máquina com rede — seu PC ou um nó de `workers/`):
 

@@ -17,6 +17,7 @@ import hashlib
 import json
 import re
 import sys
+import urllib.parse
 import urllib.request
 from datetime import datetime, timezone
 from pathlib import Path
@@ -51,6 +52,12 @@ FONTES = {
             "gamedev.stackexchange.com.7z": "https://archive.org/download/stackexchange/gamedev.stackexchange.com.7z",
         },
         "formato": "arquivo_7z_manual",
+    },
+    "internet_archive": {
+        "nome": "Internet Archive — textos com licença declarada (dinâmico)",
+        "licenca": "registrada por item a partir dos metadados oficiais (sem licença = não usa)",
+        "urls": {},  # dinâmico: `fontes ia-buscar <consulta>` / `fontes ia-baixar <item> <arquivo>`
+        "formato": "texto_livro",
     },
 }
 
@@ -113,6 +120,73 @@ def baixar(chave: str, timeout_s: int = 300) -> None:
     }
     salvar_manifesto(m)
     print("manifesto atualizado (licença + origem registradas).")
+
+
+# -------------------------------------------------------- internet archive
+def ia_licenca_de_meta(meta: dict) -> str:
+    """Extrai a licença declarada nos metadados oficiais do item."""
+    lic = (meta.get("metadata") or {}).get("licenseurl", "")
+    if isinstance(lic, list):
+        lic = lic[0] if lic else ""
+    return str(lic).strip()
+
+
+def _get_json(url: str, timeout_s: int = 60) -> dict:
+    req = urllib.request.Request(url, headers={"User-Agent": "ARKHER-treino/1.0 (contato: dono do projeto)"})
+    with urllib.request.urlopen(req, timeout=timeout_s) as resp:
+        return json.loads(resp.read().decode("utf-8"))
+
+
+def ia_buscar(consulta: str, linhas: int = 8) -> list[dict]:
+    """Busca textos COM licença declarada no Internet Archive (API oficial)."""
+    q = urllib.parse.quote(f"({consulta}) AND licenseurl:[* TO *] AND mediatype:texts")
+    url = (
+        "https://archive.org/advancedsearch.php?q=" + q
+        + f"&fl[]=identifier&fl[]=title&fl[]=licenseurl&rows={int(linhas)}&output=json"
+    )
+    dados = _get_json(url)
+    return dados.get("response", {}).get("docs", [])
+
+
+def ia_baixar(item: str, arquivo: str, timeout_s: int = 600) -> None:
+    """Baixa um arquivo do Internet Archive SOMENTE se o item declara licença."""
+    meta = _get_json(f"https://archive.org/metadata/{urllib.parse.quote(item)}")
+    licenca = ia_licenca_de_meta(meta)
+    if not licenca:
+        raise SystemExit(
+            f"O item '{item}' não declara licença nos metadados oficiais. "
+            "Regra do projeto: sem licença documentada, o dado não entra."
+        )
+    destino = EXTERNOS_DIR / "internet_archive"
+    destino.mkdir(parents=True, exist_ok=True)
+    url = f"https://archive.org/download/{urllib.parse.quote(item)}/{urllib.parse.quote(arquivo)}"
+    alvo = destino / f"{item}_{arquivo}".replace("/", "_")
+    print(f"baixando {url} …")
+    req = urllib.request.Request(url, headers={"User-Agent": "ARKHER-treino/1.0 (contato: dono do projeto)"})
+    with urllib.request.urlopen(req, timeout=timeout_s) as resp, open(alvo, "wb") as f:
+        while True:
+            bloco = resp.read(1 << 16)
+            if not bloco:
+                break
+            f.write(bloco)
+    m = carregar_manifesto()
+    m["fontes"].setdefault("internet_archive", {
+        "nome": FONTES["internet_archive"]["nome"],
+        "licenca": FONTES["internet_archive"]["licenca"],
+        "formato": "texto_livro",
+        "arquivos": [],
+    })
+    m["fontes"]["internet_archive"]["arquivos"].append({
+        "arquivo": alvo.name,
+        "item": item,
+        "url": url,
+        "licenca_item": licenca,
+        "sha256": hashlib.sha256(alvo.read_bytes()).hexdigest(),
+        "bytes": alvo.stat().st_size,
+        "baixado_em": _agora(),
+    })
+    salvar_manifesto(m)
+    print(f"ok: {alvo.name} ({alvo.stat().st_size} bytes) — licença: {licenca}")
 
 
 # --------------------------------------------------------------- integração
@@ -187,6 +261,14 @@ def integrar(max_por_fonte: int = 4000) -> Path:
                     import gzip
                     with gzip.open(p, "rt", encoding="utf-8", errors="ignore") as f:
                         linhas.extend(extrair_abstratos_wikipedia(f.read()))
+        elif formato == "texto_livro":
+            for arq in reg["arquivos"]:
+                p = pasta / arq["arquivo"]
+                if p.exists():
+                    for raw in p.read_text(encoding="utf-8", errors="ignore").splitlines():
+                        ln = raw.strip()
+                        if len(ln) >= 40:
+                            linhas.append(ln)
         if linhas:
             linhas = linhas[:max_por_fonte]
             saida.append("# fonte: " + chave + " — " + reg["licenca"])
@@ -206,8 +288,14 @@ def main() -> None:
         baixar(sys.argv[2])
     elif cmd == "integrar":
         integrar()
+    elif cmd == "ia-buscar":
+        for doc in ia_buscar(" ".join(sys.argv[2:]) or "game design"):
+            print(f"{doc.get('identifier', '?'):40s} {str(doc.get('title', ''))[:60]}")
+            print(f"{'':40s} {doc.get('licenseurl', '')}")
+    elif cmd == "ia-baixar":
+        ia_baixar(sys.argv[2], sys.argv[3])
     else:
-        raise SystemExit("uso: fontes listar | baixar <fonte> | integrar")
+        raise SystemExit("uso: fontes listar | baixar <fonte> | integrar | ia-buscar <consulta> | ia-baixar <item> <arquivo>")
 
 
 if __name__ == "__main__":

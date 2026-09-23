@@ -10,8 +10,8 @@ import type { Ctx } from "../app/app";
 
 const EXAMPLES = [
   "Crie uma base do exército no Roblox Studio",
+  "Crie uma animação 3D com textura no Blender",
   "Crie um obby no Roblox Studio",
-  "Crie um personagem 3D no Blender",
   "Gere um terreno com montanhas",
 ];
 

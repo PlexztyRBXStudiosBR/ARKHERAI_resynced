@@ -232,7 +232,7 @@ def test_blender_scripts_gerados_compilam(auth_client):
     from pathlib import Path
 
     auth_client.post("/api/tools/blender_gen/authorize")
-    for cena in ("terreno", "cena", "personagem"):
+    for cena in ("terreno", "cena", "personagem", "animacao"):
         r = auth_client.post("/api/tools/blender_gen/run", json={"cena": cena, "seed": 9})
         assert r.status_code == 200, r.text
         res = r.json()["result"]
@@ -243,6 +243,18 @@ def test_blender_scripts_gerados_compilam(auth_client):
         py_compile.compile(caminho, doraise=True)  # syntax real verificada
         Path(caminho).unlink()
         assert "bpy" in script and "export_scene.gltf" in script
+    # animação: keyframes + sequência de frames + textura procedural
+    from backend.app.tools import blender_gen
+    anim = blender_gen.gerar_script("animacao", 5)
+    assert "keyframe_insert" in anim and "render(animation=True)" in anim
+    assert "ShaderNodeTexNoise" in anim  # textura gerada, sem asset externo
+
+
+def test_intencao_animacao_natural(auth_client):
+    auth_client.post("/api/tools/blender_gen/authorize")
+    ev = _feito_sse(auth_client, "crie uma animacao 3d com textura no blender")
+    assert ev.get("kind") == "arquivo"
+    assert ev["arquivo"]["nome"].startswith("animacao")
 
 
 def test_blender_gen_rejeita_cena_invalida(auth_client):

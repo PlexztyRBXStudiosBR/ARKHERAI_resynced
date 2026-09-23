@@ -14,6 +14,7 @@ nós que você controla, cada um no uso para o qual o serviço foi feito.
 | --- | --- | --- |
 | **Seu PC / este servidor** | `model/training/train.py` direto | nó zero, sempre disponível |
 | **Kaggle** (GPU T4/P100 grátis) | `workers/kaggle/arkher_treino.ipynb` | GPU gratuita legítima para treino |
+| **Kaggle** (render 3D) | `workers/kaggle/arkher_render.ipynb` | Blender real gera modelos/animações/texturas a partir dos scripts da ARKHER |
 | **Google Colab** | `workers/colab/arkher_treino.ipynb` | idem, outra conta de GPU |
 | **Lightning AI Studios** | `workers/lightning/treino.py` | créditos gratuitos de GPU |
 

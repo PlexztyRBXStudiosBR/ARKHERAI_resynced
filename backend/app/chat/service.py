@@ -221,7 +221,9 @@ def _detectar_tarefa(texto: str) -> tuple[str, dict] | None:
             return ("roblox_gen", {"tipo": "checkpoint"})
         if "dia" in t and "noite" in t:
             return ("roblox_gen", {"tipo": "dia_noite"})
-    if "blender" in t or "3d" in t or "personagem" in t or "robo" in t or "cenario" in t or "modelo" in t:
+    if "blender" in t or "3d" in t or "personagem" in t or "robo" in t or "cenario" in t or "modelo" in t or "animacao" in t:
+        if "animacao" in t or "anima " in t or "textura" in t or "animado" in t:
+            return ("blender_gen", {"cena": "animacao", "seed": seed})
         if "terreno" in t or "montanha" in t or "relevo" in t:
             return ("blender_gen", {"cena": "terreno", "seed": seed})
         if "personagem" in t or "robo" in t:
