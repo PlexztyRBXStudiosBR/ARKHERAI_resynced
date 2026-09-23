@@ -8,9 +8,9 @@ import type { Ctx } from "../app/app";
 
 const EXAMPLES = [
   "O que é uma pipeline 3D completa?",
-  "Como estruturar um jogo no Roblox?",
+  "/blender terreno 7",
   "/roblox salvamento",
-  "/terreno 42",
+  "Como estruturar um jogo no Roblox?",
 ];
 
 export function renderChat(ctx: Ctx): HTMLElement {
@@ -178,7 +178,7 @@ function messageEl(ctx: Ctx, m: Message, streaming: boolean): HTMLElement {
       }
       if (m.arquivo) {
         const dl = el("button", { class: "mini pri" }, "⤓ baixar " + m.arquivo.nome);
-        dl.onclick = () => ctx.download(m.arquivo!.nome, m.arquivo!.conteudo);
+        dl.onclick = () => ctx.download(m.arquivo!.nome, m.arquivo!.conteudo ?? "", m.arquivo!.conteudo_b64);
         actions.append(dl);
       }
     }

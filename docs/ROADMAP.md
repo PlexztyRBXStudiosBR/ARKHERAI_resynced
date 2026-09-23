@@ -38,9 +38,9 @@ persistindo no checkpoint, sem nenhuma máquina precisando ficar ligada para sem
 
 **Conectores nativos (caminho aprovado para ferramentas pesadas)**:
 
-1. **Conector Blender**: quando houver modelo base maduro, o backend conversa com o
-   Blender rodando na MÁQUINA DO USUÁRIO via API oficial, gerando scripts Python que o
-   usuário revisa e executa com confirmação. Nada de controle remoto escondido.
+1. ✅ **Conector Blender (já implementado)**: gera scripts Python do Blender e,
+   com o Blender instalado no servidor ou na máquina do usuário, executa em modo
+   headless e devolve 3D real (.glb + render). Sem controle remoto escondido.
 2. **Conector Roblox Studio**: exportação de módulos Luau e assets gerados pela ARKHER
    para o projeto do usuário, com revisão humana antes de publicar.
 3. **Conector de animação**: geração de blocos de keyframes/dados de animação em

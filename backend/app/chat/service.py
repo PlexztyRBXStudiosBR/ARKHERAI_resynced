@@ -170,6 +170,7 @@ _TOOL_CMDS = {
     "/memoria": ("memory_query", "q"),
     "/roblox": ("roblox_gen", "tipo"),
     "/terreno": ("obj_gen", "seed"),
+    "/blender": ("blender_gen", "cena"),
 }
 
 
@@ -182,7 +183,11 @@ def _run_tool_message(user_id: str, message: str) -> tuple[str, str, list[str], 
     cmd = parts[0].lower()
     arg = parts[1] if len(parts) > 1 else ""
     tool_id, field = _TOOL_CMDS[cmd]
-    args = {} if field is None else {field: arg}
+    if tool_id == "blender_gen":
+        peda = arg.split()
+        args = {"cena": peda[0] if peda else "", "seed": peda[1] if len(peda) > 1 else "42"}
+    else:
+        args = {} if field is None else {field: arg}
     try:
         result = tools.run(user_id, tool_id, args)
         if tool_id == "data_export":
@@ -205,6 +210,18 @@ def _run_tool_message(user_id: str, message: str) -> tuple[str, str, list[str], 
                 "Use o botão de download na resposta para baixar o arquivo."
             )
             return corpo, "arquivo", [tool_id], result["arquivo"]
+        if tool_id == "blender_gen":
+            extra = ""
+            if result.get("modo") == "blender_real":
+                extra = "\n\nExecutado em Blender real no servidor — artefatos no zip (GLB + render PNG)."
+            else:
+                extra = (
+                    "\n\nComo rodar no seu Blender:\n"
+                    "1. Baixe o script no botão de download;\n"
+                    "2. `blender --background --python nome_do_script.py` (ou abra e rode);\n"
+                    "3. Os artefatos saem na pasta `arkher_saida/`."
+                )
+            return f"{result['descricao']}{extra}", "arquivo", [tool_id], result["arquivo"]
         if tool_id == "file_read":
             conteudo = result["conteudo"][:8000]
             return f"Conteúdo de `{result['nome']}` ({result['caracteres']} caracteres):\n\n```\n{conteudo}\n```", "ferramenta", [tool_id], None

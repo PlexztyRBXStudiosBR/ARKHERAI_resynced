@@ -223,6 +223,62 @@ def test_obj_gen_produz_obj_valido(auth_client):
     assert r2.json()["result"]["arquivo"]["conteudo"] == obj
 
 
+# ------------------------------------------------------------ conector blender
+def test_blender_scripts_gerados_compilam(auth_client):
+    """Os scripts Blender gerados precisam ser Python válido (py_compile)."""
+    import py_compile
+    import tempfile
+    from pathlib import Path
+
+    auth_client.post("/api/tools/blender_gen/authorize")
+    for cena in ("terreno", "cena", "personagem"):
+        r = auth_client.post("/api/tools/blender_gen/run", json={"cena": cena, "seed": 9})
+        assert r.status_code == 200, r.text
+        res = r.json()["result"]
+        script = res["arquivo"]["conteudo"]
+        with tempfile.NamedTemporaryFile("w", suffix=".py", delete=False) as f:
+            f.write(script)
+            caminho = f.name
+        py_compile.compile(caminho, doraise=True)  # syntax real verificada
+        Path(caminho).unlink()
+        assert "bpy" in script and "export_scene.gltf" in script
+
+
+def test_blender_gen_rejeita_cena_invalida(auth_client):
+    auth_client.post("/api/tools/blender_gen/authorize")
+    r = auth_client.post("/api/tools/blender_gen/run", json={"cena": "nao_existe"})
+    assert r.status_code == 400
+
+
+def test_blender_gen_exige_autorizacao(auth_client):
+    r = auth_client.post("/api/tools/blender_gen/run", json={"cena": "cena"})
+    assert r.status_code == 403
+
+
+def test_blender_executar_com_blender_instalado(tmp_path, monkeypatch):
+    """Com um binário Blender (fake aqui), executar() roda e devolve zip base64."""
+    import base64
+    import os
+    import stat
+    from backend.app.tools import blender_gen
+
+    fake = tmp_path / "blender"
+    fake.write_text(
+        "#!/bin/sh\nmkdir -p arkher_saida\necho GLB > arkher_saida/x.glb\necho ARKHER_OK\n"
+    )
+    fake.chmod(fake.stat().st_mode | stat.S_IEXEC)
+    monkeypatch.setenv("ARKHER_BLENDER", str(fake))
+    cwd = os.getcwd()
+    os.chdir(tmp_path)
+    try:
+        res = blender_gen.executar(blender_gen.gerar_script("cena", 1), "cena_seed1")
+    finally:
+        os.chdir(cwd)
+    assert res is not None
+    assert res["itens"] == ["x.glb"]
+    assert base64.b64decode(res["conteudo_b64"])[:2] == b"PK"
+
+
 # ------------------------------------------------------------- feedback
 def test_feedback_registra_sinal_de_treino(auth_client):
     r = auth_client.post("/api/feedback", json={"session_id": "s_x", "rating": 1, "content_hash": "abc123"})

@@ -160,7 +160,7 @@ export interface Message {
   kind: string;
   created_at: string;
   hash?: string;
-  arquivo?: { nome: string; conteudo: string };
+  arquivo?: { nome: string; conteudo?: string; conteudo_b64?: string };
 }
 
 export interface Memory {

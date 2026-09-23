@@ -18,6 +18,16 @@ docker compose up --build
 curl http://localhost:8710/api/health
 ```
 
+## Conector Blender (geração 3D real)
+
+Com o Blender instalado na máquina do backend, a ARKHER **executa de verdade**:
+o comando `/blender terreno|cena|personagem [seed]` roda o script em modo
+headless e devolve `.glb` + render `.png` num zip. Sem Blender no servidor, o
+mesmo comando entrega o script `.py` pronto para rodar na máquina do usuário.
+
+- Binário detectado automaticamente (`blender` no PATH) ou via `ARKHER_BLENDER=/caminho/blender`.
+- No Docker: adicione o Blender à imagem ou monte o binário; o resto é automático.
+
 ## Manual
 
 ```bash

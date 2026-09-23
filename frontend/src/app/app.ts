@@ -27,7 +27,7 @@ export interface Ctx {
   openSession: (id: string) => Promise<void>;
   refreshSessions: () => Promise<void>;
   exportSession: () => void;
-  download: (name: string, content: string) => void;
+  download: (name: string, content: string, contentB64?: string) => void;
   rate: (hash: string, rating: number, btn: HTMLButtonElement) => Promise<void>;
 }
 
@@ -140,7 +140,7 @@ export async function boot(container: HTMLElement): Promise<void> {
     let erro: ApiError | null = null;
     let doneKind = "texto";
     let doneHash: string | undefined;
-    let doneArquivo: { nome: string; conteudo: string } | undefined;
+    let doneArquivo: { nome: string; conteudo?: string; conteudo_b64?: string } | undefined;
 
     try {
       for await (const ev of api.chat(text, session, store.state.settings.memoryEnabled, aborter.signal, replaceLastUser)) {
@@ -156,8 +156,8 @@ export async function boot(container: HTMLElement): Promise<void> {
           doneKind = String(ev.data["kind"] ?? "texto");
           if (typeof ev.data["content_hash"] === "string") doneHash = ev.data["content_hash"];
           const arq = ev.data["arquivo"];
-          if (arq && typeof arq === "object" && "nome" in arq && "conteudo" in arq) {
-            doneArquivo = arq as { nome: string; conteudo: string };
+          if (arq && typeof arq === "object" && "nome" in arq) {
+            doneArquivo = arq as { nome: string; conteudo?: string; conteudo_b64?: string };
           }
         } else if (ev.event === "error") {
           erro = { code: String(ev.data["code"]), message: String(ev.data["message"]), status: 0 };
@@ -254,8 +254,16 @@ export async function boot(container: HTMLElement): Promise<void> {
     }
   }
 
-  function download(name: string, content: string): void {
-    const blob = new Blob([content], { type: "application/octet-stream" });
+  function download(name: string, content: string, contentB64?: string): void {
+    let blob: Blob;
+    if (contentB64) {
+      const bin = atob(contentB64);
+      const bytes = new Uint8Array(bin.length);
+      for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+      blob = new Blob([bytes], { type: "application/octet-stream" });
+    } else {
+      blob = new Blob([content], { type: "application/octet-stream" });
+    }
     const url = URL.createObjectURL(blob);
     const a = el("a", { href: url, download: name });
     document.body.append(a);

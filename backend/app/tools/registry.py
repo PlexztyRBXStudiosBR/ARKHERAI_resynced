@@ -21,7 +21,7 @@ from pathlib import Path
 from backend.app import config
 from backend.app.memory import service as memory_service
 from backend.app.storage import db
-from backend.app.tools import generators
+from backend.app.tools import blender_gen, generators
 
 MAX_UPLOAD_BYTES = 2 * 1024 * 1024
 MAX_READ_CHARS = 200_000
@@ -75,6 +75,13 @@ TOOLS: dict[str, dict] = {
         "descricao": "Gera um terreno heightmap em formato OBJ para importar no Blender ou na sua engine. Determinístico pela seed.",
         "permissoes": ["geracao_de_asset_local"],
         "confirmacao": False,
+    },
+    "blender_gen": {
+        "id": "blender_gen",
+        "nome": "Conector Blender (3D real)",
+        "descricao": "Gera scripts Python do Blender (terreno, cena, personagem). Com Blender no servidor, executa de verdade e devolve .glb + render; sem Blender, entrega o .py para rodar no seu.",
+        "permissoes": ["geracao_de_script_3d", "execucao_blender_local_se_instalado"],
+        "confirmacao": True,
     },
 }
 
@@ -223,6 +230,26 @@ def run(user_id: str, tool_id: str, args: dict) -> dict:
                 result = generators.gerar_terreno(args.get("seed"))
             except ValueError as e:
                 raise ToolError("INVALID_ARG", str(e))
+        elif tool_id == "blender_gen":
+            try:
+                seed = int(args.get("seed", 42))
+                cena = str(args.get("cena", ""))
+                script = blender_gen.gerar_script(cena, seed)
+            except ValueError as e:
+                raise ToolError("INVALID_ARG", str(e))
+            artefatos = blender_gen.executar(script, f"{cena}_seed{seed}")
+            if artefatos is not None:
+                result = {
+                    "modo": "blender_real",
+                    "descricao": f"A ARKHER executou o Blender de verdade ({', '.join(artefatos['itens'])}).",
+                    "arquivo": artefatos,
+                }
+            else:
+                result = {
+                    "modo": "script_para_usuario",
+                    "descricao": "O Blender não está instalado neste servidor. Segue o script pronto para rodar no seu Blender (ou instale o Blender no servidor e a ARKHER executa de verdade).",
+                    "arquivo": {"nome": f"{cena}_seed{seed}_arkher.py", "conteudo": script},
+                }
         else:
             raise ToolError("UNKNOWN_TOOL", "Ferramenta desconhecida.")
         _audit(user_id, tool_id, True, json.dumps(args, ensure_ascii=False), int((time.monotonic() - t0) * 1000))
