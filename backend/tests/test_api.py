@@ -312,6 +312,17 @@ def test_build_militar_ops_e_render():
     assert build_gen.base_militar(6) != ops
 
 
+def test_produto_status(auth_client):
+    r = auth_client.get("/api/produto/status")
+    assert r.status_code == 200
+    d = r.json()
+    assert d["total"] == len(d["itens"]) >= 6
+    ids = {i["id"] for i in d["itens"]}
+    assert {"interface", "modelo", "pontes", "render", "deploy"} <= ids
+    assert isinstance(d["prontos"], int)
+    assert "desktop remoto" in " ".join(d["fora_do_produto_por_decisao"])
+
+
 def test_fluxo_build_api(auth_client):
     auth_client.post("/api/tools/build_gen/authorize")
     r = auth_client.post("/api/build/start", json={"tema": "base do exercito brasileiro", "seed": 8})

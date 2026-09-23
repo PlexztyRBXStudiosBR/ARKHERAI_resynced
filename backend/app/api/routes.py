@@ -325,6 +325,101 @@ def build_get(build_id: str, user: dict = auth.CurrentUser):
     return b
 
 
+# ------------------------------------------------------- produto: prontidão
+@router.get("/api/produto/status")
+def produto_status(user: dict = auth.CurrentUser):
+    """Checklist honesto: o que está pronto no produto e o que falta."""
+    from backend.app.tools import blender_gen, build_gen, rbxlx_gen  # noqa: F401
+
+    root = Path(__file__).resolve().parents[3]
+    dist = root / "frontend" / "dist"
+    manifesto = root / "model" / "datasets" / "externos" / "MANIFESTO.json"
+    fontes_baixadas = 0
+    if manifesto.exists():
+        try:
+            import json as _json
+            fontes_baixadas = len(_json.loads(manifesto.read_text(encoding="utf-8")).get("fontes", {}))
+        except Exception:
+            fontes_baixadas = 0
+
+    st = model_runtime.status()
+    ckpt = root / "model" / "checkpoints" / "latest.pt"
+    train_txt = root / "model" / "datasets" / "generated" / "train.txt"
+    vocab = root / "model" / "tokenizer" / "vocab" / "bpe_v1.json"
+
+    def _mb(p: Path) -> str:
+        return f"{p.stat().st_size // (1024*1024)} MB" if p.exists() else "ausente"
+
+    def _kb(p: Path) -> str:
+        return f"{p.stat().st_size // 1024} KB" if p.exists() else "ausente"
+
+    itens = [
+        {
+            "id": "interface",
+            "nome": "Interface completa (chat, memória, ferramentas, treino, config, mobile)",
+            "ok": (dist / "index.html").exists() and any((dist / "assets").glob("*.js")) if (dist / "assets").exists() else False,
+            "detalhe": "Frontend build servido pelo backend.",
+        },
+        {
+            "id": "modelo",
+            "nome": "Modelo próprio carregado e respondendo",
+            "ok": st["state"] == "ready",
+            "detalhe": f"estado={st['state']} | checkpoint={_mb(ckpt)}",
+        },
+        {
+            "id": "tokenizer",
+            "nome": "Tokenizer próprio (BPE)",
+            "ok": vocab.exists(),
+            "detalhe": "vocab/bpe_v1.json" if vocab.exists() else "vocab ausente",
+        },
+        {
+            "id": "dataset",
+            "nome": "Corpus de treino montado (+ fontes externas licenciadas)",
+            "ok": train_txt.exists() and train_txt.stat().st_size > 100000,
+            "detalhe": f"train.txt {_kb(train_txt)} | fontes externas baixadas: {fontes_baixadas}",
+        },
+        {
+            "id": "ferramentas",
+            "nome": "Ferramentas com autorização e auditoria",
+            "ok": len(tools.TOOLS) >= 8,
+            "detalhe": f"{len(tools.TOOLS)} ferramentas: " + ", ".join(sorted(tools.TOOLS)),
+        },
+        {
+            "id": "pontes",
+            "nome": "Pontes de construção ao vivo (plugin Roblox Studio + addon Blender)",
+            "ok": (root / "backend" / "app" / "tools" / "arkher_ponte.lua").exists()
+            and (root / "backend" / "app" / "tools" / "arkher_ponte_blender.py").exists(),
+            "detalhe": "Entregues em /api/build/plugin e /api/build/plugin-blender.",
+        },
+        {
+            "id": "render",
+            "nome": "Nós de render/treino na rede (Kaggle, Colab, Lightning, PC)",
+            "ok": (root / "workers" / "render" / "render_node.py").exists()
+            and (root / "workers" / "kaggle" / "arkher_render.ipynb").exists()
+            and (root / "workers" / "kaggle" / "arkher_treino.ipynb").exists(),
+            "detalhe": "workers/ prontos; execução acontece nas contas do dono.",
+        },
+        {
+            "id": "deploy",
+            "nome": "Empacotamento para produção (Docker + dados persistentes)",
+            "ok": (root / "Dockerfile").exists() and (root / "docker-compose.yml").exists(),
+            "detalhe": "docker compose up --build; volume para os dados.",
+        },
+    ]
+    prontos = sum(1 for i in itens if i["ok"])
+    return {
+        "ok": True,
+        "prontos": prontos,
+        "total": len(itens),
+        "itens": itens,
+        "fora_do_produto_por_decisao": [
+            "busca em web no runtime (regra: zero chamadas externas)",
+            "desktop remoto/VM em runner de CI (termos do serviço)",
+            "shell arbitrário exposto na interface (segurança)",
+        ],
+    }
+
+
 # ------------------------------------------------------------- diagnóstico
 @router.get("/api/diagnostics")
 def diagnostics(user: dict = auth.CurrentUser):

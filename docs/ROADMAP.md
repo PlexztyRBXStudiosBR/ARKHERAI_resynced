@@ -48,8 +48,9 @@ persistindo no checkpoint, sem nenhuma máquina precisando ficar ligada para sem
    Studio (peças na place aberta) e addon do Blender (meshes reais com material e
    cor). O usuário controla os programas; a ARKHER constrói. Criatividade livre
    além das estruturas conhecidas acompanha o crescimento do modelo (rede workers).
-3. **Conector de animação**: geração de blocos de keyframes/dados de animação em
-   formatos abertos para uso em ferramentas do usuário.
+3. ✅ **Conector de animação**: o template `animacao` do Blender gera keyframes
+   reais (loop de 25 quadros) e exporta GLB **com a animação dentro**, além de
+   textura procedural — executável nos nós de render da rede (`workers/render/`).
 4. ✅ **Fontes externas licenciadas**: Wikipédia/Gutenberg/Stack Exchange gamedev entram no auto-treino com licença registrada (`model/datasets/fontes.py`).
 5. **Sinal de uso**: o feedback 👍/👎 (já implementado) alimenta os ciclos de treino.
 
