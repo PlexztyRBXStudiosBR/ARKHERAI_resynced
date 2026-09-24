@@ -236,11 +236,128 @@ print("ARKHER_OK:", os.path.join(OUT, f"{NOME}_seed{SEED}.glb"))
 
 _LUZ_CAMERA = _LUZES + _SAIDA_IMAGEM
 
+
+def _textura_corpo(estilo: str) -> str:
+    """Textura procedural SEM EMENDA (tileable) assada em 4K.
+
+    O pulo do gato pro Roblox: o serviço comprime texturas grandes, então a
+    estratégia é usar textura tileable repetida (tiling) — o detalhe efetivo
+    continua 4K sem estourar o orçamento. O script assa um tile 4096x4096.
+    """
+    return (
+        '''
+# ---- ARKHER: textura tileable 4K (estilo: ''' + estilo + ''') ----
+scene.render.engine = "CYCLES"
+scene.cycles.samples = 12
+scene.cycles.device = "CPU"
+
+bpy.ops.mesh.primitive_plane_add(size=2, location=(0, 0, 0))
+plano = bpy.context.object
+plano.name = "PlanoTextura"
+
+RES = 4096
+img = bpy.data.images.new("ARKHER_tile_4k", width=RES, height=RES, alpha=False)
+
+mat = bpy.data.materials.new("MatTextura")
+mat.use_nodes = True
+no = mat.node_tree.nodes
+li = mat.node_tree.links
+no.clear()
+saida = no.new("ShaderNodeOutputMaterial")
+bsdf = no.new("ShaderNodeBsdfPrincipled")
+li.new(bsdf.outputs["BSDF"], saida.inputs["Surface"])
+alvo = no.new("ShaderNodeTexImage")
+alvo.image = img
+no.active = alvo
+
+cor_final = None
+'''
+        + {
+            "tijolo": '''
+brick = no.new("ShaderNodeTexBrick")
+brick.inputs["Scale"].default_value = 2.5
+brick.offset = 0.5
+brick.offset_frequency = 2
+rampa = no.new("ShaderNodeValToRGB")
+rampa.color_ramp.elements[0].color = (0.35, 0.18, 0.14, 1)
+rampa.color_ramp.elements[1].color = (0.62, 0.3, 0.22, 1)
+li.new(brick.outputs["Fac"], rampa.inputs["Fac"])
+mix = no.new("ShaderNodeMixRGB")
+mix.inputs["Fac"].default_value = 0.85
+li.new(rampa.outputs["Color"], mix.inputs["Color1"])
+li.new(brick.outputs["Color"], mix.inputs["Color2"])
+cor_final = mix.outputs["Color"]
+''',
+            "metal": '''
+wave = no.new("ShaderNodeTexWave")
+wave.wave_type = "RINGS"
+wave.inputs["Scale"].default_value = 9.0
+noise = no.new("ShaderNodeTexNoise")
+noise.inputs["Scale"].default_value = 60.0
+noise.inputs["Detail"].default_value = 8.0
+mix = no.new("ShaderNodeMixRGB")
+mix.inputs["Fac"].default_value = 0.3
+li.new(wave.outputs["Color"], mix.inputs["Color1"])
+li.new(noise.outputs["Color"], mix.inputs["Color2"])
+cor_final = mix.outputs["Color"]
+bsdf.inputs["Metallic"].default_value = 0.9
+bsdf.inputs["Roughness"].default_value = 0.35
+''',
+            "madeira": '''
+wave = no.new("ShaderNodeTexWave")
+wave.wave_type = "BANDS"
+wave.inputs["Scale"].default_value = 7.0
+wave.inputs["Distortion"].default_value = 6.0
+rampa = no.new("ShaderNodeValToRGB")
+rampa.color_ramp.elements[0].color = (0.25, 0.14, 0.07, 1)
+rampa.color_ramp.elements[1].color = (0.5, 0.32, 0.16, 1)
+li.new(wave.outputs["Fac"], rampa.inputs["Fac"])
+cor_final = rampa.outputs["Color"]
+''',
+        }.get(
+            estilo,
+            '''
+noise = no.new("ShaderNodeTexNoise")
+noise.inputs["Scale"].default_value = 5.0
+noise.inputs["Detail"].default_value = 14.0
+rampa = no.new("ShaderNodeValToRGB")
+rampa.color_ramp.elements[0].color = (0.3, 0.3, 0.32, 1)
+rampa.color_ramp.elements[1].color = (0.62, 0.6, 0.58, 1)
+li.new(noise.outputs["Fac"], rampa.inputs["Fac"])
+cor_final = rampa.outputs["Color"]
+''',
+        )
+        + '''
+if cor_final is not None:
+    li.new(cor_final, bsdf.inputs["Base Color"])
+
+plano.data.materials.append(mat)
+
+bpy.ops.object.select_all(action="DESELECT")
+plano.select_set(True)
+bpy.context.view_layer.objects.active = plano
+bpy.ops.object.bake(type="DIFFUSE", margin=8)
+
+caminho = os.path.join(OUT, f"{NOME}_seed{SEED}_4k.png")
+img.filepath_raw = caminho
+img.file_format = "PNG"
+img.save()
+print("ARKHER_OK:", caminho)
+print("Dica Roblox: use esta textura como TILE (repetida) no material;")
+print("a compressao do servico nao destroi o detalhe quando o tile se repete.")
+'''
+    )
+
+
 CENAS = {
     "terreno": (_TERRENO, "Terreno", "imagem"),
     "cena": (_CENA, "Cena", "imagem"),
     "personagem": (_PERSONAGEM, "Personagem", "imagem"),
     "animacao": (_ANIMACAO, "Animacao", "anim"),
+    "textura_pedra": (_textura_corpo("pedra"), "TexturaPedra", "textura"),
+    "textura_tijolo": (_textura_corpo("tijolo"), "TexturaTijolo", "textura"),
+    "textura_metal": (_textura_corpo("metal"), "TexturaMetal", "textura"),
+    "textura_madeira": (_textura_corpo("madeira"), "TexturaMadeira", "textura"),
 }
 
 
@@ -249,7 +366,10 @@ def gerar_script(cena: str, seed: int) -> str:
     if cena not in CENAS:
         raise ValueError(f"Cena desconhecida. Opções: {', '.join(sorted(CENAS))}")
     corpo, nome, saida = CENAS[cena]
-    rodape = _LUZES + (_SAIDA_ANIM if saida == "anim" else _SAIDA_IMAGEM)
+    if saida == "textura":
+        rodape = ""  # a cena de textura assa e salva o PNG sozinha
+    else:
+        rodape = _LUZES + (_SAIDA_ANIM if saida == "anim" else _SAIDA_IMAGEM)
     script = _BASE_HEADER.format(seed=int(seed)) + corpo + rodape
     return f'NOME = "{nome}"\n' + script
 

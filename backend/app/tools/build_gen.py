@@ -33,12 +33,21 @@ AZUL_VIDRO = (150, 190, 220)
 MARROM = (101, 67, 33)
 VERDE_FOLHA = (52, 120, 48)
 AREIA = (222, 202, 150)
+PEDRA = (150, 145, 135)
+PEDRA_ESC = (112, 107, 100)
+MADEIRA_ESC = (74, 50, 30)
+TELHA = (96, 60, 44)
+FERRO = (70, 72, 78)
 
 PALETAS = {
     "militar": {"parede": CAQUI, "teto": VERDE_ESCURO, "piso": CONCRETO,
                 "estrutura": VERDE_OLIVA, "detalhe": CINZA, "vidro": AZUL_VIDRO,
                 "veiculo": VERDE_OLIVA, "destaque1": VERDE_BR, "destaque2": AMARELO_BR,
                 "chao": AREIA},
+    "medieval": {"parede": PEDRA, "teto": TELHA, "piso": PEDRA_ESC,
+                 "estrutura": PEDRA, "detalhe": PEDRA_ESC, "vidro": AZUL_VIDRO,
+                 "veiculo": MADEIRA_ESC, "destaque1": FERRO, "destaque2": AMARELO_BR,
+                 "chao": (120, 130, 95)},
     "cidade": {"parede": (200, 200, 205), "teto": (90, 95, 105), "piso": CINZA,
                "estrutura": CINZA, "detalhe": (70, 70, 75), "vidro": AZUL_VIDRO,
                "veiculo": (160, 40, 40), "destaque1": BRANCO, "destaque2": AMARELO_BR,
@@ -155,7 +164,108 @@ def _muro_perimetro(ops, meia, p) -> int:
     return len(segs) + 3
 
 
+# ----------------------------------------------- castelo medieval detalhado
+def _ameia_fileira(ops, nome, cx, cz, y, meia_x, meia_z, p, passo=4.0) -> None:
+    """Muralha de merlões (ameias) ao longo do perímetro de um retângulo."""
+    x = -meia_x
+    while x <= meia_x:
+        _part(ops, nome, (cx + x, y, cz - meia_z), (1.8, 2.2, 1.3), p["detalhe"])
+        _part(ops, nome, (cx + x, y, cz + meia_z), (1.8, 2.2, 1.3), p["detalhe"])
+        x += passo
+    z = -meia_z + passo
+    while z <= meia_z - passo / 2:
+        _part(ops, nome, (cx - meia_x, y, cz + z), (1.3, 2.2, 1.8), p["detalhe"])
+        _part(ops, nome, (cx + meia_x, y, cz + z), (1.3, 2.2, 1.8), p["detalhe"])
+        z += passo
+
+
+def _torre_castelo(ops, r, x, z, p, alt=22.0) -> None:
+    _part(ops, "TorreBase", (x, 1.5, z), (12, 3, 12), p["detalhe"])
+    _part(ops, "TorreCorpo", (x, alt / 2, z), (9, alt, 9), p["estrutura"])
+    _part(ops, "TorreBalcao", (x, alt + 0.7, z), (12, 1.4, 12), p["detalhe"])
+    for mx in (-4.5, 0, 4.5):
+        for mz in (-4.5, 4.5):
+            _part(ops, "TorreAmeia", (x + mx, alt + 2.5, z + mz), (1.8, 2.2, 1.4), p["estrutura"])
+    for mz in (-4.5,):
+        for mx in (-4.5, 4.5):
+            _part(ops, "TorreAmeia", (x + mx, alt + 2.5, z + mz), (1.8, 2.2, 1.4), p["estrutura"])
+    # topo em pirâmide escalonada (telhado)
+    la = 9.0
+    for i in range(4):
+        la -= 2.0
+        _part(ops, "TorreTelhado", (x, alt + 4.0 + i * 1.5, z), (la + 2, 1.5, la + 2), p["teto"])
+    _part(ops, "TorreJanela", (x, alt - 5, z - 4.6), (1.6, 3, 0.4), p["vidro"])
+
+
+def _castelo(ops, r, x, z, p) -> None:
+    m, alt_muro = 30.0, 10.0
+    # muralhas (frente com vão para o portão)
+    _part(ops, "MuralhaTras", (x, alt_muro / 2, z + m), (2 * m + 4, alt_muro, 2.5), p["estrutura"])
+    _part(ops, "MuralhaEsq", (x - m, alt_muro / 2, z), (2.5, alt_muro, 2 * m), p["estrutura"])
+    _part(ops, "MuralhaDir", (x + m, alt_muro / 2, z), (2.5, alt_muro, 2 * m), p["estrutura"])
+    _part(ops, "MuralhaFrenteE", (x - (m + 7) / 2, alt_muro / 2, z - m), (m - 7, alt_muro, 2.5), p["estrutura"])
+    _part(ops, "MuralhaFrenteD", (x + (m + 7) / 2, alt_muro / 2, z - m), (m - 7, alt_muro, 2.5), p["estrutura"])
+    _ameia_fileira(ops, "Ameia", x, z, alt_muro + 1.1, m, m, p, passo=5.0)
+    # torres nos quatro cantos
+    for tx, tz in ((-m, -m), (m, -m), (-m, m), (m, m)):
+        _torre_castelo(ops, r, x + tx, z + tz, p)
+    # casa de portão: pilares + arco + grade
+    _part(ops, "PortaoPilarE", (x - 7, 7, z - m), (3, 14, 4), p["detalhe"])
+    _part(ops, "PortaoPilarD", (x + 7, 7, z - m), (3, 14, 4), p["detalhe"])
+    _part(ops, "PortaoArco", (x, 13.5, z - m), (17, 3, 4), p["detalhe"])
+    for gx in (-4, -2, 0, 2, 4):
+        _part(ops, "PortaoGrade", (x + gx, 5.5, z - m), (0.5, 11, 0.5), FERRO)
+    # torre de menagem (keep): exterior + 2 andares + divisórias + escada
+    kx, kz, kl, kp, kalt = x, z + 8, 26.0, 20.0, 16.0
+    _part(ops, "KeepPiso", (kx, 0.4, kz), (kl, 0.8, kp), p["piso"])
+    for wx, wz, wsx, wsz in ((0, kp / 2, kl, 1.2), (-kl / 2, 0, 1.2, kp), (kl / 2, 0, 1.2, kp), (0, -kp / 2, kl, 1.2)):
+        _part(ops, "KeepParede", (kx + wx, kalt / 2, kz + wz), (wsx, kalt, wsz), p["parede"])
+    _part(ops, "KeepAndar2", (kx, kalt / 2 + 0.4, kz), (kl - 2, 0.8, kp - 2), p["piso"])
+    _part(ops, "KeepTeto", (kx, kalt + 0.6, kz), (kl + 3, 1.2, kp + 3), p["teto"])
+    _part(ops, "KeepDivisoria", (kx - 4, kalt / 4, kz), (1, kalt / 2, kp - 4), p["detalhe"])
+    _part(ops, "KeepDivisoria2", (kx + 5, kalt * 3 / 4, kz), (1, kalt / 2, kp - 6), p["detalhe"])
+    for i in range(8):  # escada interna
+        _part(ops, "KeepEscada", (kx + kl / 2 - 3, 1 + i, kz + kp / 2 - 3 - i * 1.6), (4, 0.8, 1.6), p["detalhe"])
+    for jx in (-8, 0, 8):  # janelas
+        _part(ops, "KeepJanela", (kx + jx, 10, kz - kp / 2 - 0.3), (2, 3, 0.5), p["vidro"])
+    # mobiliário interno (salão do andar térreo)
+    _part(ops, "MesaReal", (kx - 6, 1.5, kz - 3), (8, 0.6, 3), MADEIRA_ESC)
+    _part(ops, "Trono", (kx - 11, 2, kz - 3), (2, 3.4, 2), p["destaque2"])
+    _part(ops, "Lareira", (kx + 8, 2.5, kz + 6), (4, 5, 2), PEDRA_ESC)
+
+
+def _bunker(ops, r, x, z, p) -> None:
+    _part(ops, "BunkerCorpo", (x, 2.5, z), (16, 5, 12), CONCRETO)
+    _part(ops, "BunkerTerra", (x, 5.4, z), (17, 1, 13), p["chao"])
+    _part(ops, "BunkerPorta", (x, 2, z - 6.2), (3, 4, 0.5), FERRO)
+    _part(ops, "BunkerDivisoria", (x, 2.5, z), (0.8, 5, 11), CINZA)
+    _part(ops, "BunkerBeliche", (x - 5, 1.2, z + 3), (4, 1.4, 2), p["estrutura"])
+    _part(ops, "BunkerMesa", (x + 4, 1.5, z - 2), (4, 0.5, 2.4), MADEIRA_ESC)
+    _part(ops, "BunkerRespiro", (x + 6, 6.4, z + 4), (1, 1.6, 1), FERRO)
+
+
+def _tanque(ops, r, x, z, p) -> None:
+    giro = r.uniform(-0.4, 0.4)
+
+    def rot(wx, wz):
+        return (x + wx * math.cos(giro) - wz * math.sin(giro),
+                z + wx * math.sin(giro) + wz * math.cos(giro))
+
+    for lado in (-2.3, 2.3):
+        rx, rz = rot(0, lado)
+        _part(ops, "TanqueEsteira", (rx, 1.1, rz), (9, 1.6, 1.6), PRETO)
+    cx, cz = rot(0, 0)
+    _part(ops, "TanqueChassi", (cx, 2.4, cz), (8, 1.4, 4.4), p["veiculo"])
+    tx, tz = rot(-0.5, 0)
+    _part(ops, "TanqueTorre", (tx, 3.8, tz), (4, 1.4, 3.4), p["veiculo"])
+    bx, bz = rot(3.6, 0)
+    _part(ops, "TanqueCanhao", (bx, 3.8, bz), (6, 0.6, 0.6), FERRO)
+
+
 ESTRUTURAS = {
+    "castelo": {"funcao": _castelo, "chaves": ("castelo", "castelos", "fortaleza", "cidadela"), "raio": 44},
+    "bunker": {"funcao": _bunker, "chaves": ("bunker", "bunkers", "abrico", "abrigo"), "raio": 10},
+    "tanque": {"funcao": _tanque, "chaves": ("tanque", "tanques"), "raio": 7},
     "torre": {"funcao": _torre, "chaves": ("torre", "torres", "vigia"), "raio": 8},
     "quartel": {"funcao": lambda o, r, x, z, p: _predio(o, r, x, z, p, "Quartel"), "chaves": ("quartel", "quarteis"), "raio": 17},
     "predio": {"funcao": lambda o, r, x, z, p: _predio(o, r, x, z, p, "Predio", 16, 12, 14), "chaves": ("predio", "predios"), "raio": 12},
@@ -193,13 +303,15 @@ def paleta_para(texto: str) -> str:
     t = _norm(texto)
     if "militar" in t or "exercito" in t or "guerra" in t or "quartel" in t:
         return "militar"
+    if "medieval" in t or "castelo" in t or "fortaleza" in t or "cavaleiro" in t or "reino" in t:
+        return "medieval"
     if "cidade" in t or "vila" in t or "urbana" in t or "rua" in t:
         return "cidade"
     return "padrao"
 
 
-RECEITA_MILITAR = {"quartel": 3, "torre": 4, "heliponto": 1, "mastro": 1,
-                    "antena": 1, "veiculo": 3, "sacos": 1}
+RECEITA_MILITAR = {"quartel": 2, "torre": 3, "bunker": 2, "heliponto": 1, "mastro": 1,
+                    "antena": 1, "veiculo": 2, "tanque": 2, "sacos": 1}
 
 
 def compor_receita(receita: dict[str, int], seed: int = 42, paleta: str = "padrao",
@@ -213,7 +325,8 @@ def compor_receita(receita: dict[str, int], seed: int = 42, paleta: str = "padra
     for nome, qtd in receita.items():
         itens.extend([nome] * max(0, min(qtd, 40)))
     n = len(itens)
-    meia = max(32.0, 10.0 * math.sqrt(n) + 24.0)
+    maior_raio = max((ESTRUTURAS[i]["raio"] for i in itens), default=0)
+    meia = max(32.0, 10.0 * math.sqrt(n) + 24.0, maior_raio + 14.0)
     _part(ops, "Chao", (0, -0.5, 0), (2 * meia + 10, 1, 2 * meia + 10), p["chao"])
     if com_muro:
         _muro_perimetro(ops, meia, p)

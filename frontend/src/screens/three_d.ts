@@ -17,6 +17,10 @@ type Escolha =
   | "blender_cena"
   | "blender_terreno"
   | "blender_animacao"
+  | "blender_textura_pedra"
+  | "blender_textura_tijolo"
+  | "blender_textura_metal"
+  | "blender_textura_madeira"
   | "terreno_obj"
   | "place_obby"
   | "place_arena"
@@ -27,6 +31,10 @@ const OPCOES: [Escolha, string][] = [
   ["blender_cena", "Blender — cena com primitivas"],
   ["blender_terreno", "Blender — terreno heightmap"],
   ["blender_animacao", "Blender — animação + textura procedural"],
+  ["blender_textura_pedra", "Blender — textura 4K pedra (tileable)"],
+  ["blender_textura_tijolo", "Blender — textura 4K tijolo (tileable)"],
+  ["blender_textura_metal", "Blender — textura 4K metal (tileable)"],
+  ["blender_textura_madeira", "Blender — textura 4K madeira (tileable)"],
   ["terreno_obj", "Terreno .obj (visualiza em 3D aqui)"],
   ["place_obby", "Roblox Studio — obby .rbxlx"],
   ["place_arena", "Roblox Studio — arena .rbxlx"],

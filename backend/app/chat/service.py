@@ -198,7 +198,8 @@ def _detectar_tarefa(texto: str) -> tuple[str, dict] | None:
     estrutura = re.search(
         r"\b(torre|torres|quartel|quarteis|predio|predios|casa|casas|arvore|arvores|"
         r"heliponto|heliporto|mastro|bandeira|antena|radar|veiculo|veiculos|jipe|jipes|"
-        r"carro|carros|sacos|trincheira|muro|muralha|cerco|base|cidade|vila|militar|exercito)\b", t)
+        r"carro|carros|sacos|trincheira|muro|muralha|cerco|base|cidade|vila|militar|exercito|"
+        r"castelo|castelos|fortaleza|cidadela|bunker|bunkers|tanque|tanques)\b", t)
     if pedido and estrutura:
         return ("build_gen", {"tema": texto, "seed": seed})
     if pedido and re.search(r"\b(ponte|plugin)\b", t) and re.search(r"\b(instal|ativa|ativação|ligar)\w*\b", t):

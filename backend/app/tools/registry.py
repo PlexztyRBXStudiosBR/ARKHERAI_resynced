@@ -79,7 +79,7 @@ TOOLS: dict[str, dict] = {
     "blender_gen": {
         "id": "blender_gen",
         "nome": "Conector Blender (3D real)",
-        "descricao": "Gera scripts Python do Blender (terreno, cena, personagem). Com Blender no servidor, executa de verdade e devolve .glb + render; sem Blender, entrega o .py para rodar no seu.",
+        "descricao": "Gera scripts Python do Blender (terreno, cena, personagem, animação e texturas 4K tileable). Com Blender no servidor, executa de verdade e devolve .glb/.png; sem Blender, entrega o .py para rodar no seu.",
         "permissoes": ["geracao_de_script_3d", "execucao_blender_local_se_instalado"],
         "confirmacao": True,
     },

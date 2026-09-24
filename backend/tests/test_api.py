@@ -257,6 +257,13 @@ def test_intencao_animacao_natural(auth_client):
     assert ev["arquivo"]["nome"].startswith("animacao")
 
 
+def test_intencao_castelo_natural(auth_client):
+    """Pediu castelo em linguagem natural → composição detalhada."""
+    auth_client.post("/api/tools/build_gen/authorize")
+    ev = _feito_sse(auth_client, "crie um castelo medieval com torres")
+    assert "castelo" in ev.get("content", "").lower() or "Muralha" in str(ev)
+
+
 def test_blender_gen_rejeita_cena_invalida(auth_client):
     auth_client.post("/api/tools/blender_gen/authorize")
     r = auth_client.post("/api/tools/blender_gen/run", json={"cena": "nao_existe"})
@@ -310,6 +317,46 @@ def test_build_militar_ops_e_render():
     # determinismo
     assert build_gen.base_militar(5) == ops
     assert build_gen.base_militar(6) != ops
+
+
+def test_build_castelo_medieval_detalhado():
+    """Castelo: muralhas, torres, portão, torre de menagem COM interior."""
+    from backend.app.tools import build_gen
+
+    ops = build_gen.compor("um castelo medieval bem detalhado", 7)
+    nomes = {o["nome"] for o in ops}
+    assert {"MuralhaTras", "TorreCorpo", "PortaoGrade", "KeepParede", "KeepEscada", "MesaReal"} <= nomes
+    assert len(ops) > 120  # detalhe de verdade, não meia dúzia de blocos
+    # determinístico por seed
+    assert build_gen.compor("um castelo medieval bem detalhado", 7) == ops
+
+
+def test_build_base_militar_interior_e_veiculos():
+    from backend.app.tools import build_gen
+
+    ops = build_gen.base_militar(9)
+    nomes = {o["nome"] for o in ops}
+    assert "BunkerCorpo" in nomes and "BunkerBeliche" in nomes  # interior
+    assert "TanqueCanhao" in nomes and "TanqueEsteira" in nomes  # veículos
+
+
+def test_texturas_4k_tileable_compilam(auth_client):
+    """Texturas 4K sem emenda: script Python válido + bake 4096."""
+    import py_compile
+    import tempfile
+    from pathlib import Path
+
+    auth_client.post("/api/tools/blender_gen/authorize")
+    for cena in ("textura_pedra", "textura_tijolo", "textura_metal", "textura_madeira"):
+        r = auth_client.post("/api/tools/blender_gen/run", json={"cena": cena, "seed": 3})
+        assert r.status_code == 200, r.text
+        script = r.json()["result"]["arquivo"]["conteudo"]
+        assert "4096" in script and "bake" in script
+        with tempfile.NamedTemporaryFile("w", suffix=".py", delete=False) as f:
+            f.write(script)
+            caminho = f.name
+        py_compile.compile(caminho, doraise=True)
+        Path(caminho).unlink()
 
 
 def test_produto_status(auth_client):
