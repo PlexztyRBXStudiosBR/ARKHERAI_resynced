@@ -87,6 +87,13 @@ export function renderIntegrations(ctx: Ctx): HTMLElement {
         en: "Push trained checkpoints to your own private HF repo; the product only uses weights you train.",
       },
     ],
+    [
+      { pt: "Sempre ligado — auto-ligar/auto-recuperar", en: "Always-on — auto-start/self-heal" },
+      {
+        pt: "Alternativa legítima ao religamento manual: systemd com Restart=always (deploy/arkher.service), Docker com healthcheck, e o vigia deploy/arkher-watchdog.sh. O serviço volta sozinho de qualquer queda, na sua própria máquina.",
+        en: "Legitimate alternative to manual reboots: systemd with Restart=always (deploy/arkher.service), Docker with healthcheck, and the deploy/arkher-watchdog.sh watchdog. The service recovers on its own, on your own machine.",
+      },
+    ],
   ];
   for (const [nome, desc] of info) {
     const card = el("div", { class: "tool-card" });

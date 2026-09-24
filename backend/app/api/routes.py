@@ -401,9 +401,14 @@ def produto_status(user: dict = auth.CurrentUser):
         },
         {
             "id": "deploy",
-            "nome": "Empacotamento para produção (Docker + dados persistentes)",
-            "ok": (root / "Dockerfile").exists() and (root / "docker-compose.yml").exists(),
-            "detalhe": "docker compose up --build; volume para os dados.",
+            "nome": "Produção sempre ligada (Docker/systemd + auto-recuperar)",
+            "ok": (
+                (root / "Dockerfile").exists()
+                and (root / "docker-compose.yml").exists()
+                and (root / "deploy" / "arkher.service").exists()
+                and (root / "deploy" / "arkher-watchdog.sh").exists()
+            ),
+            "detalhe": "docker compose up --build; systemd Restart=always + vigia de saúde.",
         },
     ]
     prontos = sum(1 for i in itens if i["ok"])

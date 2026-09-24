@@ -18,6 +18,27 @@ docker compose up --build
 curl http://localhost:8710/api/health
 ```
 
+## Sempre ligado (auto-ligar + auto-recuperar)
+
+A alternativa legítima para "não precisar ficar ligando a máquina/serviço":
+o ARKHER se mantém no ar sozinho, **na sua própria máquina** — sem painel
+remoto, sem controle de tela, sem tocar em outros computadores.
+
+| Modo | O que mantém ligado |
+|---|---|
+| Docker | `restart: unless-stopped` + `healthcheck` no `docker-compose.yml` (sobrevive a boot e a travamento) |
+| Linux (systemd) | `deploy/arkher.service` com `Restart=always` + `enable` no boot: `sudo cp deploy/arkher.service /etc/systemd/system/ && sudo systemctl daemon-reload && sudo systemctl enable --now arkher` |
+| Camada extra | `deploy/arkher-watchdog.sh` checa `/api/health` a cada 2 min (cron) e religa se não responder |
+| Logs | `journalctl -u arkher -f` ou `docker compose logs -f` |
+
+Com isso, a máquina liga uma vez (ou nem precisa de login) e o serviço volta
+sozinho de qualquer queda. A interface mostra o estado real em tempo real na
+barra de status — nada de "ligar de novo pelo app".
+
+> Fora do produto por decisão: ver/controlar tela de VM remotamente pelo app,
+> religar máquinas por automação de CI e shell aberto. Motivo: viola termos de
+> serviço das plataformas (risco de ban) e abre superfície de ataque.
+
 ## Conector Blender (geração 3D real)
 
 Com o Blender instalado na máquina do backend, a ARKHER **executa de verdade**:

@@ -6,15 +6,15 @@
   --panel2: #0b130e;
   --line: #12362298;
   --line-soft: #123622;
-  --tx: #dcffe9;
-  --dim: #6fa287;
-  --acc: #00ff9c;
-  --acc2: #00c878;
+  --tx: #e9f6ee;
+  --dim: #74a488;
+  --acc: #00d47a;
+  --acc2: #00a85c;
   --warn: #ffd166;
   --err: #ff6b6b;
-  --ok: #00ff9c;
-  --glow: rgba(0, 255, 156, 0.16);
-  --glow-strong: rgba(0, 255, 156, 0.5);
+  --ok: #00d47a;
+  --glow: rgba(0, 212, 122, 0.13);
+  --glow-strong: rgba(0, 212, 122, 0.36);
 }
 
 :root[data-theme="light"] {
@@ -48,12 +48,12 @@ body::before {
   background-image:
     linear-gradient(var(--glow) 1px, transparent 1px),
     linear-gradient(90deg, var(--glow) 1px, transparent 1px);
-  background-size: 44px 44px; opacity: 0.16; mask-image: radial-gradient(ellipse at 50% 0%, #000 0%, transparent 75%);
+  background-size: 44px 44px; opacity: 0.10; mask-image: radial-gradient(ellipse at 50% 0%, #000 0%, transparent 75%);
 }
 body::after {
   content: ""; position: fixed; left: 0; right: 0; top: -20%; height: 20%; z-index: 0; pointer-events: none;
   background: linear-gradient(180deg, transparent, var(--glow), transparent);
-  animation: scanline 9s linear infinite; opacity: 0.5;
+  animation: scanline 9s linear infinite; opacity: 0.32;
 }
 @keyframes scanline { from { top: -20%; } to { top: 120%; } }
 @keyframes neonpulse {

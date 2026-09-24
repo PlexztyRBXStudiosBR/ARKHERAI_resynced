@@ -1,0 +1,32 @@
+# ARKHER AI — unidade systemd para "sempre ligado".
+# Instalação (uma vez):
+#   sudo cp deploy/arkher.service /etc/systemd/system/
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable --now arkher
+# A partir daí o serviço:
+#   • sobe sozinho em todo boot (enable);
+#   • religa sozinho se cair (Restart=always, 5s de espera);
+#   • registra logs em `journalctl -u arkher -f`.
+# Nada aqui controla outras máquinas: é auto-manutenção do próprio serviço.
+
+[Unit]
+Description=ARKHER AI - backend e modelo proprios
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+# ajuste para o usuario/dono do repositorio na sua maquina
+User=arkher
+WorkingDirectory=/opt/ARKHERAI_resynced
+Environment=PYTHONPATH=/opt/ARKHERAI_resynced
+Environment=ARKHER_SERVE_FRONTEND=1
+ExecStart=/opt/ARKHERAI_resynced/.venv/bin/python -m uvicorn backend.app.main:app --host 0.0.0.0 --port 8710
+Restart=always
+RestartSec=5
+# limites saudaveis (opcional)
+MemoryMax=4G
+CPUQuota=200%
+
+[Install]
+WantedBy=multi-user.target

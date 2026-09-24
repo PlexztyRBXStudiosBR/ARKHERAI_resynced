@@ -24,7 +24,8 @@ Estes itens estão com tudo pronto do lado do código; dependem de rodar:
    de `workers/` nas suas contas Kaggle/Colab, baixar as fontes licenciadas
    (`python -m model.datasets.fontes baixar …`) e retreinar. É isso que transforma
    o ARKHER-1 mini num modelo progressivamente mais capaz. Tempo: sessões de GPU,
-   acumulando por checkpoint — dias/semanas de ciclos, não horas.
+   acumulando por checkpoint — dias/semanas de ciclos, não horas. A escada honesta
+   de escala está em `docs/ESCALA_TREINO.md`.
 2. **Publicar num lugar permanente**: `docker compose up --build` no seu PC ou
    numa VM **sua** (o preview deste sandbox é efêmero). ~30 min.
 3. **Instalar as pontes na sua máquina**: plugin no Roblox Studio e addon no
@@ -48,6 +49,10 @@ Estes itens estão com tudo pronto do lado do código; dependem de rodar:
   após o limite de horas (violação dos termos do serviço → risco real de ban;
   o mesmo resultado legítimo: sessões manuais + estado persistido em
   checkpoint/repositório, que já funciona).
+- Ver/controlar a tela de uma VM pelo app com comandos de IA (agente de tela /
+  controle remoto). **Alternativa legítima já entregue**: o ARKHER se mantém no
+  ar sozinho na sua própria máquina — systemd `Restart=always`, Docker com
+  healthcheck e o vigia `deploy/arkher-watchdog.sh` (ver `docs/DEPLOYMENT.md`).
 - Shell arbitrário exposto na interface (superfície de invasão; as ferramentas
   autorizadas cobrem o que é seguro executar).
 
