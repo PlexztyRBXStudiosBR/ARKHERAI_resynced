@@ -14,7 +14,9 @@ const STRINGS = {
     tab_settings: "Config",
     three_d_title: "Estúdio 3D — geração própria",
     three_d_hint:
-      "Gere scripts Blender (.py), terrenos .obj e lugares Roblox (.rbxlx) direto da ARKHER. Use as pontes da aba Integrações para aplicar dentro das suas ferramentas abertas.",
+      "Todas as ferramentas de geração da ARKHER num lugar só: Blender, terreno, places Roblox e as receitas do Arkher Studio. Use as pontes da aba Integrações para aplicar dentro das suas ferramentas abertas.",
+    three_d_extra: "parâmetro: bioma / tipo de animação / descrição do estilo ou física",
+    three_d_choice: "Escolha da ARKHER",
     gen: "Gerar",
     authorize_first: "Esta ferramenta ainda não está autorizada. Autorize para usar:",
     integrations_title: "Integrações — pontes oficiais",
@@ -113,7 +115,9 @@ const STRINGS = {
     tab_settings: "Settings",
     three_d_title: "3D Studio — first-party generation",
     three_d_hint:
-      "Generate Blender scripts (.py), .obj terrain and Roblox places (.rbxlx) straight from ARKHER. Use the bridges from the Integrations tab to apply them inside your open tools.",
+      "All ARKHER generation tools in one place: Blender, terrain, Roblox places and Arkher Studio recipes. Use the bridges from the Integrations tab to apply them inside your open tools.",
+    three_d_extra: "parameter: biome / animation type / style or physics description",
+    three_d_choice: "ARKHER's choice",
     gen: "Generate",
     authorize_first: "This tool is not authorized yet. Authorize to use it:",
     integrations_title: "Integrations — official bridges",

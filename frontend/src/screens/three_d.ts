@@ -24,7 +24,11 @@ type Escolha =
   | "terreno_obj"
   | "place_obby"
   | "place_arena"
-  | "place_base";
+  | "place_base"
+  | "studio_terreno"
+  | "studio_anim"
+  | "studio_estilo"
+  | "studio_fisica";
 
 const OPCOES: [Escolha, string][] = [
   ["blender_personagem", "Blender — personagem robô"],
@@ -39,11 +43,19 @@ const OPCOES: [Escolha, string][] = [
   ["place_obby", "Roblox Studio — obby .rbxlx"],
   ["place_arena", "Roblox Studio — arena .rbxlx"],
   ["place_base", "Roblox Studio — base .rbxlx"],
+  ["studio_terreno", "Arkher Studio — receita de terreno (bioma)"],
+  ["studio_anim", "Arkher Studio — keyframes de animação (tipo)"],
+  ["studio_estilo", "Arkher Studio — estilo visual (ANG)"],
+  ["studio_fisica", "Arkher Studio — tipo de física"],
 ];
 
-function toolPara(e: Escolha): { tool: string; args: (seed: number) => Record<string, unknown> } {
+function toolPara(e: Escolha): { tool: string; args: (seed: number, extra: string) => Record<string, unknown> } {
   if (e === "terreno_obj") return { tool: "obj_gen", args: (s) => ({ seed: String(s) }) };
   if (e.startsWith("place_")) return { tool: "rbxlx_gen", args: (s) => ({ tipo: e.slice(6), seed: String(s) }) };
+  if (e === "studio_terreno") return { tool: "terrain_gen", args: (s, x) => ({ bioma: x || "montanha", seed: String(s) }) };
+  if (e === "studio_anim") return { tool: "anim_gen", args: (s, x) => ({ tipo: x || "flutuar", seed: String(s), duracao: 2 }) };
+  if (e === "studio_estilo") return { tool: "style_gen", args: (_s, x) => ({ prompt: x || "estilizado" }) };
+  if (e === "studio_fisica") return { tool: "fisica_gen", args: (_s, x) => ({ prompt: x || "objetos rígidos" }) };
   return { tool: "blender_gen", args: (s) => ({ cena: e.slice(8), seed: String(s) }) };
 }
 
@@ -57,9 +69,10 @@ export function render3D(ctx: Ctx): HTMLElement {
   const tipo = el("select", { class: "input" });
   for (const [v, l] of OPCOES) tipo.append(el("option", { value: v }, l));
   const seed = el("input", { class: "input", type: "number", value: "42", min: "0", max: "999999" });
+  const extra = el("input", { class: "input", type: "text", placeholder: t("three_d_extra", lang) });
   const btn = el("button", { class: "pri" });
   btn.append(icon("cube", 15), " " + t("gen", lang));
-  form.append(tipo, seed, btn);
+  form.append(tipo, seed, extra, btn);
   root.append(form);
 
   const saida = el("div", { class: "saida3d" });
@@ -70,15 +83,17 @@ export function render3D(ctx: Ctx): HTMLElement {
   async function gerar(): Promise<void> {
     const e = tipo.value as Escolha;
     const s = Math.max(0, Math.min(999999, parseInt(seed.value || "42", 10) || 42));
+    const x = (extra.value || "").trim();
     const { tool, args } = toolPara(e);
     saida.textContent = "";
     saida.append(el("p", { class: "typing" }, "…"));
     try {
-      const r = await ctx.api.runTool(tool, args(s));
-      const res = r.result as { descricao?: string; arquivo?: Arquivo };
+      const r = await ctx.api.runTool(tool, args(s, x));
+      const res = r.result as { descricao?: string; arquivo?: Arquivo; escolha?: string; motivo?: string };
       saida.textContent = "";
       const card = el("div", { class: "card3d" });
       card.append(el("p", {}, res.descricao ?? ""));
+      if (res.escolha) card.append(el("p", { class: "dim" }, `${t("three_d_choice", lang)}: ${res.escolha}${res.motivo ? " — " + res.motivo : ""}`));
       const acoes = el("div", { class: "msg-actions", style: "opacity:1" });
       if (res.arquivo) {
         const dl = el("button", { class: "mini pri" });
@@ -91,6 +106,13 @@ export function render3D(ctx: Ctx): HTMLElement {
           ver.onclick = () => openViewer(res.arquivo!.nome, res.arquivo!.conteudo!);
           acoes.append(ver);
         }
+      } else {
+        // geradores de receita (terreno/animação/estilo/física): baixa o JSON p/ usar no Studio
+        const dl = el("button", { class: "mini pri" });
+        const nome = `${tool}_seed${s}.json`;
+        dl.append(icon("download", 14), " " + nome);
+        dl.onclick = () => ctx.download(nome, JSON.stringify(r.result, null, 2));
+        acoes.append(dl);
       }
       card.append(acoes);
       saida.append(card);
