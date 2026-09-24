@@ -26,6 +26,9 @@ STEPS = {
     "train": ["-m", "model.training.train", "--epochs", "2", "--tag", "web"],
     "evaluate": ["-m", "model.training.evaluate"],
     "report": ["-m", "model.training.report"],
+    # Um ciclo seguro pela UI; o serviço 24/7 é iniciado explicitamente pelo
+    # operador com model.training.auto_train e pode ser parado por arquivo-stop.
+    "auto_train": ["-m", "model.training.auto_train", "--cycles", "1"],
 }
 
 
