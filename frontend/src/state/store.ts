@@ -11,7 +11,7 @@ export type UiState =
   | "generating"
   | "error";
 
-export type Screen = "chat" | "memory" | "tools" | "training" | "settings";
+export type Screen = "chat" | "3d" | "integrations" | "cerebro" | "tools" | "settings";
 
 export interface Settings {
   userName: string;

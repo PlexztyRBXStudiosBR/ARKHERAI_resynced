@@ -111,6 +111,15 @@ export function renderSettings(ctx: Ctx): HTMLElement {
   dataRow.append(exportBtn, wipe);
   root.append(dataRow);
 
+  // limites do produto (decisões fixas)
+  root.append(el("h2", {}, t("limits_title", lang)));
+  const limits = el("div", { class: "limits" });
+  limits.append(el("p", { class: "dim" }, t("limits_note", lang)));
+  for (const key of ["limit_ci_desktop", "limit_open_shell", "limit_external_ai", "limit_web_search"] as const) {
+    limits.append(el("p", {}, "• " + t(key, lang)));
+  }
+  root.append(limits);
+
   // diagnóstico
   root.append(el("h2", {}, t("settings_diag", lang)));
   const diag = el("pre", { class: "diag" }, "…");

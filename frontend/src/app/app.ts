@@ -9,9 +9,10 @@ import type { StringKey } from "../services/i18n";
 import { el, toast } from "../components/ui";
 import { icon } from "../components/icons";
 import { renderChat, afterChatRender } from "../screens/chat";
-import { renderMemory } from "../screens/memory";
+import { render3D } from "../screens/three_d";
+import { renderIntegrations } from "../screens/integrations";
+import { renderCerebro } from "../screens/cerebro";
 import { renderTools } from "../screens/tools";
-import { renderTraining } from "../screens/training";
 import { renderSettings } from "../screens/settings";
 import { saveToken } from "../state/store";
 
@@ -280,20 +281,21 @@ export async function boot(container: HTMLElement): Promise<void> {
     const mark = el("span", { class: "mark" });
     mark.append(icon("logo", 20));
     header.append(
-      el("div", { class: "logo" }, mark, el("span", {}, "ARKHER AI")),
+      el("div", { class: "logo" }, mark, el("span", { class: "name" }, "ARKHER AI")),
       el("div", { class: "sp" }),
       statusPill(c),
     );
     const nav = el("nav", { class: "tabs", id: "tabs" });
     const screens: [ScreenId, StringKey][] = [
       ["chat", "tab_chat"],
-      ["memory", "tab_memory"],
+      ["3d", "tab_3d"],
+      ["integrations", "tab_integrations"],
+      ["cerebro", "tab_cerebro"],
       ["tools", "tab_tools"],
-      ["training", "tab_training"],
       ["settings", "tab_settings"],
     ];
     const ICONES: Record<ScreenId, string> = {
-      chat: "chat", memory: "memory", tools: "tools", training: "training", settings: "settings",
+      chat: "chat", "3d": "cube", integrations: "plug", cerebro: "chip", tools: "tools", settings: "settings",
     };
     for (const [id, key] of screens) {
       const b = el("button", { class: "tab" + (c.store.state.screen === id ? " on" : ""), "data-tab": id });
@@ -348,18 +350,20 @@ export async function boot(container: HTMLElement): Promise<void> {
     if (s.screen === "chat") {
       screenHost.append(renderChat(ctx));
       afterChatRender(ctx);
-    } else if (s.screen === "memory") screenHost.append(renderMemory(ctx));
+    } else if (s.screen === "3d") screenHost.append(render3D(ctx));
+    else if (s.screen === "integrations") screenHost.append(renderIntegrations(ctx));
+    else if (s.screen === "cerebro") screenHost.append(renderCerebro(ctx));
     else if (s.screen === "tools") screenHost.append(renderTools(ctx));
-    else if (s.screen === "training") screenHost.append(renderTraining(ctx));
     else if (s.screen === "settings") screenHost.append(renderSettings(ctx));
   }
 }
 
 const TAB_KEYS = {
   chat: "tab_chat",
-  memory: "tab_memory",
+  "3d": "tab_3d",
+  integrations: "tab_integrations",
+  cerebro: "tab_cerebro",
   tools: "tab_tools",
-  training: "tab_training",
   settings: "tab_settings",
 } as const;
 

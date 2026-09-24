@@ -87,6 +87,18 @@ export function makeApi(baseUrl: () => string, token: () => string | null) {
     trainingStatus: () => http<TrainingStatus>("GET", "/api/training/status", undefined, 8000),
     trainingStart: (step: string) => http<TrainingStatus>("POST", "/api/training/start", { step }),
     diagnostics: () => http<Record<string, unknown>>("GET", "/api/diagnostics"),
+    produtoStatus: () => http<ProdutoStatus>("GET", "/api/produto/status", undefined, 8000),
+    async getRaw(path: string): Promise<string> {
+      const headers: Record<string, string> = {};
+      const tk = token();
+      if (tk) {
+        headers["Authorization"] = `Bearer ${tk}`;
+        headers["X-Arkher-Token"] = tk;
+      }
+      const res = await fetch(`${baseUrl()}${path}`, { headers });
+      if (!res.ok) throw { code: `HTTP_${res.status}`, message: `HTTP ${res.status}`, status: res.status } as ApiError;
+      return res.text();
+    },
 
     // Chat com streaming SSE real vindo do backend próprio.
     async *chat(
@@ -185,6 +197,20 @@ export interface ToolLogEntry {
   arg_summary: string;
   ms: number;
   created_at: string;
+}
+
+export interface ProdutoStatusItem {
+  id: string;
+  nome: string;
+  ok: boolean;
+  detalhe: string;
+}
+
+export interface ProdutoStatus {
+  prontos: number;
+  total: number;
+  itens: ProdutoStatusItem[];
+  fora_do_produto_por_decisao: string[];
 }
 
 export interface TrainingStatus {
