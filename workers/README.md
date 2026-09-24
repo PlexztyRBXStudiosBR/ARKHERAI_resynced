@@ -17,6 +17,7 @@ nós que você controla, cada um no uso para o qual o serviço foi feito.
 | **Kaggle** (render 3D) | `workers/kaggle/arkher_render.ipynb` | Blender real gera modelos/animações/texturas a partir dos scripts da ARKHER |
 | **Google Colab** | `workers/colab/arkher_treino.ipynb` | idem, outra conta de GPU |
 | **Lightning AI Studios** | `workers/lightning/treino.py` | créditos gratuitos de GPU |
+| **Operários HF (qualquer GPU/CPU sua)** | `workers/hf_operarios/operarios_hf.py` | modelos abertos do HF Hub geram/avaliam/filtram dados de treino com proveniência |
 
 **Como funciona o ciclo** ("ir religando e religando"):
 1. O nó baixa o repositório (dataset + código + `latest.pt` versionado no git).

@@ -115,7 +115,7 @@ export function renderSettings(ctx: Ctx): HTMLElement {
   root.append(el("h2", {}, t("limits_title", lang)));
   const limits = el("div", { class: "limits" });
   limits.append(el("p", { class: "dim" }, t("limits_note", lang)));
-  for (const key of ["limit_ci_desktop", "limit_open_shell", "limit_external_ai", "limit_web_search"] as const) {
+  for (const key of ["limit_ci_desktop", "limit_pc_control", "limit_open_shell", "limit_external_ai", "limit_web_search", "limit_executors"] as const) {
     limits.append(el("p", {}, "• " + t(key, lang)));
   }
   root.append(limits);

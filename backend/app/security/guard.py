@@ -69,6 +69,19 @@ _FALSE_CLAIMS = [
     (re.compile(r"(?i)\b(enviei|subi|publiquei)\s+(?:o\s+)?arquivo\b"), "enviou arquivo"),
 ]
 
+# Alegações de capacidades que o produto NÃO tem (sempre sinalizadas):
+# controle de máquinas e uso de provedores externos.
+_FALSE_CLAIMS_CAPS = [
+    (
+        re.compile(r"(?i)\b(controlei|operei|naveguei\s+(?:no|pelo))(?:\s+(?:o|um|seu|sua))*\s+(?:pc|computador|vm|m[aá]quina)\b"),
+        "ter controlado uma máquina/VM",
+    ),
+    (
+        re.compile(r"(?i)\bperguntei\s+(?:ao|para\s+o|pro)\s+(?:chatgpt|gpt|gemini|claude|copilot)\b"),
+        "ter consultado um provedor externo de IA",
+    ),
+]
+
 
 @dataclass
 class Correction:
@@ -125,7 +138,18 @@ def check_output(text: str, tools_ran: list[str]) -> tuple[str, list[Correction]
                     )
                 )
 
-    # 3) atribuição a terceiros: a resposta é sempre da ARKHER
+    # 3) alegação de capacidades que o produto não tem (controle de máquina,
+    #    provedor externo): vira nota de verificação, nunca passa em branco
+    for pat, desc in _FALSE_CLAIMS_CAPS:
+        if pat.search(text):
+            corrections.append(
+                Correction(
+                    "capacidade_inexistente",
+                    f"Verificação: a resposta alegava {desc}; o produto não faz isso (ver docs/PRODUTO_FINAL.md).",
+                )
+            )
+
+    # 4) atribuição a terceiros: a resposta é sempre da ARKHER
     if re.search(r"(?i)\bfui\s+(?:criada?|treinada?|feita?)\s+por\s+(?:outra|uma)\s+(?:empresa|ia|modelo)\b", text):
         corrections.append(Correction("atribuicao", "A ARKHER é o modelo próprio do projeto; a atribuição a terceiros foi removida."))
         text = re.sub(r"(?i)\bfui\s+(?:criada?|treinada?|feita?)\s+por\s+(?:outra|uma)\s+(?:empresa|ia|modelo)\b", "sou a ARKHER AI, modelo próprio do projeto ARKHER", text)

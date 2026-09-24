@@ -323,6 +323,18 @@ def test_produto_status(auth_client):
     assert "desktop remoto" in " ".join(d["fora_do_produto_por_decisao"])
 
 
+def test_training_news(auth_client):
+    r = auth_client.get("/api/training/news")
+    assert r.status_code == 200
+    d = r.json()
+    assert d["ok"] is True
+    assert isinstance(d["news"], list)
+    for item in d["news"]:
+        assert {"quando", "tipo", "titulo", "detalhe"} <= set(item.keys())
+    # há checkpoints no repositório → a news não pode nascer vazia
+    assert any(n["tipo"] == "checkpoint" for n in d["news"])
+
+
 def test_fluxo_build_api(auth_client):
     auth_client.post("/api/tools/build_gen/authorize")
     r = auth_client.post("/api/build/start", json={"tema": "base do exercito brasileiro", "seed": 8})

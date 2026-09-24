@@ -79,3 +79,38 @@ def tail(step: str, linhas: int = 40) -> list[str]:
     if not Path(log_path).exists():
         return []
     return Path(log_path).read_text(encoding="utf-8", errors="replace").splitlines()[-linhas:]
+
+
+def news(limite: int = 20) -> list[dict]:
+    """Lista de eventos reais do treino (checkpoints salvos, relatórios).
+
+    Derivada do sistema de arquivos — sem inventar nada. Mais novo primeiro.
+    """
+    eventos: list[dict] = []
+    ckpt_dir = Path(config.MODEL_DIR) / "checkpoints"
+    if ckpt_dir.exists():
+        for pt in ckpt_dir.glob("*.pt"):
+            quando = datetime.fromtimestamp(pt.stat().st_mtime, tz=timezone.utc).isoformat()
+            titulo = pt.stem
+            detalhe = ""
+            try:
+                import torch  # import local: só existe no ambiente de treino
+
+                meta = torch.load(pt, map_location="cpu", weights_only=False).get("meta", {})
+                val = meta.get("final_val_loss")
+                if val is not None:
+                    detalhe += f"perda_val={val}"
+                if meta.get("steps"):
+                    detalhe += f" · passos={meta['steps']}"
+                if meta.get("epoch"):
+                    detalhe += f" · época={meta['epoch']}"
+            except Exception:
+                detalhe = detalhe or "metadados indisponíveis"
+            eventos.append({"quando": quando, "tipo": "checkpoint", "titulo": titulo, "detalhe": detalhe.strip(" ·")})
+    runs_dir = Path(config.MODEL_DIR) / "training" / "runs"
+    if runs_dir.exists():
+        for md in runs_dir.glob("relatorio-*.md"):
+            quando = datetime.fromtimestamp(md.stat().st_mtime, tz=timezone.utc).isoformat()
+            eventos.append({"quando": quando, "tipo": "relatorio", "titulo": md.stem, "detalhe": "relatório de avaliação gerado"})
+    eventos.sort(key=lambda e: e["quando"], reverse=True)
+    return eventos[:limite]

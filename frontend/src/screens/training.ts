@@ -24,15 +24,24 @@ export function renderTraining(ctx: Ctx): HTMLElement {
 
   const topbar = el("div", { class: "row" });
   const refreshBtn = el("button", { class: "pri" }, "⟳ " + t("training_refresh", lang));
-  refreshBtn.onclick = () => void refresh(ctx, statusBox, chartBox, logBox);
+  refreshBtn.onclick = () => {
+    void refresh(ctx, statusBox, chartBox, logBox);
+    void refreshNews(ctx, newsBox);
+  };
   topbar.append(refreshBtn);
   root.append(topbar);
 
   const statusBox = el("div", { class: "train-status" });
   const chartBox = el("div", { class: "train-chart" });
+  const newsBox = el("div", { class: "train-news" });
   root.append(statusBox);
   root.append(el("h2", {}, t("training_loss", lang)));
   root.append(chartBox);
+
+  root.append(el("h2", {}, t("training_news", lang)));
+  root.append(el("p", { class: "dim" }, t("training_news_note", lang)));
+  root.append(newsBox);
+  void refreshNews(ctx, newsBox);
 
   root.append(el("h2", {}, "Etapas"));
   const steps = el("div", { class: "steps" });
@@ -43,7 +52,10 @@ export function renderTraining(ctx: Ctx): HTMLElement {
       try {
         await ctx.api.trainingStart(st.id);
         toast("▶ " + st.nome);
-        setTimeout(() => void refresh(ctx, statusBox, chartBox, logBox), 1200);
+        setTimeout(() => {
+          void refresh(ctx, statusBox, chartBox, logBox);
+          void refreshNews(ctx, newsBox);
+        }, 1200);
       } catch (e) {
         toast((e as { message?: string }).message ?? "erro");
       }
@@ -95,13 +107,36 @@ async function refresh(ctx: Ctx, statusBox: HTMLElement, chartBox: HTMLElement, 
 
 async function fetchLog(ctx: Ctx): Promise<string[]> {
   try {
-    const res = await fetch(`${ctx.base()}/api/training/log?step=train`, {
-      headers: ctx.store.state.token ? { Authorization: `Bearer ${ctx.store.state.token}` } : {},
-    });
-    const data = (await res.json()) as { lines?: string[] };
+    const texto = await ctx.api.getRaw("/api/training/log?step=train");
+    const data = JSON.parse(texto) as { lines?: string[] };
     return data.lines ?? [];
   } catch {
     return [];
+  }
+}
+
+async function refreshNews(ctx: Ctx, newsBox: HTMLElement): Promise<void> {
+  newsBox.textContent = "";
+  try {
+    const res = await ctx.api.trainingNews();
+    if (res.news.length === 0) {
+      newsBox.append(el("p", { class: "dim" }, "Nenhum evento de treino registrado ainda."));
+      return;
+    }
+    const lista = el("div", { class: "news-lista" });
+    for (const n of res.news) {
+      const item = el("div", { class: "news-item" });
+      const data = new Date(n.quando);
+      const quando = isNaN(data.getTime()) ? "" : data.toLocaleString();
+      item.append(
+        el("b", {}, (n.tipo === "checkpoint" ? "◆ " : "▤ ") + n.titulo),
+        el("span", { class: "dim" }, ` ${quando}` + (n.detalhe ? ` — ${n.detalhe}` : "")),
+      );
+      lista.append(item);
+    }
+    newsBox.append(lista);
+  } catch (e) {
+    newsBox.append(el("p", { class: "banner err" }, (e as { message?: string }).message ?? "erro"));
   }
 }
 

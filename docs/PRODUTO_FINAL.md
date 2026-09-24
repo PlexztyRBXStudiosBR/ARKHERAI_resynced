@@ -13,8 +13,12 @@
 | Ferramentas de game dev: sistemas Luau, places .rbxlx, compositor aberto de construção, scripts Blender (cena/terreno/personagem/animação com textura) | ✅ |
 | Pontes de construção ao vivo: plugin Roblox Studio + addon Blender (com permissão do usuário) | ✅ |
 | Rede de nós: render 3D e treino em Kaggle/Colab/Lightning/seu PC, com retomada por checkpoint | ✅ |
+| **Operários HF**: modelos abertos do HF Hub (no seu hardware) geram/avaliam/filtram dados de treino com proveniência — `workers/hf_operarios/` | ✅ |
+| **Observatório de treino**: gráficos de perda + news de checkpoints/relatórios, atualização manual (`/api/training/news`) | ✅ |
+| **Sempre ligado legítimo**: systemd Restart=always + healthcheck Docker + vigia de saúde (`deploy/`) | ✅ |
 | Auto-treino com dados da web licenciados: Wikipédia, Gutenberg, Stack Exchange gamedev, Internet Archive (só item com licença declarada) | ✅ pipeline |
-| Docker, documentação, PWA instalável, 59 testes backend + 19 frontend + 17 de integração | ✅ |
+| Camada de verificação de resposta: corrige aritmética, alegações de ações não executadas e capacidades inexistentes | ✅ |
+| Docker, documentação, PWA instalável, 60+ testes backend + 19 frontend + 17 de integração | ✅ |
 
 ## 2. O que falta — e NÃO é código (é execução sua)
 

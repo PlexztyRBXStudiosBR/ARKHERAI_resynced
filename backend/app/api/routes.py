@@ -272,6 +272,12 @@ def training_log(step: str = "train", user: dict = auth.CurrentUser):
     return {"ok": True, "lines": training_service.tail(step)}
 
 
+@router.get("/api/training/news")
+def training_news(user: dict = auth.CurrentUser):
+    """Eventos reais do treino (checkpoints/relatórios) — mais novo primeiro."""
+    return {"ok": True, "news": training_service.news()}
+
+
 # ------------------------------------------------- construção ao vivo (ponte)
 class BuildStartIn(BaseModel):
     tema: str = Field(min_length=1, max_length=200)
@@ -421,6 +427,9 @@ def produto_status(user: dict = auth.CurrentUser):
             "busca em web no runtime (regra: zero chamadas externas)",
             "desktop remoto/VM em runner de CI (termos do serviço)",
             "shell arbitrário exposto na interface (segurança)",
+            "IA controlando PC/VM ou runners de CI como máquinas pessoais (termos do serviço + segurança)",
+            "raspagem de web/vídeos sem licença declarada (treino só com fontes licenciadas)",
+            "scripts de executor/trapaça para jogos online (prejudica outros jogadores)",
         ],
     }
 

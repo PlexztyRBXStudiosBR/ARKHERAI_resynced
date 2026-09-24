@@ -86,6 +86,7 @@ export function makeApi(baseUrl: () => string, token: () => string | null) {
       http<{ ok: boolean }>("POST", "/api/feedback", { session_id: sessionId, rating, content_hash: contentHash }),
     trainingStatus: () => http<TrainingStatus>("GET", "/api/training/status", undefined, 8000),
     trainingStart: (step: string) => http<TrainingStatus>("POST", "/api/training/start", { step }),
+    trainingNews: () => http<{ ok: boolean; news: TrainingNewsItem[] }>("GET", "/api/training/news", undefined, 8000),
     diagnostics: () => http<Record<string, unknown>>("GET", "/api/diagnostics"),
     produtoStatus: () => http<ProdutoStatus>("GET", "/api/produto/status", undefined, 8000),
     async getRaw(path: string): Promise<string> {
@@ -211,6 +212,13 @@ export interface ProdutoStatus {
   total: number;
   itens: ProdutoStatusItem[];
   fora_do_produto_por_decisao: string[];
+}
+
+export interface TrainingNewsItem {
+  quando: string;
+  tipo: "checkpoint" | "relatorio" | string;
+  titulo: string;
+  detalhe: string;
 }
 
 export interface TrainingStatus {
