@@ -195,4 +195,150 @@ function Connector.Materializar(ops: { any }, pastaPai: Instance?): Instance?
 	return pasta
 end
 
+-- ------------------------------------------------------------------ modeler
+-- Parseia o OBJ que o ARKHER gera (obj_gen) em geometria pura.
+function Connector.ParseOBJ(texto: string): { vertices: { { number } }, faces: { { number } } }
+	local vertices: { { number } } = {}
+	local faces: { { number } } = {}
+	for linha in (texto .. "\n"):gmatch("(.-)\n") do
+		local vx, vy, vz = linha:match("^v%s+([%-%d%.]+)%s+([%-%d%.]+)%s+([%-%d%.]+)")
+		if vx then
+			table.insert(vertices, { tonumber(vx) or 0, tonumber(vy) or 0, tonumber(vz) or 0 })
+		else
+			local f = linha:match("^f%s+(.+)$")
+			if f then
+				local ids: { number } = {}
+				for tok in f:gmatch("%S+") do
+					local id = tonumber(tok:match("^(%d+)"))
+					if id then
+						table.insert(ids, id)
+					end
+				end
+				if #ids >= 3 then
+					table.insert(faces, ids)
+				end
+			end
+		end
+	end
+	return { vertices = vertices, faces = faces }
+end
+
+-- Gera mesh real no ARKHER (terreno heightmap OBJ) e devolve geometria.
+function Connector.GerarMesh(seed: number?): (boolean, any)
+	if _token == "" then
+		Connector.Registrar()
+	end
+	request("POST", "/api/tools/obj_gen/authorize")
+	local ok, res = request("POST", "/api/tools/obj_gen/run", { seed = tostring(seed or 42) })
+	if not ok or typeof(res) ~= "table" then
+		return false, res
+	end
+	local resultado = (res :: any).result
+	if not resultado or not resultado.arquivo or not resultado.arquivo.conteudo then
+		return false, { error = "Resposta sem geometria." }
+	end
+	local geo = Connector.ParseOBJ(resultado.arquivo.conteudo)
+	return true, {
+		geometria = geo,
+		descricao = resultado.descricao,
+		nome = resultado.arquivo.nome,
+		vertices = #geo.vertices,
+		faces = #geo.faces,
+	}
+end
+
+-- Converte a geometria do ARKHER no MeshData do Arkher Studio
+-- (passe o módulo MeshData: require(script.Parent.Parent.Modeling.MeshData)).
+function Connector.ParaMeshData(geometria: any, MeshData: any): any
+	local mesh = MeshData.new()
+	for _, v in geometria.vertices do
+		MeshData.AddVertex(mesh, Vector3.new(v[1], v[2], v[3]))
+	end
+	for _, face in geometria.faces do
+		MeshData.AddFace(mesh, face)
+	end
+	return mesh
+end
+
+-- Interface no formato que o ArkherEngineerResource espera
+-- (engineer.arkherAI = Connector.InterfaceIA()).
+-- GenerateModel devolve contagens REAIS + a geometria em .dados — quem quiser
+-- montar o mesh de verdade usa Connector.ParaMeshData(resultado.dados, MeshData).
+function Connector.InterfaceIA(): any
+	return {
+		GenerateModel = function(_self, prompt: string, styleProfile: string?)
+			local ok, res = Connector.GerarMesh()
+			if not ok then
+				return { mesh = { vertices = 0, triangles = 0 }, styleProfile = styleProfile or "realistic", message = tostring((res or {}).error or "backend fora") }
+			end
+			return {
+				mesh = {
+					vertices = res.vertices,
+					triangles = res.faces * 2,
+					format = "EditableMesh",
+					dados = res.geometria,
+					generatedBy = "ARKHER AI - backend proprio",
+				},
+				styleProfile = styleProfile or "realistic",
+				message = res.descricao,
+			}
+		end,
+		GenerateTexture = function(_self, prompt: string, styleProfile: string?, resolucao: string?)
+			return {
+				resolution = resolucao or "4K",
+				generatedBy = "ARKHER AI - textura tileable via Blender (cenas textura_* no backend)",
+				message = "Peça a textura na aba 3D do ARKHER (textura_pedra/tijolo/metal/madeira) e aplique como tile.",
+			}
+		end,
+	}
+end
+
+-- ------------------------------------------------------------------ animator
+-- Gera keyframes procedurais no ARKHER (girar/flutuar/pulsar/vaivem/tremer).
+function Connector.GerarAnimacao(tipo: string, seed: number?, duracao: number?): (boolean, any)
+	if _token == "" then
+		Connector.Registrar()
+	end
+	request("POST", "/api/tools/anim_gen/authorize")
+	return request("POST", "/api/tools/anim_gen/run", {
+		tipo = tipo,
+		seed = tostring(seed or 42),
+		duracao = duracao or 2.0,
+	})
+end
+
+-- Aplica as trilhas do ARKHER num UniversalAnimator do Arkher Studio:
+--   local ok, anim = ArkherAI.GerarAnimacao("flutuar", 7)
+--   ArkherAI.AplicarAnimacao(animator, minhaPart, anim.result)
+function Connector.AplicarAnimacao(animator: any, objeto: Instance, anim: any): number?
+	if typeof(anim) ~= "table" or not anim.trilhas then
+		return nil
+	end
+	local track = animator:RegisterObject(objeto, "Part")
+	local basePos = objeto:IsA("BasePart") and objeto.Position or Vector3.new()
+	local baseSize = objeto:IsA("BasePart") and objeto.Size or Vector3.new(1, 1, 1)
+	local aplicados = 0
+	for _, trilha in anim.trilhas do
+		local prop = trilha.propriedade
+		for _, kf in trilha.keyframes do
+			local valor = kf.valor
+			local propriedade, v = prop, valor
+			if prop == "Rotation" and typeof(valor) == "table" then
+				v = Vector3.new(valor[1], valor[2], valor[3])
+			elseif prop == "PositionOffsetY" and typeof(valor) == "number" then
+				propriedade, v = "Position", basePos + Vector3.new(0, valor, 0)
+			elseif prop == "PositionOffsetX" and typeof(valor) == "number" then
+				propriedade, v = "Position", basePos + Vector3.new(valor, 0, 0)
+			elseif prop == "PositionOffset" and typeof(valor) == "table" then
+				propriedade, v = "Position", basePos + Vector3.new(valor[1], valor[2], valor[3])
+			elseif prop == "SizeScale" and typeof(valor) == "number" then
+				propriedade, v = "Size", baseSize * valor
+			end
+			animator:AddKeyframe(track.id, propriedade, kf.t, v, "humanized")
+			aplicados += 1
+		end
+	end
+	return aplicados
+end
+
 return Connector

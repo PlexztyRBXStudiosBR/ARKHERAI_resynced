@@ -97,8 +97,8 @@ export function renderIntegrations(ctx: Ctx): HTMLElement {
     [
       { pt: "Arkher Studio — integração real", en: "Arkher Studio — real integration" },
       {
-        pt: "O repo PlexztyRBXStudiosBR/ia já fala com este backend: rotas /real/* (chat, builds por tema livre, status) + módulo Luau ArkherAIConnector que materializa as construções peça por peça no Studio. Pacote pronto em integracoes/studio/ (patch git am + instruções).",
-        en: "The PlexztyRBXStudiosBR/ia repo already talks to this backend: /real/* routes (chat, free-theme builds, status) + the ArkherAIConnector Luau module that materializes builds piece by piece in Studio. Ready package in integracoes/studio/ (git am patch + instructions).",
+        pt: "O repo PlexztyRBXStudiosBR/ia fala com este backend: rotas /real/* (chat, builds por tema livre, status) + conector Luau que materializa construções peça por peça, alimenta o Modeler (geometria real via MeshData/EditableMesh) e o Animator (keyframes procedurais). Pacote em integracoes/studio/.",
+        en: "The PlexztyRBXStudiosBR/ia repo talks to this backend: /real/* routes (chat, free-theme builds, status) + Luau connector that materializes builds piece by piece, feeds the Modeler (real geometry via MeshData/EditableMesh) and the Animator (procedural keyframes). Package in integracoes/studio/.",
       },
     ],
   ];

@@ -340,6 +340,29 @@ def test_build_base_militar_interior_e_veiculos():
     assert "TanqueCanhao" in nomes and "TanqueEsteira" in nomes  # veículos
 
 
+def test_anim_gen_keyframes(auth_client):
+    """Keyframes procedurais para o Animator do Arkher Studio."""
+    auth_client.post("/api/tools/anim_gen/authorize")
+    r = auth_client.post("/api/tools/anim_gen/run", json={"tipo": "girar", "seed": 7, "duracao": 2})
+    assert r.status_code == 200
+    res = r.json()["result"]
+    trilha = res["trilhas"][0]
+    assert trilha["propriedade"] == "Rotation"
+    kfs = trilha["keyframes"]
+    assert len(kfs) == 12 and kfs[0]["t"] == 0
+    assert all(kfs[i]["t"] <= kfs[i + 1]["t"] for i in range(len(kfs) - 1))
+    # determinístico por seed
+    r2 = auth_client.post("/api/tools/anim_gen/run", json={"tipo": "girar", "seed": 7, "duracao": 2})
+    assert r2.json()["result"] == res
+    # todos os tipos geram trilhas
+    for tipo in ("flutuar", "pulsar", "vaivem", "tremer"):
+        rt = auth_client.post("/api/tools/anim_gen/run", json={"tipo": tipo, "seed": 3})
+        assert rt.status_code == 200 and rt.json()["result"]["trilhas"]
+    # tipo inválido → erro honesto
+    r3 = auth_client.post("/api/tools/anim_gen/run", json={"tipo": "voar"})
+    assert r3.status_code == 400
+
+
 def test_texturas_4k_tileable_compilam(auth_client):
     """Texturas 4K sem emenda: script Python válido + bake 4096."""
     import py_compile

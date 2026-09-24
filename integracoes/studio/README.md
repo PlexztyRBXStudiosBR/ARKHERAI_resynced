@@ -60,6 +60,30 @@ end
 no `World` do ECS ou direto no Workspace. O ARKHER entrega as operações; quem
 monta é o seu código (permissão e controle ficam com você).
 
+## Modeler + Animator (mesh e keyframes de verdade)
+
+O Arkher Studio tem editor de malha (`MeshData` → `EditableMesh`) e
+`UniversalAnimator` — o conector alimenta os dois direto:
+
+```lua
+-- MODELER: geometria real (terreno OBJ do ARKHER → MeshData → EditableMesh)
+local MeshData = require(ReplicatedStorage.Shared.Modeling.MeshData)
+local ok, mesh = ArkherAI.GerarMesh(42)          -- 256 vértices, 225 faces
+local dados = ArkherAI.ParaMeshData(mesh.geometria, MeshData)
+-- DisplayMesh(dados) do ArkherEngineerResource monta o EditableMesh real
+
+-- interface no formato que o ArkherEngineerResource já espera:
+engineer.arkherAI = ArkherAI.InterfaceIA()       -- AIGenerate() passa a usar dados reais
+
+-- ANIMATOR: keyframes procedurais do ARKHER no UniversalAnimator
+local okA, anim = ArkherAI.GerarAnimacao("flutuar", 7, 2.5)
+local n = ArkherAI.AplicarAnimacao(animator, minhaPart, anim.result)
+animator:Play()                                   -- curva "humanized" nativa deles
+```
+
+Tipos de animação: `girar`, `flutuar`, `pulsar`, `vaivem`, `tremer`
+(12 keyframes, determinísticos por seed; o backend valida e recusa tipo inválido).
+
 ## Testado de ponta a ponta
 
 - status do modelo real ✓

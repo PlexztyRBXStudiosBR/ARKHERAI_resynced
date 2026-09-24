@@ -174,6 +174,65 @@ def gerar_roblox(tipo: str) -> dict:
 
 
 # ------------------------------------------------------------------ OBJ 3D
+def gerar_animacao(tipo: str, seed: str | None = None, duracao: float = 2.0) -> dict:
+    """Keyframes procedurais prontos para animadores (UniversalAnimator etc.).
+
+    Saída em trilhas {propriedade, keyframes:[{t, valor}]} onde valor é lista
+    [x,y,z] (vira Vector3 no consumidor) ou número. Determinístico pela seed.
+    """
+    tipos = ("girar", "flutuar", "pulsar", "vaivem", "tremer")
+    t = (tipo or "").strip().lower()
+    if t not in tipos:
+        raise ValueError(f"Tipo desconhecido. Opções: {', '.join(tipos)}")
+    try:
+        semente = int(seed) if seed not in (None, "") else random.randrange(1, 100000)
+    except (TypeError, ValueError):
+        raise ValueError("seed deve ser um número inteiro")
+    duracao = max(0.5, min(10.0, float(duracao)))
+    rng = random.Random(semente)
+    n = 12
+    tempos = [round(duracao * i / (n - 1), 4) for i in range(n)]
+    trilhas: list[dict] = []
+    if t == "girar":
+        angulo = 360.0 if rng.random() > 0.25 else -360.0
+        trilhas.append({
+            "propriedade": "Rotation",
+            "keyframes": [{"t": k, "valor": [0, angulo * k / duracao, 0]} for k in tempos],
+        })
+    elif t == "flutuar":
+        amp = rng.uniform(1.0, 2.5)
+        fase = rng.uniform(0, math.tau)
+        trilhas.append({
+            "propriedade": "PositionOffsetY",
+            "keyframes": [{"t": k, "valor": round(math.sin(k / duracao * math.tau + fase) * amp, 4)} for k in tempos],
+        })
+    elif t == "pulsar":
+        base, amp = 1.0, rng.uniform(0.15, 0.45)
+        trilhas.append({
+            "propriedade": "SizeScale",
+            "keyframes": [{"t": k, "valor": round(base + math.sin(k / duracao * math.tau) * amp, 4)} for k in tempos],
+        })
+    elif t == "vaivem":
+        amp = rng.uniform(2.0, 6.0)
+        trilhas.append({
+            "propriedade": "PositionOffsetX",
+            "keyframes": [{"t": k, "valor": round(math.sin(k / duracao * math.tau) * amp, 4)} for k in tempos],
+        })
+    else:  # tremer
+        trilhas.append({
+            "propriedade": "PositionOffset",
+            "keyframes": [{"t": k, "valor": [round(rng.uniform(-0.4, 0.4), 3), 0, round(rng.uniform(-0.4, 0.4), 3)]} for k in tempos],
+        })
+    return {
+        "descricao": f"Animação '{t}' ({duracao}s, {n} keyframes, seed {semente}) gerada pelo ARKHER.",
+        "tipo": t,
+        "duracao": duracao,
+        "fps": 30,
+        "trilhas": trilhas,
+        "como_usar": "Registre o objeto no animador e aplique cada keyframe (valor em lista vira Vector3).",
+    }
+
+
 def gerar_terreno(seed: str | None = None, tamanho: int = 16, amplitude: float = 2.5) -> dict:
     """Gera um terreno heightmap em OBJ (texto), determinístico pela seed."""
     try:

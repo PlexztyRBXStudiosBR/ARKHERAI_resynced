@@ -76,6 +76,13 @@ TOOLS: dict[str, dict] = {
         "permissoes": ["geracao_de_asset_local"],
         "confirmacao": False,
     },
+    "anim_gen": {
+        "id": "anim_gen",
+        "nome": "Gerador de animação (keyframes)",
+        "descricao": "Gera trilhas de keyframes procedurais (girar, flutuar, pulsar, vaivem, tremer) prontas para o animador do Arkher Studio. Determinístico pela seed.",
+        "permissoes": ["geracao_de_animacao_local"],
+        "confirmacao": False,
+    },
     "blender_gen": {
         "id": "blender_gen",
         "nome": "Conector Blender (3D real)",
@@ -249,6 +256,15 @@ def run(user_id: str, tool_id: str, args: dict) -> dict:
         elif tool_id == "obj_gen":
             try:
                 result = generators.gerar_terreno(args.get("seed"))
+            except ValueError as e:
+                raise ToolError("INVALID_ARG", str(e))
+        elif tool_id == "anim_gen":
+            try:
+                result = generators.gerar_animacao(
+                    str(args.get("tipo", "")),
+                    args.get("seed"),
+                    float(args.get("duracao", 2.0) or 2.0),
+                )
             except ValueError as e:
                 raise ToolError("INVALID_ARG", str(e))
         elif tool_id == "blender_gen":
