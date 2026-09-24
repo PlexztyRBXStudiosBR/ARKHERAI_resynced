@@ -1,0 +1,456 @@
+From d992e1d671f627af7d2fff88d19dd8f47fb016b4 Mon Sep 17 00:00:00 2001
+From: PlexztyRBXStudiosBR
+ <257159587+PlexztyRBXStudiosBR@users.noreply.github.com>
+Date: Thu, 24 Sep 2026 02:50:48 +0000
+Subject: [PATCH] =?UTF-8?q?Integracao=20REAL=20com=20o=20ARKHER=20AI:=20en?=
+ =?UTF-8?q?dpoints=20/real/*=20(chat=20SSE,=20builds=20por=20tema=20livre,?=
+ =?UTF-8?q?=20status),=20conector=20Luau=20ArkherAIConnector=20e=20docs=20?=
+ =?UTF-8?q?=E2=80=94=20sem=20mock=20quando=20o=20backend=20esta=20no=20ar?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+---
+ backend/src/routes/arkherai.js             | 124 ++++++++++++-
+ docs/ARKHER_AI_INTEGRATION.md              |  70 ++++++++
+ src/shared/ArkherAI/ArkherAIConnector.luau | 198 +++++++++++++++++++++
+ 3 files changed, 383 insertions(+), 9 deletions(-)
+ create mode 100644 docs/ARKHER_AI_INTEGRATION.md
+ create mode 100644 src/shared/ArkherAI/ArkherAIConnector.luau
+
+diff --git a/backend/src/routes/arkherai.js b/backend/src/routes/arkherai.js
+index 021f46b..828ed09 100644
+--- a/backend/src/routes/arkherai.js
++++ b/backend/src/routes/arkherai.js
+@@ -11,6 +11,58 @@ async function arkheraiRoutes(fastify, options) {
+   const ARKHER_AI_BACKEND = process.env.ARKHER_AI_BACKEND || 'http://localhost:8710';
+   const IS_MOCK = process.env.ARKHER_AI_MOCK !== 'false'; // default mock true for now
+ 
++  // ---------- integração REAL com o backend ARKHER (token + SSE + builds) ----------
++  // Usa o fetch global do Node 18+ (sem dependência externa nova).
++  let arkherToken = null;
++
++  function fetchComTimeout(url, opts = {}, ms = 60000) {
++    const ctrl = new AbortController();
++    const timer = setTimeout(() => ctrl.abort(), ms);
++    return fetch(url, { ...opts, signal: ctrl.signal }).finally(() => clearTimeout(timer));
++  }
++
++  async function ensureArkherToken() {
++    if (arkherToken) return arkherToken;
++    const res = await fetchComTimeout(`${ARKHER_AI_BACKEND}/api/auth/device`, {
++      method: 'POST',
++      headers: { 'Content-Type': 'application/json' },
++      body: JSON.stringify({ name: 'Arkher Studio' }),
++    }, 6000);
++    if (!res.ok) throw new Error(`auth HTTP ${res.status}`);
++    const data = await res.json();
++    arkherToken = data.token;
++    return arkherToken;
++  }
++
++  async function arkherFetch(path, opts = {}) {
++    const token = await ensureArkherToken();
++    return fetchComTimeout(`${ARKHER_AI_BACKEND}${path}`, {
++      ...opts,
++      headers: {
++        'Content-Type': 'application/json',
++        Authorization: `Bearer ${token}`,
++        'X-Arkher-Token': token, // fallback para proxies que descartam Authorization
++        ...(opts.headers || {}),
++      },
++    });
++  }
++
++  function parseSSE(texto) {
++    let done = null; let erro = null; let tokens = 0;
++    for (const bloco of String(texto).split('\n\n')) {
++      const ev = /event: (\w+)/.exec(bloco);
++      const dt = /data: (.+)/.exec(bloco);
++      if (!ev || !dt) continue;
++      try {
++        const payload = JSON.parse(dt[1]);
++        if (ev[1] === 'done') done = payload;
++        else if (ev[1] === 'error') erro = payload;
++        else if (ev[1] === 'token') tokens += 1;
++      } catch { /* dado parcial — ignora */ }
++    }
++    return { done, erro, tokens };
++  }
++
+   fastify.get('/status', async (request, reply) => {
+     console.log(`[Arkher AI v1] Status check - Backend: ${ARKHER_AI_BACKEND} - Mock: ${IS_MOCK}`);
+ 
+@@ -70,19 +122,18 @@ async function arkheraiRoutes(fastify, options) {
+       return reply.code(400).send({ error: 'Message required' });
+     }
+ 
+-    // If real backend available and not mock, proxy to it
++    // If real backend available and not mock, proxy to it (consome o SSE do ARKHER)
+     if (!IS_MOCK) {
+       try {
+-        const fetch = (await import('node-fetch')).default;
+-        const res = await fetch(`${ARKHER_AI_BACKEND}/api/chat`, {
++        const res = await arkherFetch('/api/chat', {
+           method: 'POST',
+-          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${request.headers.authorization || 'mock'}` },
+-          body: JSON.stringify({ message, session_id, memory_enabled }),
+-          timeout: 10000,
++          body: JSON.stringify({ message, session_id, memory_enabled: memory_enabled !== false }),
+         });
+-        const data = await res.json();
+-        console.log(`[Arkher AI v1] Real backend chat response:`, data);
+-        return data;
++        const texto = await res.text();
++        const sse = parseSSE(texto);
++        if (sse.erro) return { ok: false, ...sse.erro, mock: false };
++        if (sse.done) return { ok: true, ...sse.done, mock: false, backend: 'arkher-ai-real' };
++        return { ok: false, error: 'SSE sem evento done', mock: false };
+       } catch (err) {
+         console.log(`[Arkher AI v1] Real backend chat failed, fallback to mock - Error:`, err.message);
+       }
+@@ -353,6 +404,61 @@ return ${prompt.replace(/\s+/g, '')}
+       message: 'Physics types - Real and advanced, atomic, quantum, all types - Backend for ARKHER AI v1 to know how to do everything best - Inspire reality top 1',
+     };
+   });
++
++  // ---------- endpoints REAIS (sem mock): chat, builds, status do modelo ----------
++
++  // Chat REAL: usa o backend ARKHER mesmo com ARKHER_AI_MOCK ativo no resto.
++  // Erro honesto (502) se o backend estiver fora — nunca resposta inventada.
++  fastify.post('/real/chat', async (request, reply) => {
++    const { message, session_id, memory_enabled } = request.body || {};
++    if (!message) return reply.code(400).send({ ok: false, error: 'Message required' });
++    try {
++      const res = await arkherFetch('/api/chat', {
++        method: 'POST',
++        body: JSON.stringify({ message, session_id, memory_enabled: memory_enabled !== false }),
++      });
++      const sse = parseSSE(await res.text());
++      if (sse.erro) return { ok: false, ...sse.erro, mock: false };
++      if (sse.done) return { ok: true, ...sse.done, mock: false, backend: 'arkher-ai-real' };
++      return { ok: false, error: 'SSE sem evento done', mock: false };
++    } catch (err) {
++      return reply.code(502).send({ ok: false, error: `ARKHER backend indisponível: ${err.message}`, mock: false });
++    }
++  });
++
++  // Construção REAL: tema livre (castelo, base militar, vila...) → ops peça a peça
++  fastify.post('/real/build/start', async (request, reply) => {
++    const { tema, seed } = request.body || {};
++    if (!tema) return reply.code(400).send({ ok: false, error: 'tema obrigatório' });
++    try {
++      await arkherFetch('/api/tools/build_gen/authorize', { method: 'POST' });
++      const res = await arkherFetch('/api/build/start', {
++        method: 'POST',
++        body: JSON.stringify({ tema, seed: seed ?? 42 }),
++      });
++      return await res.json();
++    } catch (err) {
++      return reply.code(502).send({ ok: false, error: `ARKHER backend indisponível: ${err.message}` });
++    }
++  });
++
++  fastify.get('/real/build/proximo', async (request, reply) => {
++    try {
++      const res = await arkherFetch('/api/build/proximo');
++      return await res.json();
++    } catch (err) {
++      return reply.code(502).send({ ok: false, error: `ARKHER backend indisponível: ${err.message}` });
++    }
++  });
++
++  fastify.get('/real/model/status', async (request, reply) => {
++    try {
++      const res = await arkherFetch('/api/model/status');
++      return await res.json();
++    } catch (err) {
++      return reply.code(502).send({ ok: false, error: `ARKHER backend indisponível: ${err.message}` });
++    }
++  });
+ }
+ 
+ module.exports = arkheraiRoutes;
+diff --git a/docs/ARKHER_AI_INTEGRATION.md b/docs/ARKHER_AI_INTEGRATION.md
+new file mode 100644
+index 0000000..68ca481
+--- /dev/null
++++ b/docs/ARKHER_AI_INTEGRATION.md
+@@ -0,0 +1,70 @@
++# ARKHER AI — integração REAL com o Arkher Studio
++
++O ARKHER AI (backend + modelo próprios, sem provedor externo) agora conversa
++de verdade com o Arkher Studio — sem mock quando o backend está no ar.
++
++## O que foi ligado
++
++| Caminho | O que faz |
++|---|---|
++| `POST /api/arkherai/real/chat` | Conversa REAL com o modelo ARKHER-1 (consome o SSE do backend e devolve JSON). Erro 502 honesto se o backend estiver fora. |
++| `POST /api/arkherai/real/build/start` | Pede construção por tema livre (`{"tema":"castelo medieval","seed":11}`) → `build_id` + nº de peças |
++| `GET /api/arkherai/real/build/proximo` | Busca as operações (peça por peça: posição, tamanho, cor) para montar na cena |
++| `GET /api/arkherai/real/model/status` | Estado real do modelo (checkpoint, parâmetros, qualidade) |
++
++O backend Node registra o dispositivo uma vez (`/api/auth/device` do ARKHER),
++guarda o token em memória e assina todas as chamadas. Nada de dependência nova:
++usa o `fetch` global do Node 18+.
++
++Variáveis de ambiente:
++
++```bash
++ARKHER_AI_BACKEND=http://SEU_SERVIDOR:8710   # onde o ARKHER roda
++ARKHER_AI_MOCK=false                         # desliga os mocks antigos (opcional)
++```
++
++Os endpoints `/real/*` funcionam mesmo com `ARKHER_AI_MOCK` ativo no resto da
++rota — assim a migração é gradual e nada quebra.
++
++## Dentro do Roblox (Luau)
++
++`src/shared/ArkherAI/ArkherAIConnector.luau` fala DIRETO com o backend do
++ARKHER via HttpService (útil quando o jogo não passa pelo Node):
++
++```lua
++local ArkherAI = require(game.ReplicatedStorage:WaitForChild("ArkherAIConnector"))
++ArkherAI.Configurar("http://SEU_SERVIDOR:8710")
++
++-- conversa
++local ok, resposta = ArkherAI.Chat("crie um castelo medieval com torres")
++
++-- construção: gera no ARKHER e materializa as peças
++local okBuild, build = ArkherAI.Construir("base militar completa", 9)
++if okBuild then
++    local pasta = ArkherAI.Materializar(build.ops) -- Folder com as Parts
++    -- dali você anexa no ECS/Projeto/Workspace como preferir
++end
++```
++
++`Materializar` devolve um `Folder` com as `Part` criadas — plugue no
++`BuildingService`, no `World` do ECS ou direto no Workspace.
++
++## Fluxo da construção
++
++```
++Studio ──tema livre──► ARKHER build_gen ──ops──► Studio materializa
++        (castelo, base militar, vila…)    peça a peça, com permissão
++```
++
++O ARKHER nunca controla o Studio: ele entrega as operações e o seu código
++decide onde e como montar.
++
++## Honestidade
++
++- Backend fora → erro 502 explícito, nunca resposta inventada.
++- O modelo é o ARKHER-1 mini (experimental); o status real está em
++  `/real/model/status` e no frontend do ARKHER (aba Cérebro).
++- Repositório de origem do ARKHER:
++  https://github.com/PlexztyRBXStudiosBR/ARKHERAI_resynced (branch
++  `arena/01a0cf78-arkherai-resynced`) — arquivo espelhado em
++  `integracoes/studio/` lá.
+diff --git a/src/shared/ArkherAI/ArkherAIConnector.luau b/src/shared/ArkherAI/ArkherAIConnector.luau
+new file mode 100644
+index 0000000..76a7d62
+--- /dev/null
++++ b/src/shared/ArkherAI/ArkherAIConnector.luau
+@@ -0,0 +1,198 @@
++--!strict
++-- ArkherAIConnector — integração REAL do ARKHER AI com o Arkher Studio.
++--
++-- O ARKHER AI (backend próprio + modelo próprio) expõe API HTTP:
++--   POST /api/auth/device      → registra o dispositivo e devolve token
++--   GET  /api/health           → estado do backend/modelo
++--   POST /api/chat             → conversa (resposta em SSE; o corpo completo
++--                                 chega ao fim da geração — parse abaixo)
++--   POST /api/tools/{id}/authorize → autoriza uma ferramenta
++--   POST /api/build/start      → pede uma construção (tema livre + seed)
++--   GET  /api/build/proximo    → busca as operações (peça por peça)
++--
++-- Este módulo conversa DIRETO com o backend do ARKHER (configure a URL).
++-- Nada de mock: se o backend estiver fora, devolve erro honesto.
++--
++-- Uso:
++--   local ArkherAI = require(script.Parent.ArkherAIConnector)
++--   ArkherAI.Configurar("http://SEU_SERVIDOR:8710")
++--   local ok, resposta = ArkherAI.Chat("crie um castelo medieval com torres")
++--   local build = ArkherAI.Construir("castelo medieval", 11)
++--   ArkherAI.Materializar(build.ops)  -- cria as peças no Workspace
++
++local HttpService = game:GetService("HttpService")
++
++local Connector = {}
++
++local _baseUrl: string = ""
++local _token: string = ""
++
++-- ------------------------------------------------------------------ config
++function Connector.Configurar(url: string): ()
++	_baseUrl = url:gsub("/$", "") -- sem barra final
++	_token = ""
++end
++
++function Connector.UrlAtual(): string
++	return _baseUrl
++end
++
++-- ------------------------------------------------------------------ http
++local function request(method: string, path: string, body: any?): (boolean, any)
++	if _baseUrl == "" then
++		return false, { error = "Configure a URL do backend ARKHER com Configurar()." }
++	end
++	local headers = { ["Content-Type"] = "application/json" }
++	if _token ~= "" then
++		headers["Authorization"] = "Bearer " .. _token
++		headers["X-Arkher-Token"] = _token -- fallback para proxies
++	end
++	local ok, res = pcall(function()
++		return HttpService:RequestAsync({
++			Url = _baseUrl .. path,
++			Method = method,
++			Headers = headers,
++			Body = body ~= nil and HttpService:JSONEncode(body) or nil,
++		})
++	end)
++	if not ok then
++		return false, { error = tostring(res) }
++	end
++	local r = res :: any
++	if not r.Success then
++		return false, { error = ("HTTP %d"):format(r.StatusCode), body = r.Body }
++	end
++	local decoded = nil
++	if r.Body and r.Body ~= "" then
++		local jok, jres = pcall(HttpService.JSONDecode, HttpService, r.Body)
++		decoded = jok and jres or r.Body
++	end
++	return true, decoded
++end
++
++-- SSE do /api/chat: eventos "event: X" + "data: {json}", um por linha
++local function parseSSE(corpo: string): { done: any?, tokens: number, erro: any? }
++	local donePayload = nil
++	local tokenCount = 0
++	local erroPayload = nil
++	local eventoAtual = nil
++	for linha in (corpo .. "\n"):gmatch("(.-)\n") do
++		if linha:sub(1, 7) == "event: " then
++			eventoAtual = linha:sub(8)
++		elseif linha:sub(1, 6) == "data: " then
++			local jok, dados = pcall(HttpService.JSONDecode, HttpService, linha:sub(7))
++			if jok and eventoAtual then
++				if eventoAtual == "done" then
++					donePayload = dados
++				elseif eventoAtual == "token" then
++					tokenCount += 1
++				elseif eventoAtual == "error" then
++					erroPayload = dados
++				end
++			end
++		end
++	end
++	return { done = donePayload, tokens = tokenCount, erro = erroPayload }
++end
++
++-- ------------------------------------------------------------------ auth/status
++function Connector.Registrar(nomeDoDispositivo: string?): (boolean, any)
++	local ok, res = request("POST", "/api/auth/device", { name = nomeDoDispositivo or "Arkher Studio" })
++	if ok and res and res.token then
++		_token = res.token
++		return true, res
++	end
++	return false, res
++end
++
++function Connector.Saude(): (boolean, any)
++	local ok, res = request("GET", "/api/health")
++	return ok, res
++end
++
++function Connector.StatusModelo(): (boolean, any)
++	local ok, res = request("GET", "/api/model/status")
++	return ok, res
++end
++
++-- ------------------------------------------------------------------ chat
++function Connector.Chat(mensagem: string, sessionId: string?, memoria: boolean?): (boolean, any)
++	if _token == "" then
++		local regOk = Connector.Registrar()
++		if not regOk then
++			return false, { error = "Sem token: backend ARKHER inacessível." }
++		end
++	end
++	local ok, res = request("POST", "/api/chat", {
++		message = mensagem,
++		session_id = sessionId,
++		memory_enabled = memoria ~= false,
++	})
++	if not ok then
++		return false, res
++	end
++	if typeof(res) == "table" and res.content then
++		-- resposta já veio como JSON simples
++		return true, res
++	end
++	if typeof(res) == "string" then
++		local sse = parseSSE(res)
++		if sse.erro then
++			return false, sse.erro
++		end
++		if sse.done then
++			return true, sse.done
++		end
++	end
++	return false, { error = "Resposta inesperada do backend." }
++end
++
++-- ------------------------------------------------------------------ construção
++function Connector.Construir(tema: string, seed: number?): (boolean, any)
++	if _token == "" then
++		Connector.Registrar()
++	end
++	request("POST", "/api/tools/build_gen/authorize")
++	local ok, res = request("POST", "/api/build/start", {
++		tema = tema,
++		seed = seed or 42,
++	})
++	if not ok then
++		return false, res
++	end
++	local okOps, ops = request("GET", "/api/build/proximo")
++	if not okOps then
++		return false, ops
++	end
++	return true, ops
++end
++
++-- Materializa as operações como peças reais (cliente/Studio).
++-- Devolve o Folder criado para você anexar onde quiser (ECS, Projeto, Workspace).
++function Connector.Materializar(ops: { any }, pastaPai: Instance?): Instance?
++	if typeof(ops) ~= "table" then
++		return nil
++	end
++	local pasta = Instance.new("Folder")
++	pasta.Name = "ArkherBuild_" .. os.time()
++	pasta.Parent = pastaPai or workspace
++	for _, op in ops do
++		if typeof(op) == "table" and op.op == "part" then
++			local p = Instance.new("Part")
++			p.Name = tostring(op.nome or "Peca")
++			local pos = op.pos or { 0, 0, 0 }
++			local size = op.size or { 4, 4, 4 }
++			local cor = op.cor or { 160, 160, 160 }
++			p.Position = Vector3.new(pos[1], pos[2], pos[3])
++			p.Size = Vector3.new(size[1], size[2], size[3])
++			p.Color = Color3.fromRGB(cor[1], cor[2], cor[3])
++			p.Anchored = op.ancorado ~= false
++			p.TopSurface = Enum.SurfaceType.Smooth
++			p.BottomSurface = Enum.SurfaceType.Smooth
++			p.Parent = pasta
++		end
++	end
++	return pasta
++end
++
++return Connector
+-- 
+2.39.5
+

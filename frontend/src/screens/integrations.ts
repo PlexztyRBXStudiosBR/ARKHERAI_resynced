@@ -94,6 +94,13 @@ export function renderIntegrations(ctx: Ctx): HTMLElement {
         en: "Legitimate alternative to manual reboots: systemd with Restart=always (deploy/arkher.service), Docker with healthcheck, and the deploy/arkher-watchdog.sh watchdog. The service recovers on its own, on your own machine.",
       },
     ],
+    [
+      { pt: "Arkher Studio — integração real", en: "Arkher Studio — real integration" },
+      {
+        pt: "O repo PlexztyRBXStudiosBR/ia já fala com este backend: rotas /real/* (chat, builds por tema livre, status) + módulo Luau ArkherAIConnector que materializa as construções peça por peça no Studio. Pacote pronto em integracoes/studio/ (patch git am + instruções).",
+        en: "The PlexztyRBXStudiosBR/ia repo already talks to this backend: /real/* routes (chat, free-theme builds, status) + the ArkherAIConnector Luau module that materializes builds piece by piece in Studio. Ready package in integracoes/studio/ (git am patch + instructions).",
+      },
+    ],
   ];
   for (const [nome, desc] of info) {
     const card = el("div", { class: "tool-card" });
