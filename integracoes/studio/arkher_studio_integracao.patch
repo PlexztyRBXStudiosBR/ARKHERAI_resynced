@@ -1,11 +1,12 @@
-From 9586d445910197c479676627d3dfea651e972cea Mon Sep 17 00:00:00 2001
+From af4436762db8cfd71d101b363125750a07ed81d9 Mon Sep 17 00:00:00 2001
 From: PlexztyRBXStudiosBR
  <257159587+PlexztyRBXStudiosBR@users.noreply.github.com>
 Date: Thu, 24 Sep 2026 02:50:48 +0000
-Subject: [PATCH] =?UTF-8?q?Integracao=20REAL=20com=20o=20ARKHER=20AI:=20en?=
- =?UTF-8?q?dpoints=20/real/*=20(chat=20SSE,=20builds=20por=20tema=20livre,?=
- =?UTF-8?q?=20status),=20conector=20Luau=20ArkherAIConnector=20e=20docs=20?=
- =?UTF-8?q?=E2=80=94=20sem=20mock=20quando=20o=20backend=20esta=20no=20ar?=
+Subject: [PATCH 1/2] =?UTF-8?q?Integracao=20REAL=20com=20o=20ARKHER=20AI:?=
+ =?UTF-8?q?=20endpoints=20/real/*=20(chat=20SSE,=20builds=20por=20tema=20l?=
+ =?UTF-8?q?ivre,=20status),=20conector=20Luau=20ArkherAIConnector=20e=20do?=
+ =?UTF-8?q?cs=20=E2=80=94=20sem=20mock=20quando=20o=20backend=20esta=20no?=
+ =?UTF-8?q?=20ar?=
 MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8
 Content-Transfer-Encoding: 8bit
@@ -845,6 +846,1409 @@ index 0000000..571df25
 +end
 +
 +return Connector
+-- 
+2.39.5
+
+
+From 9733a3cdc3898f10a91ada93dc9960aa4581d935 Mon Sep 17 00:00:00 2001
+From: PlexztyRBXStudiosBR
+ <257159587+PlexztyRBXStudiosBR@users.noreply.github.com>
+Date: Thu, 24 Sep 2026 17:27:43 +0000
+Subject: [PATCH 2/2] Arkher Agent AI: botao na topbar/toolbar com icone
+ personalizado + painel com abas (chat, 3D materializado, animacoes ao vivo,
+ jogo completo, pesquisa web em fontes abertas) + rota /real/search
+
+---
+ backend/src/routes/arkherai.js               |   18 +
+ docs/ARKHER_AI_INTEGRATION.md                |   21 +
+ src/client/controllers/MainControllerV2.luau |   59 +
+ src/client/modules/UI/AgentPanel.luau        | 1139 ++++++++++++++++++
+ src/client/modules/UI/ShellV2.luau           |   68 +-
+ 5 files changed, 1299 insertions(+), 6 deletions(-)
+ create mode 100644 src/client/modules/UI/AgentPanel.luau
+
+diff --git a/backend/src/routes/arkherai.js b/backend/src/routes/arkherai.js
+index 593269f..8507471 100644
+--- a/backend/src/routes/arkherai.js
++++ b/backend/src/routes/arkherai.js
+@@ -508,6 +508,24 @@ return ${prompt.replace(/\s+/g, '')}
+     }
+   });
+ 
++  // Pesquisa REAL: fontes abertas (Wikipedia CC-BY-SA, Internet Archive,
++  // documentação oficial do Roblox via Roblox/creator-docs CC-BY-4.0,
++  // YouTube somente com chave própria). Sem rede → erro honesto.
++  fastify.post('/real/search', async (request, reply) => {
++    const { consulta, fonte, idioma } = request.body || {};
++    if (!consulta) return reply.code(400).send({ ok: false, error: 'consulta obrigatória' });
++    try {
++      await arkherFetch('/api/tools/web_search/authorize', { method: 'POST' });
++      const res = await arkherFetch('/api/tools/web_search/run', {
++        method: 'POST',
++        body: JSON.stringify({ consulta, fonte: fonte || null, idioma: idioma || 'pt' }),
++      });
++      return await res.json();
++    } catch (err) {
++      return reply.code(502).send({ ok: false, error: `ARKHER backend indisponível: ${err.message}` });
++    }
++  });
++
+   // Animação REAL: keyframes procedurais (girar/flutuar/pulsar/vaivem/tremer)
+   fastify.post('/real/anim', async (request, reply) => {
+     const { tipo, seed, duracao } = request.body || {};
+diff --git a/docs/ARKHER_AI_INTEGRATION.md b/docs/ARKHER_AI_INTEGRATION.md
+index 3927f70..6a22e56 100644
+--- a/docs/ARKHER_AI_INTEGRATION.md
++++ b/docs/ARKHER_AI_INTEGRATION.md
+@@ -105,3 +105,24 @@ tem equivalente — nada fica fingindo integração.
+ Rotas Node: `POST /real/style` e `POST /real/fisica` completam o conjunto —
+ o ARKHER escolhe o estilo visual e o tipo de física a partir do pedido em
+ linguagem natural, e os aplicadores injetam direto nos módulos do Studio.
++
++## Arkher Agent AI — botão na topbar + painel com abas (REAL)
++
++Botão **Arkher Agent AI** com ícone personalizado (neon próprio, vetorial) na
++topbar (`ShellV2.RightContainer`) e na toolbar mobile. Abre o painel
++`src/client/modules/UI/AgentPanel.luau`, integrado de verdade ao backend
++ARKHER via proxy deste repositório (`/api/arkherai/*`) — sem mock:
++
++| Aba | O que faz (real) |
++|---|---|
++| Chat | conversa com o modelo próprio (SSE via `/real/chat`) |
++| 3D | `/real/build/start` + `/real/build/proximo` → peças viram **Parts reais** em `Workspace.ArkherAgent` (Modeler edita depois) |
++| Anim | escolha do modelo + descrição → `/real/anim` gera keyframes e o painel **reproduz ao vivo** (PivotTo/Heartbeat) |
++| Jogo | descreve o jogo inteiro → planejamento peça a peça + materialização completa |
++| Web | `/real/search` — Wikipedia (CC BY-SA), Internet Archive, **docs oficiais do Roblox** (`Roblox/creator-docs`, CC-BY-4.0), YouTube (com chave própria) |
++
++Rota Node nova: `POST /real/search` → `web_search` (fonte aberta por vez ou
++todas; falha de rede vira erro honesto, nunca resultado inventado).
++
++Ícone personalizado: `docs/arkher_agent_icon.png`. Para usar no Roblox, suba a
++imagem e cole o `rbxassetid` em `ICON_ASSET_ID` no topo do `AgentPanel.luau`.
+diff --git a/src/client/controllers/MainControllerV2.luau b/src/client/controllers/MainControllerV2.luau
+index 12586fb..23f6594 100644
+--- a/src/client/controllers/MainControllerV2.luau
++++ b/src/client/controllers/MainControllerV2.luau
+@@ -26,6 +26,7 @@ local Outliner = require(script.Parent.Parent.modules.UI.Outliner)
+ local Details = require(script.Parent.Parent.modules.UI.Details)
+ local MobileUI = require(script.Parent.Parent.modules.UI.MobileUI)
+ local Toolbar = require(script.Parent.Parent.modules.UI.Toolbar)
++local AgentPanel = require(script.Parent.Parent.modules.UI.AgentPanel)
+ 
+ -- Building
+ local InputService = require(script.Parent.Parent.modules.Input.InputService)
+@@ -299,6 +300,64 @@ function MainControllerV2:Init()
+ 
+ 	self.uiV2 = self.shellV2:BuildFullUIV2(screenGuiV2, self.currentLevel :: any)
+ 
++	-- ARKHER AGENT AI: painel real (chat, 3D, animacoes, jogo completo, web)
++	self.agentPanel = AgentPanel.new({ isMobile = self.adaptiveLayout.isMobile })
++	self.agentPanel:Init(screenGuiV2)
++	if self.uiV2 and self.uiV2.topBar then
++		local agentBtn = self.uiV2.topBar:FindFirstChild("RightContainer")
++			and self.uiV2.topBar.RightContainer:FindFirstChild("ArkherAgentBtn")
++		if agentBtn and agentBtn:IsA("TextButton") then
++			agentBtn.MouseButton1Click:Connect(function()
++				self.agentPanel:Toggle()
++			end)
++		end
++	end
++	-- Mobile: botao dedicado na toolbar inferior
++	if self.uiV2 and self.uiV2.mobileToolbar then
++		local mobileBar = self.uiV2.mobileToolbar :: Frame
++		local agentMobile = Instance.new("TextButton")
++		agentMobile.Name = "ArkherAgentBtnMobile"
++		agentMobile.Size = UDim2.new(0, 170, 0, 40)
++		agentMobile.Position = UDim2.new(0.5, -85, 0.5, -24)
++		agentMobile.BackgroundColor3 = Color3.fromRGB(0, 60, 36)
++		agentMobile.Text = "  Arkher Agent AI"
++		agentMobile.TextColor3 = Color3.fromRGB(0, 212, 122)
++		agentMobile.TextSize = 14
++		agentMobile.Font = Enum.Font.GothamBold
++		agentMobile.TextXAlignment = Enum.TextXAlignment.Left
++		agentMobile.ZIndex = 22
++		agentMobile.Parent = mobileBar
++		local agentMobileCorner = Instance.new("UICorner")
++		agentMobileCorner.CornerRadius = UDim.new(0, 10)
++		agentMobileCorner.Parent = agentMobile
++		local agentMobileStroke = Instance.new("UIStroke")
++		agentMobileStroke.Color = Color3.fromRGB(0, 212, 122)
++		agentMobileStroke.Thickness = 1.2
++		agentMobileStroke.Parent = agentMobile
++		local agentMobileIcon = Instance.new("Frame")
++		agentMobileIcon.Size = UDim2.fromOffset(22, 22)
++		agentMobileIcon.Position = UDim2.new(0, 6, 0.5, -11)
++		agentMobileIcon.BackgroundColor3 = Color3.fromRGB(0, 120, 70)
++		agentMobileIcon.BorderSizePixel = 0
++		agentMobileIcon.ZIndex = 23
++		agentMobileIcon.Parent = agentMobile
++		local agentMobileIconCorner = Instance.new("UICorner")
++		agentMobileIconCorner.CornerRadius = UDim.new(0, 6)
++		agentMobileIconCorner.Parent = agentMobileIcon
++		local agentMobileLetter = Instance.new("TextLabel")
++		agentMobileLetter.Size = UDim2.fromScale(1, 1)
++		agentMobileLetter.BackgroundTransparency = 1
++		agentMobileLetter.Text = "A"
++		agentMobileLetter.Font = Enum.Font.GothamBlack
++		agentMobileLetter.TextColor3 = Color3.fromRGB(0, 212, 122)
++		agentMobileLetter.TextSize = 13
++		agentMobileLetter.ZIndex = 24
++		agentMobileLetter.Parent = agentMobileIcon
++		agentMobile.MouseButton1Click:Connect(function()
++			self.agentPanel:Toggle()
++		end)
++	end
++
+ 	-- Fallback to old Shell for compatibility
+ 	local screenGuiOld = Shell.CreateMainScreenGui()
+ 	screenGuiOld.Parent = playerGui
+diff --git a/src/client/modules/UI/AgentPanel.luau b/src/client/modules/UI/AgentPanel.luau
+new file mode 100644
+index 0000000..6493192
+--- /dev/null
++++ b/src/client/modules/UI/AgentPanel.luau
+@@ -0,0 +1,1139 @@
++--!strict
++-- Arkher Studio - AgentPanel - ARKHER AGENT AI
++-- Painel REAL da ARKHER AI dentro do Studio: chat, geração 3D materializada,
++-- animações aplicadas de verdade, jogo completo peça a peça e pesquisa na web
++-- em fontes abertas (Wikipedia, Internet Archive, docs oficiais do Roblox).
++-- Nada de mock: se o backend ARKHER está fora, o painel avisa com honestidade.
++
++local HttpService = game:GetService("HttpService")
++local RunService = game:GetService("RunService")
++local Workspace = game:GetService("Workspace")
++
++local AgentPanel = {}
++AgentPanel.__index = AgentPanel
++
++-- Backend do proprio Arkher Studio faz proxy para o backend ARKHER AI.
++local API_BASE = "http://localhost:3000/api/arkherai"
++local AGENT_ROOT = "ArkherAgent"
++local NEON = Color3.fromRGB(0, 212, 122)
++local NEON_DARK = Color3.fromRGB(0, 120, 70)
++local PANEL_BG = Color3.fromRGB(16, 20, 18)
++local PANEL_CARD = Color3.fromRGB(26, 32, 29)
++local PANEL_BORDER = Color3.fromRGB(0, 90, 56)
++local TEXT_MAIN = Color3.fromRGB(235, 245, 240)
++local TEXT_DIM = Color3.fromRGB(150, 165, 158)
++
++-- Se você subir o ícone personalizado no Roblox, cole o rbxassetid aqui.
++local ICON_ASSET_ID = ""
++
++export type Aba = "chat" | "tresd" | "anim" | "jogo" | "web"
++
++function AgentPanel.new(opts: { isMobile: boolean? }?)
++	local o = opts or {}
++	return setmetatable({
++		isMobile = o.isMobile == true,
++		open = false,
++		root = nil :: Frame?,
++		gui = nil :: ScreenGui?,
++		pages = {} :: { [string]: Frame },
++		tabs = {} :: { [string]: TextButton },
++		statusDot = nil :: Frame?,
++		statusLabel = nil :: TextLabel?,
++		modelStatus = "verificando",
++		-- animacao
++		animTarget = nil :: Instance?,
++		animPlaying = false,
++		animCancel = nil :: thread?,
++		-- jogo
++		jogoPecas = 0,
++		jogoOps = nil :: { any }?,
++	}, AgentPanel)
++end
++
++-- ------------------------------------------------------------------ util UI
++local function corner(parent: Instance, raio: number?)
++	local c = Instance.new("UICorner")
++	c.CornerRadius = UDim.new(0, raio or 8)
++	c.Parent = parent
++	return c
++end
++
++local function stroke(parent: Instance, cor: Color3?)
++	local s = Instance.new("UIStroke")
++	s.Color = cor or PANEL_BORDER
++	s.Thickness = 1
++	s.Parent = parent
++	return s
++end
++
++local function rotulo(texto: string, tamanho: number, cor: Color3?, alinhado: string?)
++	local l = Instance.new("TextLabel")
++	l.BackgroundTransparency = 1
++	l.Text = texto
++	l.TextColor3 = cor or TEXT_MAIN
++	l.TextSize = tamanho
++	l.Font = Enum.Font.Gotham
++	l.TextXAlignment = if alinhado == "dir" then Enum.TextXAlignment.Right else Enum.TextXAlignment.Left
++	l.TextYAlignment = Enum.TextYAlignment.Top
++	l.TextWrapped = true
++	return l
++end
++
++-- Ícone personalizado da ARKHER (vetorial: nucleo + anel neon). Sem depender
++-- de asset externo; se ICON_ASSET_ID existir, usa a imagem enviada.
++local function makeIcon(px: number): GuiObject
++	if ICON_ASSET_ID ~= "" then
++		local img = Instance.new("ImageLabel")
++		img.Size = UDim2.fromOffset(px, px)
++		img.BackgroundTransparency = 1
++		img.Image = ICON_ASSET_ID
++		return img
++	end
++	local icone = Instance.new("Frame")
++	icone.Size = UDim2.fromOffset(px, px)
++	icone.BackgroundColor3 = NEON_DARK
++	icone.BorderSizePixel = 0
++	corner(icone, math.floor(px * 0.28))
++
++	local anel = Instance.new("Frame")
++	anel.Size = UDim2.fromScale(0.72, 0.72)
++	anel.Position = UDim2.fromScale(0.14, 0.14)
++	anel.BackgroundTransparency = 1
++	anel.BorderSizePixel = 0
++	anel.Parent = icone
++	stroke(anel, NEON).Thickness = math.max(1.5, px * 0.07)
++	corner(anel, math.floor(px * 0.5))
++
++	local letra = Instance.new("TextLabel")
++	letra.Size = UDim2.fromScale(1, 1)
++	letra.BackgroundTransparency = 1
++	letra.Text = "A"
++	letra.Font = Enum.Font.GothamBlack
++	letra.TextColor3 = NEON
++	letra.TextSize = math.floor(px * 0.52)
++	letra.Parent = icone
++	return icone
++end
++
++-- --------------------------------------------------------------------- HTTP
++function AgentPanel:_request(metodo: string, caminho: string, corpo: any?): (boolean, any)
++	local url = API_BASE .. caminho
++	local ok, res = pcall(function()
++		return HttpService:RequestAsync({
++			Url = url,
++			Method = metodo,
++			Headers = { ["Content-Type"] = "application/json" },
++			Body = corpo ~= nil and HttpService:JSONEncode(corpo) or nil,
++		})
++	end)
++	if not ok then
++		return false, { erro = "Backend do Arkher Studio fora do ar (localhost:3000). Abra o backend e tente de novo." }
++	end
++	local resposta = res :: any
++	if not resposta.Success then
++		return false, { erro = string.format("HTTP %d em %s", resposta.StatusCode or 0, caminho) }
++	end
++	local okJson, dados = pcall(function()
++		return HttpService:JSONDecode(resposta.Body)
++	end)
++	if not okJson then
++		return false, { erro = "Resposta inválida do backend." }
++	end
++	return true, dados
++end
++
++function AgentPanel:_post(caminho: string, corpo: any?)
++	return self:_request("POST", caminho, corpo or {})
++end
++
++-- ------------------------------------------------------------------ raizes
++function AgentPanel:_pastaAgente(): Folder
++	local pasta = Workspace:FindFirstChild(AGENT_ROOT)
++	if not pasta then
++		pasta = Instance.new("Folder")
++		pasta.Name = AGENT_ROOT
++		pasta.Parent = Workspace
++	end
++	return pasta :: Folder
++end
++
++-- ------------------------------------------------------------- materializar
++function AgentPanel:_materializarOps(ops: { any }, nomeModelo: string): number
++	local pasta = self:_pastaAgente()
++	local modelo = Instance.new("Model")
++	modelo.Name = nomeModelo
++	local criadas = 0
++	for _, op in ops do
++		if op.op == "part" and typeof(op.pos) == "table" and typeof(op.size) == "table" then
++			local part = Instance.new("Part")
++			part.Name = tostring(op.nome or "Peca")
++			part.Size = Vector3.new(op.size[1] or 4, op.size[2] or 4, op.size[3] or 4)
++			part.Position = Vector3.new(op.pos[1] or 0, op.pos[2] or 0, op.pos[3] or 0)
++			local cor = op.cor
++			if typeof(cor) == "table" then
++				part.Color = Color3.fromRGB(cor[1] or 160, cor[2] or 160, cor[3] or 160)
++			end
++			part.Anchored = op.ancorado ~= false
++			part.Material = Enum.Material.SmoothPlastic
++			part.TopSurface = Enum.SurfaceType.Smooth
++			part.BottomSurface = Enum.SurfaceType.Smooth
++			part.Parent = modelo
++			criadas += 1
++		end
++	end
++	modelo.Parent = pasta
++	if modelo.PrimaryPart == nil and modelo:FindFirstChildWhichIsA("BasePart") then
++		modelo.PrimaryPart = modelo:FindFirstChildWhichIsA("BasePart")
++	end
++	return criadas
++end
++
++-- ----------------------------------------------------------------- animação
++local function interpolar(trilha: any, t: number): any
++	local kfs = trilha.keyframes
++	if not kfs or #kfs == 0 then
++		return nil
++	end
++	if t <= kfs[1].t then
++		return kfs[1].valor
++	end
++	for i = 1, #kfs - 1 do
++		local a, b = kfs[i], kfs[i + 1]
++		if t >= a.t and t <= b.t then
++			local f = if (b.t - a.t) > 0 then (t - a.t) / (b.t - a.t) else 1
++			if typeof(a.valor) == "table" then
++				local r = {}
++				for j = 1, #a.valor do
++					r[j] = a.valor[j] + (b.valor[j] - a.valor[j]) * f
++				end
++				return r
++			end
++			return a.valor + (b.valor - a.valor) * f
++		end
++	end
++	return kfs[#kfs].valor
++end
++
++function AgentPanel:_tocarAnimacao(alvo: Instance, trilhas: { any }, duracao: number)
++	self:PararAnimacao()
++	local base = nil :: CFrame?
++	local sizeBase = nil :: Vector3?
++	local parteRaiz = nil :: BasePart?
++	if alvo:IsA("Model") then
++		if not alvo.PrimaryPart and alvo:FindFirstChildWhichIsA("BasePart") then
++			alvo.PrimaryPart = alvo:FindFirstChildWhichIsA("BasePart")
++		end
++		parteRaiz = alvo.PrimaryPart
++		base = (alvo :: Model):GetPivot()
++	else
++		parteRaiz = alvo :: BasePart
++		base = parteRaiz.CFrame
++		sizeBase = parteRaiz.Size
++	end
++	if not parteRaiz or not base then
++		return false, "Selecione um modelo/parte com geometria para animar."
++	end
++	local origem = base :: CFrame
++	local tamanho0 = sizeBase
++	self.animPlaying = true
++	self.animCancel = task.spawn(function()
++		local inicio = os.clock()
++		while self.animPlaying do
++			local t = (os.clock() - inicio) % math.max(0.1, duracao)
++			local offset = Vector3.zero
++			local yaw = 0.0
++			local escala = 1.0
++			for _, trilha in trilhas do
++				local v = interpolar(trilha, t)
++				if v ~= nil then
++					if trilha.propriedade == "Rotation" and typeof(v) == "table" then
++						yaw = math.rad(v[2] or 0)
++					elseif trilha.propriedade == "PositionOffsetY" then
++						offset += Vector3.new(0, v :: number, 0)
++					elseif trilha.propriedade == "PositionOffsetX" then
++						offset += Vector3.new(v :: number, 0, 0)
++					elseif trilha.propriedade == "PositionOffset" and typeof(v) == "table" then
++						offset += Vector3.new(v[1] or 0, v[2] or 0, v[3] or 0)
++					elseif trilha.propriedade == "SizeScale" then
++						escala = v :: number
++					end
++				end
++			end
++			if not parteRaiz.Parent then
++				break
++			end
++			local novo = origem * CFrame.Angles(0, yaw, 0) + offset
++			if alvo:IsA("Model") then
++				(alvo :: Model):PivotTo(novo)
++			else
++				parteRaiz.CFrame = novo
++				if tamanho0 and escala ~= 1 then
++					parteRaiz.Size = tamanho0 * escala
++				end
++			end
++			RunService.Heartbeat:Wait()
++		end
++	end)
++	return true
++end
++
++function AgentPanel:PararAnimacao()
++	self.animPlaying = false
++end
++
++-- -------------------------------------------------------------- status real
++function AgentPanel:_checarStatus()
++	task.spawn(function()
++		local ok, dados = self:_request("GET", "/real/model/status")
++		if ok and dados.ok ~= false and dados.state then
++			self.modelStatus = dados.state
++			if self.statusDot then
++				self.statusDot.BackgroundColor3 = if dados.state == "ready" then NEON else Color3.fromRGB(220, 160, 40)
++			end
++			if self.statusLabel then
++				local nome = dados.name or "ARKHER-1"
++				self.statusLabel.Text = if dados.state == "ready"
++					then (nome .. " - pronto (IA propria, sem provedor externo)")
++					else (nome .. " - " .. tostring(dados.state))
++			end
++		else
++			self.modelStatus = "offline"
++			if self.statusDot then
++				self.statusDot.BackgroundColor3 = Color3.fromRGB(220, 70, 60)
++			end
++			if self.statusLabel then
++				self.statusLabel.Text = "Backend ARKHER offline - suba o backend e tente de novo"
++			end
++		end
++	end)
++end
++
++-- ------------------------------------------------------------------ chat
++function AgentPanel:_addBolha(texto: string, ehUsuario: boolean)
++	local pagina = self.pages.chat
++	if not pagina then return end
++	local historico = pagina:FindFirstChild("Historico") :: ScrollingFrame
++	local layout = historico and historico:FindFirstChildOfClass("UIListLayout")
++	local bolha = Instance.new("Frame")
++	bolha.Size = UDim2.new(0.92, 0, 0, 20)
++	bolha.AutomaticSize = Enum.AutomaticSize.Y
++	bolha.BackgroundColor3 = if ehUsuario then NEON_DARK else PANEL_CARD
++	bolha.BorderSizePixel = 0
++	corner(bolha, 8)
++	local txt = rotulo(texto, 12, TEXT_MAIN)
++	txt.Size = UDim2.new(1, -16, 0, 0)
++	txt.Position = UDim2.new(0, 8, 0, 6)
++	txt.AutomaticSize = Enum.AutomaticSize.Y
++	local pad = Instance.new("UIPadding")
++	pad.PaddingBottom = UDim.new(0, 6)
++	pad.Parent = txt
++	txt.Parent = bolha
++	bolha.Parent = historico
++	if layout and historico then
++		task.wait()
++		historico.CanvasSize = UDim2.new(0, 0, 0, layout.AbsoluteContentSize.Y + 12)
++		historico.CanvasPosition = Vector2.new(0, historico.CanvasSize.Y.Offset)
++	end
++end
++
++function AgentPanel:_enviarChat(mensagem: string, input: TextBox?)
++	if mensagem == "" then return end
++	self:_addBolha("Voce: " .. mensagem, true)
++	if input then input.Text = "" end
++	self:_addBolha("ARKHER pensando...", false)
++	task.spawn(function()
++		local ok, dados = self:_post("/real/chat", { message = mensagem, memory_enabled = true })
++		local historico = self.pages.chat and self.pages.chat:FindFirstChild("Historico")
++		if historico then
++			local filhos = historico:GetChildren()
++			local ultima = filhos[#filhos]
++			if ultima and ultima ~= historico:FindFirstChildOfClass("UIListLayout") then
++				ultima:Destroy() -- remove o "pensando..."
++			end
++		end
++		if not ok then
++			self:_addBolha("[ARKHER] " .. tostring((dados or {}).erro), false)
++			return
++		end
++		if dados.ok == false then
++			self:_addBolha("[ARKHER] " .. tostring(dados.error or dados.message or "nao consegui responder."), false)
++			return
++		end
++		local ms = dados.metrics and dados.metrics.ms
++		local extra = if ms then string.format("  (%d ms)", ms) else ""
++		self:_addBolha("[ARKHER] " .. tostring(dados.content or "") .. extra, false)
++	end)
++end
++
++-- --------------------------------------------------------------- aba: chat
++function AgentPanel:_buildChat(pagina: Frame)
++	local historico = Instance.new("ScrollingFrame")
++	historico.Name = "Historico"
++	historico.Size = UDim2.new(1, -16, 1, -64)
++	historico.Position = UDim2.new(0, 8, 0, 8)
++	historico.BackgroundTransparency = 1
++	historico.BorderSizePixel = 0
++	historico.ScrollBarThickness = 4
++	historico.CanvasSize = UDim2.new(0, 0, 0, 0)
++	historico.Parent = pagina
++	local lista = Instance.new("UIListLayout")
++	lista.Padding = UDim.new(0, 6)
++	lista.Parent = historico
++
++	local caixa = Instance.new("TextBox")
++	caixa.Name = "EntradaChat"
++	caixa.Size = UDim2.new(1, -76, 0, 34)
++	caixa.Position = UDim2.new(0, 8, 1, -46)
++	caixa.BackgroundColor3 = PANEL_CARD
++	caixa.PlaceholderText = "Fale com a ARKHER (ex: crie um castelo medieval)"
++	caixa.PlaceholderColor3 = TEXT_DIM
++	caixa.Text = ""
++	caixa.TextColor3 = TEXT_MAIN
++	caixa.TextSize = 12
++	caixa.Font = Enum.Font.Gotham
++	caixa.ClearTextOnFocus = false
++	caixa.Parent = pagina
++	corner(caixa, 8)
++	stroke(caixa)
++	local padC = Instance.new("UIPadding")
++	padC.PaddingLeft = UDim.new(0, 8)
++	padC.Parent = caixa
++
++	local enviar = Instance.new("TextButton")
++	enviar.Name = "EnviarChat"
++	enviar.Size = UDim2.new(0, 56, 0, 34)
++	enviar.Position = UDim2.new(1, -64, 1, -46)
++	enviar.BackgroundColor3 = NEON
++	enviar.Text = ">"
++	enviar.Font = Enum.Font.GothamBold
++	enviar.TextColor3 = Color3.new(0, 0, 0)
++	enviar.TextSize = 16
++	enviar.Parent = pagina
++	corner(enviar, 8)
++
++	enviar.MouseButton1Click:Connect(function()
++		self:_enviarChat(caixa.Text, caixa)
++	end)
++	caixa.FocusLost:Connect(function(enter)
++		if enter then self:_enviarChat(caixa.Text, caixa) end
++	end)
++
++	self:_addBolha("[ARKHER] Oi! Sou a ARKHER, IA propria do estúdio. Posso construir em 3D, animar, criar jogos peça a peça e pesquisar na web. É só pedir.", false)
++end
++
++-- --------------------------------------------------------------- aba: 3D
++function AgentPanel:_build3D(pagina: Frame)
++	local titulo = rotulo("Geracao 3D nativa", 14, NEON)
++	titulo.Size = UDim2.new(1, -16, 0, 18)
++	titulo.Position = UDim2.new(0, 8, 0, 8)
++	titulo.Parent = pagina
++
++	local desc = rotulo("A ARKHER compoe a estrutura peca a peca e o Modeler do estúdio materializa de verdade no mundo. Qualidade nativa: sao partes reais que voce edita depois.", 11, TEXT_DIM)
++	desc.Size = UDim2.new(1, -16, 0, 44)
++	desc.Position = UDim2.new(0, 8, 0, 28)
++	desc.Parent = pagina
++
++	local caixa = Instance.new("TextBox")
++	caixa.Name = "Prompt3D"
++	caixa.Size = UDim2.new(1, -16, 0, 60)
++	caixa.Position = UDim2.new(0, 8, 0, 78)
++	caixa.BackgroundColor3 = PANEL_CARD
++	caixa.PlaceholderText = "Descreva o modelo (ex: castelo medieval completo com torres e ponte)"
++	caixa.PlaceholderColor3 = TEXT_DIM
++	caixa.Text = ""
++	caixa.TextColor3 = TEXT_MAIN
++	caixa.TextSize = 12
++	caixa.TextWrapped = true
++	caixa.ClearTextOnFocus = false
++	caixa.MultiLine = true
++	caixa.TextYAlignment = Enum.TextYAlignment.Top
++	caixa.Parent = pagina
++	corner(caixa, 8)
++	stroke(caixa)
++
++	local botao = Instance.new("TextButton")
++	botao.Name = "Gerar3D"
++	botao.Size = UDim2.new(1, -16, 0, 36)
++	botao.Position = UDim2.new(0, 8, 0, 146)
++	botao.BackgroundColor3 = NEON
++	botao.Text = "Gerar e materializar no Studio"
++	botao.Font = Enum.Font.GothamBold
++	botao.TextColor3 = Color3.new(0, 0, 0)
++	botao.TextSize = 13
++	botao.Parent = pagina
++	corner(botao, 8)
++
++	local estado = rotulo("", 11, TEXT_DIM)
++	estado.Name = "Estado3D"
++	estado.Size = UDim2.new(1, -16, 0, 60)
++	estado.Position = UDim2.new(0, 8, 0, 190)
++	estado.Parent = pagina
++
++	local limpar = Instance.new("TextButton")
++	limpar.Name = "Limpar3D"
++	limpar.Size = UDim2.new(1, -16, 0, 30)
++	limpar.Position = UDim2.new(0, 8, 0, 256)
++	limpar.BackgroundColor3 = PANEL_CARD
++	limpar.Text = "Limpar tudo que o agente criou"
++	limpar.Font = Enum.Font.Gotham
++	limpar.TextColor3 = TEXT_DIM
++	limpar.TextSize = 12
++	limpar.Parent = pagina
++	corner(limpar, 8)
++	stroke(limpar)
++
++	botao.MouseButton1Click:Connect(function()
++		local tema = caixa.Text
++		if tema == "" then
++			estado.Text = "Descreva o modelo primeiro."
++			return
++		end
++		estado.Text = "ARKHER planejando a construcao..."
++		task.spawn(function()
++			local ok, dados = self:_post("/real/build/start", { tema = tema })
++			if not ok then
++				estado.Text = tostring((dados or {}).erro)
++				return
++			end
++			if dados.ok == false then
++				estado.Text = tostring(dados.error or dados.message or "nao consegui planejar.")
++				return
++			end
++			local okP, pendente = self:_request("GET", "/real/build/proximo")
++			if not okP or not pendente.ops then
++				estado.Text = "Plano criado, mas nao consegui buscar as pecas."
++				return
++			end
++			local n = self:_materializarOps(pendente.ops, dados.tema or tema)
++			estado.Text = string.format("Pronto: %d pecas reais criadas em Workspace.%s (%d planejadas). Refine com o Modeler/EditableMesh.", n, AGENT_ROOT, dados.pecas or n)
++		end)
++	end)
++
++	limpar.MouseButton1Click:Connect(function()
++		local pasta = Workspace:FindFirstChild(AGENT_ROOT)
++		if pasta then pasta:Destroy() end
++		estado.Text = "Limpo. O agente pode construir de novo quando voce quiser."
++	end)
++end
++
++-- --------------------------------------------------------------- aba: anim
++function AgentPanel:_listarAlvos(): { Instance }
++	local alvos: { Instance } = {}
++	local pasta = Workspace:FindFirstChild(AGENT_ROOT)
++	if pasta then
++		for _, filho in pasta:GetChildren() do
++			table.insert(alvos, filho)
++		end
++	end
++	for _, filho in Workspace:GetChildren() do
++		if filho:IsA("Model") and filho.Name ~= AGENT_ROOT and #alvos < 30 then
++			table.insert(alvos, filho)
++		end
++	end
++	return alvos
++end
++
++function AgentPanel:_buildAnim(pagina: Frame)
++	local titulo = rotulo("Animacoes fluidas", 14, NEON)
++	titulo.Size = UDim2.new(1, -16, 0, 18)
++	titulo.Position = UDim2.new(0, 8, 0, 8)
++	titulo.Parent = pagina
++
++	local desc = rotulo("Escolha o modelo, descreva o movimento e a ARKHER gera os keyframes. Aplicacao real no objeto, com reproducao ao vivo aqui no estúdio.", 11, TEXT_DIM)
++	desc.Size = UDim2.new(1, -16, 0, 40)
++	desc.Position = UDim2.new(0, 8, 0, 28)
++	desc.Parent = pagina
++
++	local alvoBtn = Instance.new("TextButton")
++	alvoBtn.Name = "AlvoAnim"
++	alvoBtn.Size = UDim2.new(1, -76, 0, 32)
++	alvoBtn.Position = UDim2.new(0, 8, 0, 74)
++	alvoBtn.BackgroundColor3 = PANEL_CARD
++	alvoBtn.Text = "  Modelo: nenhum selecionado"
++	alvoBtn.TextColor3 = TEXT_MAIN
++	alvoBtn.TextSize = 12
++	alvoBtn.Font = Enum.Font.Gotham
++	alvoBtn.TextXAlignment = Enum.TextXAlignment.Left
++	alvoBtn.Parent = pagina
++	corner(alvoBtn, 8)
++	stroke(alvoBtn)
++
++	local refresh = Instance.new("TextButton")
++	refresh.Name = "RefreshAlvos"
++	refresh.Size = UDim2.new(0, 60, 0, 32)
++	refresh.Position = UDim2.new(1, -68, 0, 74)
++	refresh.BackgroundColor3 = PANEL_CARD
++	refresh.Text = "atualizar"
++	refresh.TextColor3 = TEXT_DIM
++	refresh.TextSize = 10
++	refresh.Parent = pagina
++	corner(refresh, 8)
++
++	local listaAlvos = Instance.new("ScrollingFrame")
++	listaAlvos.Name = "ListaAlvos"
++	listaAlvos.Size = UDim2.new(1, -16, 0, 0)
++	listaAlvos.Position = UDim2.new(0, 8, 0, 110)
++	listaAlvos.BackgroundTransparency = 1
++	listaAlvos.BorderSizePixel = 0
++	listaAlvos.ScrollBarThickness = 3
++	listaAlvos.Visible = false
++	listaAlvos.ZIndex = 5
++	listaAlvos.CanvasSize = UDim2.new(0, 0, 0, 0)
++	listaAlvos.Parent = pagina
++	local layoutAlvos = Instance.new("UIListLayout")
++	layoutAlvos.Padding = UDim.new(0, 3)
++	layoutAlvos.Parent = listaAlvos
++
++	local function montarLista()
++		for _, f in listaAlvos:GetChildren() do
++			if f:IsA("TextButton") then f:Destroy() end
++		end
++		local alvos = self:_listarAlvos()
++		if #alvos == 0 then
++			local vazio = rotulo("Nada para animar ainda: gere algo na aba 3D primeiro.", 11, TEXT_DIM)
++			vazio.Size = UDim2.new(1, 0, 0, 28)
++			vazio.Name = "VazioAlvos"
++			vazio.ZIndex = 6
++			vazio.Parent = listaAlvos
++		end
++		for i, alvo in alvos do
++			local b = Instance.new("TextButton")
++			b.Size = UDim2.new(1, 0, 0, 26)
++			b.BackgroundColor3 = PANEL_CARD
++			b.Text = "  " .. alvo.Name
++			b.TextColor3 = TEXT_MAIN
++			b.TextSize = 11
++			b.Font = Enum.Font.Gotham
++			b.TextXAlignment = Enum.TextXAlignment.Left
++			b.ZIndex = 6
++			b.Parent = listaAlvos
++			corner(b, 6)
++			b.MouseButton1Click:Connect(function()
++				self.animTarget = alvo
++				alvoBtn.Text = "  Modelo: " .. alvo.Name
++				listaAlvos.Visible = false
++				listaAlvos.Size = UDim2.new(1, -16, 0, 0)
++			end)
++		end
++		task.wait()
++		local altura = math.min(#alvos + 1, 6) * 29
++		listaAlvos.CanvasSize = UDim2.new(0, 0, 0, layoutAlvos.AbsoluteContentSize.Y)
++		listaAlvos.Size = UDim2.new(1, -16, 0, altura)
++	end
++
++	alvoBtn.MouseButton1Click:Connect(function()
++		listaAlvos.Visible = not listaAlvos.Visible
++		if listaAlvos.Visible then montarLista() end
++	end)
++	refresh.MouseButton1Click:Connect(montarLista)
++
++	local caixa = Instance.new("TextBox")
++	caixa.Name = "DescAnim"
++	caixa.Size = UDim2.new(1, -16, 0, 44)
++	caixa.Position = UDim2.new(0, 8, 0, 118)
++	caixa.BackgroundColor3 = PANEL_CARD
++	caixa.PlaceholderText = "Descreva: flutuando suave, girando rapido, tremendo como impacto..."
++	caixa.PlaceholderColor3 = TEXT_DIM
++	caixa.Text = ""
++	caixa.TextColor3 = TEXT_MAIN
++	caixa.TextSize = 12
++	caixa.TextWrapped = true
++	caixa.ClearTextOnFocus = false
++	caixa.Parent = pagina
++	corner(caixa, 8)
++	stroke(caixa)
++
++	local duracao = Instance.new("TextBox")
++	duracao.Name = "DuracaoAnim"
++	duracao.Size = UDim2.new(0, 90, 0, 30)
++	duracao.Position = UDim2.new(1, -98, 0, 170)
++	duracao.BackgroundColor3 = PANEL_CARD
++	duracao.PlaceholderText = "seg (2.0)"
++	duracao.PlaceholderColor3 = TEXT_DIM
++	duracao.Text = ""
++	duracao.TextColor3 = TEXT_MAIN
++	duracao.TextSize = 12
++	duracao.Parent = pagina
++	corner(duracao, 8)
++
++	local botao = Instance.new("TextButton")
++	botao.Name = "GerarAnim"
++	botao.Size = UDim2.new(1, -110, 0, 30)
++	botao.Position = UDim2.new(0, 8, 0, 170)
++	botao.BackgroundColor3 = NEON
++	botao.Text = "Gerar keyframes e aplicar"
++	botao.Font = Enum.Font.GothamBold
++	botao.TextColor3 = Color3.new(0, 0, 0)
++	botao.TextSize = 12
++	botao.Parent = pagina
++	corner(botao, 8)
++
++	local parar = Instance.new("TextButton")
++	parar.Name = "PararAnim"
++	parar.Size = UDim2.new(1, -16, 0, 28)
++	parar.Position = UDim2.new(0, 8, 0, 208)
++	parar.BackgroundColor3 = PANEL_CARD
++	parar.Text = "Parar reproducao"
++	parar.TextColor3 = TEXT_DIM
++	parar.TextSize = 11
++	parar.Parent = pagina
++	corner(parar, 8)
++	stroke(parar)
++
++	local estado = rotulo("", 11, TEXT_DIM)
++	estado.Name = "EstadoAnim"
++	estado.Size = UDim2.new(1, -16, 0, 40)
++	estado.Position = UDim2.new(0, 8, 0, 242)
++	estado.Parent = pagina
++
++	botao.MouseButton1Click:Connect(function()
++		local alvo = self.animTarget
++		if not alvo or not alvo.Parent then
++			estado.Text = "Escolha um modelo primeiro (botao acima)."
++			return
++		end
++		local texto = caixa.Text
++		if texto == "" then
++			estado.Text = "Descreva o movimento."
++			return
++		end
++		-- interpreta o pedido e cai num dos 5 tipos procedurais do gerador
++		local baixo = texto:lower()
++		local tipo = "flutuar"
++		if baixo:find("gir") or baixo:find("roda") or baixo:find("spin") then
++			tipo = "girar"
++		elseif baixo:find("puls") or baixo:find("coracao") or baixo:find("respira") then
++			tipo = "pulsar"
++		elseif baixo:find("trem") or baixo:find("impacto") or baixo:find("explo") then
++			tipo = "tremer"
++		elseif baixo:find("vai") or baixo:find("vem") or baixo:find("anda") or baixo:find("nada") then
++			tipo = "vaivem"
++		end
++		local seg = tonumber(duracao.Text) or 2.0
++		estado.Text = "Gerando keyframes..."
++		task.spawn(function()
++			local ok, dados = self:_post("/real/anim", { tipo = tipo, duracao = seg, seed = tostring(os.time() % 100000) })
++			if not ok then
++				estado.Text = tostring((dados or {}).erro)
++				return
++			end
++			if dados.ok == false or not dados.trilhas then
++				estado.Text = tostring(dados.error or "nao consegui gerar keyframes.")
++				return
++			end
++			local okAplicar, err = self:_tocarAnimacao(alvo, dados.trilhas, dados.duracao or seg)
++			if not okAplicar then
++				estado.Text = tostring(err)
++				return
++			end
++			local kf = 0
++			for _, tr in dados.trilhas do
++				kf += #tr.keyframes
++			end
++			estado.Text = string.format("Aplicando ao vivo: %d keyframes em %d trilha(s) - %s", kf, #dados.trilhas, tostring(dados.descricao or tipo))
++		end)
++	end)
++
++	parar.MouseButton1Click:Connect(function()
++		self:PararAnimacao()
++		estado.Text = "Parado."
++	end)
++end
++
++-- --------------------------------------------------------------- aba: jogo
++function AgentPanel:_buildJogo(pagina: Frame)
++	local titulo = rotulo("Jogo completo, peca a peca", 14, NEON)
++	titulo.Size = UDim2.new(1, -16, 0, 18)
++	titulo.Position = UDim2.new(0, 8, 0, 8)
++	titulo.Parent = pagina
++
++	local desc = rotulo("Descreva o jogo (mapa, estilo, estruturas). A ARKHER planeja as pecas e materializa no mundo. Jogos grandes nascem assim: varias sessoes, iterando com a IA — use o chat para melhorar cada parte.", 11, TEXT_DIM)
++	desc.Size = UDim2.new(1, -16, 0, 58)
++	desc.Position = UDim2.new(0, 8, 0, 28)
++	desc.Parent = pagina
++
++	local caixa = Instance.new("TextBox")
++	caixa.Name = "PromptJogo"
++	caixa.Size = UDim2.new(1, -16, 0, 78)
++	caixa.Position = UDim2.new(0, 8, 0, 92)
++	caixa.BackgroundColor3 = PANEL_CARD
++	caixa.PlaceholderText = "Ex: jogo medieval com castelo no centro, vila com casas, muralha e arena de batalha"
++	caixa.PlaceholderColor3 = TEXT_DIM
++	caixa.Text = ""
++	caixa.TextColor3 = TEXT_MAIN
++	caixa.TextSize = 12
++	caixa.TextWrapped = true
++	caixa.ClearTextOnFocus = false
++	caixa.MultiLine = true
++	caixa.TextYAlignment = Enum.TextYAlignment.Top
++	caixa.Parent = pagina
++	corner(caixa, 8)
++	stroke(caixa)
++
++	local botao = Instance.new("TextButton")
++	botao.Name = "IniciarJogo"
++	botao.Size = UDim2.new(1, -16, 0, 38)
++	botao.Position = UDim2.new(0, 8, 0, 178)
++	botao.BackgroundColor3 = NEON
++	botao.Text = "Planejar e construir o jogo"
++	botao.Font = Enum.Font.GothamBold
++	botao.TextColor3 = Color3.new(0, 0, 0)
++	botao.TextSize = 13
++	botao.Parent = pagina
++	corner(botao, 8)
++
++	local estado = rotulo("", 11, TEXT_DIM)
++	estado.Name = "EstadoJogo"
++	estado.Size = UDim2.new(1, -16, 0, 80)
++	estado.Position = UDim2.new(0, 8, 0, 224)
++	estado.Parent = pagina
++
++	botao.MouseButton1Click:Connect(function()
++		local tema = caixa.Text
++		if tema == "" then
++			estado.Text = "Descreva o jogo primeiro."
++			return
++		end
++		estado.Text = "ARKHER planejando o jogo inteiro..."
++		task.spawn(function()
++			local ok, dados = self:_post("/real/build/start", { tema = tema })
++			if not ok then
++				estado.Text = tostring((dados or {}).erro)
++				return
++			end
++			if dados.ok == false then
++				estado.Text = tostring(dados.error or dados.message or "nao consegui planejar esse jogo.")
++				return
++			end
++			local okP, pendente = self:_request("GET", "/real/build/proximo")
++			if not okP or not pendente.ops then
++				estado.Text = "Plano pronto, mas nao consegui buscar as pecas."
++				return
++			end
++			local n = self:_materializarOps(pendente.ops, "Jogo_" .. (dados.build_id or "1"))
++			estado.Text = string.format("Jogo materializado: %d pecas reais em Workspace.%s. Agora itere: use o chat para adicionar detalhes, trocar estilos ou pedir novas areas.", n, AGENT_ROOT)
++		end)
++	end)
++end
++
++-- --------------------------------------------------------------- aba: web
++function AgentPanel:_buildWeb(pagina: Frame)
++	local titulo = rotulo("Pesquisa na web (fontes abertas)", 14, NEON)
++	titulo.Size = UDim2.new(1, -16, 0, 18)
++	titulo.Position = UDim2.new(0, 8, 0, 8)
++	titulo.Parent = pagina
++
++	local desc = rotulo("A ARKHER pesquisa de verdade antes de criar: Wikipedia (CC BY-SA), Internet Archive, documentacao oficial do Roblox (CC-BY-4.0) e YouTube (com sua chave). Cada fonte mostra a licenca.", 11, TEXT_DIM)
++	desc.Size = UDim2.new(1, -16, 0, 46)
++	desc.Position = UDim2.new(0, 8, 0, 28)
++	desc.Parent = pagina
++
++	local caixa = Instance.new("TextBox")
++	caixa.Name = "ConsultaWeb"
++	caixa.Size = UDim2.new(1, -16, 0, 32)
++	caixa.Position = UDim2.new(0, 8, 0, 80)
++	caixa.BackgroundColor3 = PANEL_CARD
++	caixa.PlaceholderText = "Pesquisar (ex: terrain, medieval castle, animacao)"
++	caixa.PlaceholderColor3 = TEXT_DIM
++	caixa.Text = ""
++	caixa.TextColor3 = TEXT_MAIN
++	caixa.TextSize = 12
++	caixa.ClearTextOnFocus = false
++	caixa.Parent = pagina
++	corner(caixa, 8)
++	stroke(caixa)
++
++	local fontes = {
++		{ id = "", rotulo = "Todas" },
++		{ id = "wikipedia", rotulo = "Wikipedia" },
++		{ id = "roblox_docs", rotulo = "Roblox Docs" },
++		{ id = "internet_archive", rotulo = "Archive" },
++		{ id = "youtube", rotulo = "YouTube" },
++	}
++	local fonteAtual = ""
++	local botoesFonte: { TextButton } = {}
++	for i, f in fontes do
++		local b = Instance.new("TextButton")
++		b.Size = UDim2.new(0.2, -4, 0, 24)
++		b.Position = UDim2.new((i - 1) * 0.2, 8 + (i - 1) * 2, 0, 118)
++		b.BackgroundColor3 = PANEL_CARD
++		b.Text = f.rotulo
++		b.TextColor3 = TEXT_DIM
++		b.TextSize = 10
++		b.Font = Enum.Font.GothamBold
++		b.Parent = pagina
++		corner(b, 6)
++		table.insert(botoesFonte, b)
++		b.MouseButton1Click:Connect(function()
++			fonteAtual = f.id
++			for _, outro in botoesFonte do
++				outro.BackgroundColor3 = PANEL_CARD
++				outro.TextColor3 = TEXT_DIM
++			end
++			b.BackgroundColor3 = NEON_DARK
++			b.TextColor3 = NEON
++		end)
++	end
++	botoesFonte[1].BackgroundColor3 = NEON_DARK
++	botoesFonte[1].TextColor3 = NEON
++
++	local pesquisar = Instance.new("TextButton")
++	pesquisar.Name = "Pesquisar"
++	pesquisar.Size = UDim2.new(1, -16, 0, 30)
++	pesquisar.Position = UDim2.new(0, 8, 0, 148)
++	pesquisar.BackgroundColor3 = NEON
++	pesquisar.Text = "Pesquisar"
++	pesquisar.Font = Enum.Font.GothamBold
++	pesquisar.TextColor3 = Color3.new(0, 0, 0)
++	pesquisar.TextSize = 12
++	pesquisar.Parent = pagina
++	corner(pesquisar, 8)
++
++	local resultados = Instance.new("ScrollingFrame")
++	resultados.Name = "Resultados"
++	resultados.Size = UDim2.new(1, -16, 1, -192)
++	resultados.Position = UDim2.new(0, 8, 0, 184)
++	resultados.BackgroundTransparency = 1
++	resultados.BorderSizePixel = 0
++	resultados.ScrollBarThickness = 4
++	resultados.CanvasSize = UDim2.new(0, 0, 0, 0)
++	resultados.Parent = pagina
++	local layoutR = Instance.new("UIListLayout")
++	layoutR.Padding = UDim.new(0, 6)
++	layoutR.Parent = resultados
++
++	local function addResultado(tituloTxt: string, urlTxt: string, resumoTxt: string, licencaTxt: string)
++		local card = Instance.new("Frame")
++		card.Size = UDim2.new(1, 0, 0, 64)
++		card.AutomaticSize = Enum.AutomaticSize.Y
++		card.BackgroundColor3 = PANEL_CARD
++		card.BorderSizePixel = 0
++		corner(card, 8)
++
++		local t = rotulo(tituloTxt, 12, NEON)
++		t.Size = UDim2.new(1, -12, 0, 16)
++		t.Position = UDim2.new(0, 6, 0, 4)
++		t.Parent = card
++
++		local r = rotulo(resumoTxt ~= "" and resumoTxt or urlTxt, 10, TEXT_DIM)
++		r.Size = UDim2.new(1, -12, 0, 0)
++		r.Position = UDim2.new(0, 6, 0, 20)
++		r.AutomaticSize = Enum.AutomaticSize.Y
++		r.Parent = card
++
++		local rodape = rotulo(urlTxt .. "  |  " .. licencaTxt, 9, TEXT_DIM)
++		rodape.Size = UDim2.new(1, -12, 0, 12)
++		rodape.Position = UDim2.new(0, 6, 1, -16)
++		rodape.TextTruncate = Enum.TextTruncate.AtEnd
++		rodape.Parent = card
++
++		card.Parent = resultados
++	end
++
++	pesquisar.MouseButton1Click:Connect(function()
++		local consulta = caixa.Text
++		if consulta == "" then return end
++		for _, f in resultados:GetChildren() do
++			if f:IsA("Frame") then f:Destroy() end
++		end
++		addResultado("Pesquisando...", "", "", "")
++		task.spawn(function()
++			local corpo: { [string]: any } = { consulta = consulta }
++			if fonteAtual ~= "" then corpo.fonte = fonteAtual end
++			local ok, dados = self:_post("/real/search", corpo)
++			for _, f in resultados:GetChildren() do
++				if f:IsA("Frame") then f:Destroy() end
++			end
++			if not ok then
++				addResultado("Erro", "", tostring((dados or {}).erro), "")
++				return
++			end
++			if dados.ok == false then
++				addResultado("Sem resultado honesto", "", tostring(dados.message or dados.error or "nada encontrado."), "")
++				return
++			end
++			-- modo combinado vem com .fontes; fonte unica vem direto
++			local blocos = if dados.fontes then dados.fontes else { dados }
++			local total = 0
++			for _, bloco in blocos do
++				for _, item in bloco.resultados or {} do
++					total += 1
++					addResultado(item.titulo or "?", item.url or "", item.resumo or "", item.licenca or "")
++				end
++			end
++			for _, falha in dados.falhas or {} do
++				addResultado("[falha honesta] " .. tostring(falha.fonte), "", tostring(falha.erro), "")
++			end
++			if total == 0 then
++				addResultado("Nada encontrado para essa consulta.", "", "", "")
++			end
++			task.wait()
++			resultados.CanvasSize = UDim2.new(0, 0, 0, layoutR.AbsoluteContentSize.Y + 8)
++		end)
++	end)
++end
++
++-- ------------------------------------------------------------------ build
++function AgentPanel:Init(gui: ScreenGui)
++	self.gui = gui
++	local raiz = Instance.new("Frame")
++	raiz.Name = "ArkherAgentPanel"
++	raiz.BorderSizePixel = 0
++	raiz.BackgroundColor3 = PANEL_BG
++	raiz.Visible = false
++	raiz.ZIndex = 40
++	corner(raiz, 12)
++	stroke(raiz, NEON_DARK)
++	if self.isMobile then
++		raiz.Size = UDim2.new(1, 0, 1, 0)
++		raiz.Position = UDim2.new(0, 0, 0, 0)
++	else
++		raiz.Size = UDim2.new(0, 400, 1, -64)
++		raiz.Position = UDim2.new(1, -410, 0, 56)
++	end
++	raiz.Parent = gui
++	self.root = raiz
++
++	-- header
++	local header = Instance.new("Frame")
++	header.Name = "Header"
++	header.Size = UDim2.new(1, 0, 0, 48)
++	header.BackgroundColor3 = PANEL_CARD
++	header.BorderSizePixel = 0
++	header.ZIndex = 41
++	header.Parent = raiz
++	corner(header, 12)
++
++	local icone = makeIcon(30)
++	icone.Position = UDim2.new(0, 10, 0.5, -15)
++	icone.ZIndex = 42
++	icone.Parent = header
++
++	local nome = rotulo("Arkher Agent AI", 14, TEXT_MAIN)
++	nome.Size = UDim2.new(0, 150, 0, 18)
++	nome.Position = UDim2.new(0, 48, 0, 7)
++	nome.Font = Enum.Font.GothamBold
++	nome.ZIndex = 42
++	nome.Parent = header
++
++	local statusDot = Instance.new("Frame")
++	statusDot.Size = UDim2.fromOffset(8, 8)
++	statusDot.Position = UDim2.new(0, 50, 0, 30)
++	statusDot.BackgroundColor3 = Color3.fromRGB(220, 160, 40)
++	statusDot.BorderSizePixel = 0
++	statusDot.ZIndex = 42
++	statusDot.Parent = header
++	corner(statusDot, 4)
++	self.statusDot = statusDot
++
++	local statusLabel = rotulo("verificando backend...", 9, TEXT_DIM)
++	statusLabel.Size = UDim2.new(0, 290, 0, 12)
++	statusLabel.Position = UDim2.new(0, 62, 0, 28)
++	statusLabel.ZIndex = 42
++	statusLabel.Parent = header
++	self.statusLabel = statusLabel
++
++	local fechar = Instance.new("TextButton")
++	fechar.Name = "FecharAgente"
++	fechar.Size = UDim2.fromOffset(28, 28)
++	fechar.Position = UDim2.new(1, -36, 0.5, -14)
++	fechar.BackgroundColor3 = PANEL_BG
++	fechar.Text = "x"
++	fechar.TextColor3 = TEXT_DIM
++	fechar.Font = Enum.Font.GothamBold
++	fechar.TextSize = 14
++	fechar.ZIndex = 42
++	fechar.Parent = header
++	corner(fechar, 6)
++	stroke(fechar)
++	fechar.MouseButton1Click:Connect(function()
++		self:Toggle(false)
++	end)
++
++	-- abas
++	local nomesAbas = {
++		{ id = "chat", rotulo = "Chat" },
++		{ id = "tresd", rotulo = "3D" },
++		{ id = "anim", rotulo = "Anim" },
++		{ id = "jogo", rotulo = "Jogo" },
++		{ id = "web", rotulo = "Web" },
++	}
++	local barra = Instance.new("Frame")
++	barra.Name = "Abas"
++	barra.Size = UDim2.new(1, -16, 0, 30)
++	barra.Position = UDim2.new(0, 8, 0, 54)
++	barra.BackgroundTransparency = 1
++	barra.ZIndex = 41
++	barra.Parent = raiz
++	for i, aba in nomesAbas do
++		local b = Instance.new("TextButton")
++		b.Name = "Aba_" .. aba.id
++		b.Size = UDim2.new(0.2, -3, 1, 0)
++		b.Position = UDim2.new((i - 1) * 0.2, (i - 1) * 3, 0, 0)
++		b.BackgroundColor3 = PANEL_CARD
++		b.Text = aba.rotulo
++		b.TextColor3 = TEXT_DIM
++		b.TextSize = 12
++		b.Font = Enum.Font.GothamBold
++		b.ZIndex = 41
++		b.Parent = barra
++		corner(b, 6)
++		self.tabs[aba.id] = b
++	end
++
++	-- paginas
++	for _, aba in nomesAbas do
++		local pagina = Instance.new("Frame")
++		pagina.Name = "Pagina_" .. aba.id
++		pagina.Size = UDim2.new(1, -16, 1, -96)
++		pagina.Position = UDim2.new(0, 8, 0, 90)
++		pagina.BackgroundTransparency = 1
++		pagina.Visible = false
++		pagina.ZIndex = 41
++		pagina.Parent = raiz
++		self.pages[aba.id] = pagina
++	end
++
++	self:_buildChat(self.pages.chat)
++	self:_build3D(self.pages.tresd)
++	self:_buildAnim(self.pages.anim)
++	self:_buildJogo(self.pages.jogo)
++	self:_buildWeb(self.pages.web)
++
++	self:TrocarAba("chat")
++	for id, botao in self.tabs do
++		botao.MouseButton1Click:Connect(function()
++			self:TrocarAba(id)
++		end)
++	end
++
++	self:_checarStatus()
++	print("[Arkher Agent] Painel pronto - integrado ao backend ARKHER via", API_BASE)
++end
++
++function AgentPanel:TrocarAba(id: Aba)
++	for nome, pagina in self.pages do
++		pagina.Visible = nome == id
++	end
++	for nome, botao in self.tabs do
++		local ativo = nome == id
++		botao.BackgroundColor3 = if ativo then NEON_DARK else PANEL_CARD
++		botao.TextColor3 = if ativo then NEON else TEXT_DIM
++	end
++end
++
++function AgentPanel:Toggle(forcar: boolean?)
++	if not self.root then return end
++	local alvo = if forcar ~= nil then forcar else not self.open
++	self.open = alvo
++	self.root.Visible = alvo
++	if alvo then
++		self:_checarStatus()
++	end
++end
++
++function AgentPanel:IsOpen(): boolean
++	return self.open
++end
++
++return AgentPanel
+diff --git a/src/client/modules/UI/ShellV2.luau b/src/client/modules/UI/ShellV2.luau
+index b73f39a..1251776 100644
+--- a/src/client/modules/UI/ShellV2.luau
++++ b/src/client/modules/UI/ShellV2.luau
+@@ -235,19 +235,75 @@ function ShellV2:CreateTopBarV2(): Frame
+ 		cmdCorner.Parent = cmdBtn
+ 	end
+ 
+-	-- Right side: Style + Help + Settings
++	-- Right side: Agent AI + Style + Help + Settings
+ 	local rightContainer = Instance.new("Frame")
+ 	rightContainer.Name = "RightContainer"
+-	rightContainer.Size = UDim2.new(0, 280, 1, 0)
+-	rightContainer.Position = UDim2.new(1, -280, 0, 0)
++	rightContainer.Size = UDim2.new(0, 460, 1, 0)
++	rightContainer.Position = UDim2.new(1, -460, 0, 0)
+ 	rightContainer.BackgroundTransparency = 1
+ 	rightContainer.Parent = topBar
+ 
++	-- ARKHER AGENT AI - botao principal com icone personalizado (neon proprio)
++	local agentBtn = Instance.new("TextButton")
++	agentBtn.Name = "ArkherAgentBtn"
++	agentBtn.Size = UDim2.new(0, 150, 0, 28)
++	agentBtn.Position = UDim2.new(0, 0, 0.5, -14)
++	agentBtn.BackgroundColor3 = Color3.fromRGB(0, 60, 36)
++	agentBtn.AutoButtonColor = true
++	agentBtn.Text = "     Arkher Agent AI"
++	agentBtn.TextColor3 = Color3.fromRGB(0, 212, 122)
++	agentBtn.TextSize = 12
++	agentBtn.Font = Enum.Font.GothamBold
++	agentBtn.TextXAlignment = Enum.TextXAlignment.Left
++	agentBtn.Parent = rightContainer
++	agentBtn:SetAttribute("Tooltip", "Abrir a ARKHER AI: chat, geracao 3D, animacoes, jogo completo e pesquisa na web")
++
++	local agentCorner = Instance.new("UICorner")
++	agentCorner.CornerRadius = UDim.new(0, 6)
++	agentCorner.Parent = agentBtn
++
++	local agentStroke = Instance.new("UIStroke")
++	agentStroke.Color = Color3.fromRGB(0, 212, 122)
++	agentStroke.Thickness = 1
++	agentStroke.Parent = agentBtn
++
++	-- icone personalizado vetorial: nucleo verde escuro + anel neon + A
++	local agentIcon = Instance.new("Frame")
++	agentIcon.Name = "ArkherAgentIcon"
++	agentIcon.Size = UDim2.fromOffset(18, 18)
++	agentIcon.Position = UDim2.new(0, 5, 0.5, -9)
++	agentIcon.BackgroundColor3 = Color3.fromRGB(0, 120, 70)
++	agentIcon.BorderSizePixel = 0
++	agentIcon.Parent = agentBtn
++	local agentIconCorner = Instance.new("UICorner")
++	agentIconCorner.CornerRadius = UDim.new(0, 5)
++	agentIconCorner.Parent = agentIcon
++	local agentRing = Instance.new("Frame")
++	agentRing.Size = UDim2.fromScale(0.72, 0.72)
++	agentRing.Position = UDim2.fromScale(0.14, 0.14)
++	agentRing.BackgroundTransparency = 1
++	agentRing.Parent = agentIcon
++	local agentRingCorner = Instance.new("UICorner")
++	agentRingCorner.CornerRadius = UDim.new(1, 0)
++	agentRingCorner.Parent = agentRing
++	local agentRingStroke = Instance.new("UIStroke")
++	agentRingStroke.Color = Color3.fromRGB(0, 212, 122)
++	agentRingStroke.Thickness = 1.5
++	agentRingStroke.Parent = agentRing
++	local agentLetter = Instance.new("TextLabel")
++	agentLetter.Size = UDim2.fromScale(1, 1)
++	agentLetter.BackgroundTransparency = 1
++	agentLetter.Text = "A"
++	agentLetter.Font = Enum.Font.GothamBlack
++	agentLetter.TextColor3 = Color3.fromRGB(0, 212, 122)
++	agentLetter.TextSize = 10
++	agentLetter.Parent = agentIcon
++
+ 	-- Help button (Beginner: grande e visivel)
+ 	local helpBtn = Instance.new("TextButton")
+ 	helpBtn.Name = "HelpBtn"
+ 	helpBtn.Size = self.level == "Beginner" and UDim2.new(0, 70, 0, 28) or UDim2.new(0, 40, 0, 28)
+-	helpBtn.Position = UDim2.new(0, 0, 0.5, -14)
++	helpBtn.Position = UDim2.new(0, 158, 0.5, -14)
+ 	helpBtn.BackgroundColor3 = self.level == "Beginner" and colors.aiPrimary or colors.panelLight
+ 	helpBtn.Text = self.level == "Beginner" and "❓ Help" or "❓"
+ 	helpBtn.TextColor3 = self.level == "Beginner" and Color3.new(0,0,0) or colors.text
+@@ -263,7 +319,7 @@ function ShellV2:CreateTopBarV2(): Frame
+ 	local aiBtn = Instance.new("TextButton")
+ 	aiBtn.Name = "AIButton"
+ 	aiBtn.Size = UDim2.new(0, 50, 0, 28)
+-	aiBtn.Position = UDim2.new(0, self.level == "Beginner" and 80 or 50, 0.5, -14)
++	aiBtn.Position = UDim2.new(0, self.level == "Beginner" and 236 or 206, 0.5, -14)
+ 	aiBtn.BackgroundColor3 = colors.aiPrimary
+ 	aiBtn.Text = "🤖 AI"
+ 	aiBtn.TextColor3 = Color3.new(0,0,0)
+@@ -279,7 +335,7 @@ function ShellV2:CreateTopBarV2(): Frame
+ 	local styleSelector = Instance.new("TextButton")
+ 	styleSelector.Name = "StyleSelector"
+ 	styleSelector.Size = UDim2.new(0, 150, 0, 28)
+-	styleSelector.Position = UDim2.new(0, 110, 0.5, -14)
++	styleSelector.Position = UDim2.new(0, self.level == "Beginner" and 294 or 264, 0.5, -14)
+ 	styleSelector.BackgroundColor3 = colors.panelLight
+ 	styleSelector.Text = "🎨 Realistic ▼"
+ 	styleSelector.TextColor3 = colors.text
 -- 
 2.39.5
 

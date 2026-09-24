@@ -508,6 +508,24 @@ return ${prompt.replace(/\s+/g, '')}
     }
   });
 
+  // Pesquisa REAL: fontes abertas (Wikipedia CC-BY-SA, Internet Archive,
+  // documentação oficial do Roblox via Roblox/creator-docs CC-BY-4.0,
+  // YouTube somente com chave própria). Sem rede → erro honesto.
+  fastify.post('/real/search', async (request, reply) => {
+    const { consulta, fonte, idioma } = request.body || {};
+    if (!consulta) return reply.code(400).send({ ok: false, error: 'consulta obrigatória' });
+    try {
+      await arkherFetch('/api/tools/web_search/authorize', { method: 'POST' });
+      const res = await arkherFetch('/api/tools/web_search/run', {
+        method: 'POST',
+        body: JSON.stringify({ consulta, fonte: fonte || null, idioma: idioma || 'pt' }),
+      });
+      return await res.json();
+    } catch (err) {
+      return reply.code(502).send({ ok: false, error: `ARKHER backend indisponível: ${err.message}` });
+    }
+  });
+
   // Animação REAL: keyframes procedurais (girar/flutuar/pulsar/vaivem/tremer)
   fastify.post('/real/anim', async (request, reply) => {
     const { tipo, seed, duracao } = request.body || {};

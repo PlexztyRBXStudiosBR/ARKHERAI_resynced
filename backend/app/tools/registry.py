@@ -21,7 +21,7 @@ from pathlib import Path
 from backend.app import config
 from backend.app.memory import service as memory_service
 from backend.app.storage import db
-from backend.app.tools import blender_gen, build_gen, generators, rbxlx_gen
+from backend.app.tools import blender_gen, build_gen, generators, rbxlx_gen, web_search
 
 MAX_UPLOAD_BYTES = 2 * 1024 * 1024
 MAX_READ_CHARS = 200_000
@@ -102,6 +102,13 @@ TOOLS: dict[str, dict] = {
         "nome": "Seletor de física",
         "descricao": "Escolhe o PhysicsType do Arkher Studio (rigidbody/cloth/fluid/destruction/...) a partir do pedido. Determinístico.",
         "permissoes": ["selecao_de_fisica_local"],
+        "confirmacao": False,
+    },
+    "web_search": {
+        "id": "web_search",
+        "nome": "Pesquisa na web (fontes abertas)",
+        "descricao": "Pesquisa real em fontes abertas/licenciadas para ajudar a criar: Wikipedia (CC BY-SA), Internet Archive, documentação oficial do Roblox (Roblox/creator-docs, CC-BY-4.0) e YouTube (com chave própria). Sem rede, erro honesto.",
+        "permissoes": ["pesquisa_em_fontes_abertas"],
         "confirmacao": False,
     },
     "blender_gen": {
@@ -291,6 +298,15 @@ def run(user_id: str, tool_id: str, args: dict) -> dict:
         elif tool_id == "terrain_gen":
             try:
                 result = generators.gerar_terreno_studio(str(args.get("bioma", "")), args.get("seed"))
+            except ValueError as e:
+                raise ToolError("INVALID_ARG", str(e))
+        elif tool_id == "web_search":
+            try:
+                result = web_search.pesquisar(
+                    str(args.get("consulta", "")),
+                    args.get("fonte") if args.get("fonte") else None,
+                    str(args.get("idioma", "pt") or "pt"),
+                )
             except ValueError as e:
                 raise ToolError("INVALID_ARG", str(e))
         elif tool_id == "style_gen":

@@ -99,9 +99,33 @@ Tipos de animação: `girar`, `flutuar`, `pulsar`, `vaivem`, `tremer`
 | Physics | `Fisica(prompt)`/`AplicarFisica` → `PhysicsEngine:SetPhysicsType` (15 tipos; o ARKHER escolhe pelo pedido) |
 | Input / Publish | lado do Studio — `Connector.Cobertura()` lista honestamente |
 
+## Arkher Agent AI — botão na topbar + painel com abas
+
+O patch também adiciona o **Arkher Agent AI** dentro do Studio:
+
+- botão **Arkher Agent AI** com ícone personalizado (neon vetorial) na topbar
+  e na toolbar mobile;
+- painel `AgentPanel.luau` com 5 abas ligadas ao backend de verdade:
+  - **Chat** — conversa com o modelo próprio (SSE);
+  - **3D** — descreve o modelo → as peças viram **Parts reais** em
+    `Workspace.ArkherAgent` (o Modeler edita depois);
+  - **Anim** — lista de modelos + descrição do movimento → keyframes gerados
+    e **reproduzidos ao vivo** no objeto;
+  - **Jogo** — descreve o jogo inteiro → planejamento + materialização
+    completa (iteração contínua pelo chat);
+  - **Web** — pesquisa real: Wikipedia (CC BY-SA), Internet Archive,
+    **documentação oficial do Roblox** (`Roblox/creator-docs`, CC-BY-4.0)
+    e YouTube (com chave própria) — rota nova `POST /real/search`.
+- ícone: `arkher_agent_icon.png` (suba no Roblox e cole o `rbxassetid` em
+  `ICON_ASSET_ID` no `AgentPanel.luau` se quiser usar a imagem enviada).
+
+Base do patch: ALPHA 0.8 (`6bdcf0a`). O painel é defensivo (pcall em toda
+chamada de rede) e avisa com honestidade quando o backend está fora.
+
 ## Testado de ponta a ponta
 
 - status do modelo real ✓
 - `castelo medieval` → **149 peças** (muralhas, torres, portão, interior) ✓
 - chat real sem mock ✓
 - backend fora → erro 502 honesto (nunca resposta inventada) ✓
+- pesquisa web `terrain` → docs oficiais do Roblox com licença ✓
