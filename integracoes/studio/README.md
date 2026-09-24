@@ -95,7 +95,9 @@ Tipos de animação: `girar`, `flutuar`, `pulsar`, `vaivem`, `tremer`
 | Serialization | `SerializarProjeto` → `ProjectFormat.Serialize` (.arkher) |
 | Scripting | `Codigo(prompt)` — modelo próprio gera Luau/Python |
 | Vault | `ParaVault` — assets gerados no formato do Vault |
-| ANG / Physics / Input / Publish | sem correspondência no ARKHER — `Connector.Cobertura()` lista honestamente |
+| ANG (estilo) | `Estilo(prompt)`/`AplicarEstilo` → `StyleEnhancer:SetStyleProfile` (6 perfis; o ARKHER escolhe pelo pedido) |
+| Physics | `Fisica(prompt)`/`AplicarFisica` → `PhysicsEngine:SetPhysicsType` (15 tipos; o ARKHER escolhe pelo pedido) |
+| Input / Publish | lado do Studio — `Connector.Cobertura()` lista honestamente |
 
 ## Testado de ponta a ponta
 

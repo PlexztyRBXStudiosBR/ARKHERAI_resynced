@@ -8,6 +8,12 @@ from __future__ import annotations
 
 import math
 import random
+import unicodedata
+
+
+def _norm(t: str) -> str:
+    t = unicodedata.normalize("NFKD", (t or "").lower())
+    return "".join(c for c in t if not unicodedata.combining(c))
 
 
 # --------------------------------------------------------------- Roblox/Luau
@@ -174,6 +180,72 @@ def gerar_roblox(tipo: str) -> dict:
 
 
 # ------------------------------------------------------------------ OBJ 3D
+_ESTILOS_STUDIO = ("lowpoly", "anime", "stylized", "semirealistic", "ultrarealistic", "photorealistic")
+
+
+def selecionar_estilo(prompt: str) -> dict:
+    """Escolhe o StyleProfile do Arkher Studio a partir do pedido (determinístico)."""
+    t = _norm(prompt)
+    regras = (
+        (("low poly", "lowpoly", "minimalista", "performance", "mobile", "a01", "rapido"), "lowpoly",
+         "pedido prioriza performance/visual minimalista"),
+        (("anime", "cel", "toon", "genshin"), "anime", "pedido cita visual anime/toon"),
+        (("fotorreal", "photoreal", "foto real", "realismo maximo", "ultra realista"), "photorealistic",
+         "pedido busca fotorrealismo"),
+        (("ultra", "aaa", "next gen"), "ultrarealistic", "pedido busca qualidade ultra/AAA"),
+        (("semi", "semi-realista", "semirealista"), "semirealistic", "pedido busca semi-realismo"),
+        (("estilizado", "stylized", "cartoon", "fofo"), "stylized", "pedido busca visual estilizado"),
+    )
+    escolha, motivo = "stylized", "padrão equilibrado do ARKHER quando o pedido não especifica estilo"
+    for chaves, perfil, razao in regras:
+        if any(c in t for c in chaves):
+            escolha, motivo = perfil, razao
+            break
+    return {
+        "descricao": f"Estilo '{escolha}' selecionado pelo ARKHER para o pedido.",
+        "escolha": escolha,
+        "motivo": motivo,
+        "opcoes": list(_ESTILOS_STUDIO),
+        "como_usar": "Passe 'escolha' para StyleEnhancer:SetStyleProfile() do Studio.",
+    }
+
+
+_TIPOS_FISICA = ("newtonian", "rigidbody", "softbody", "cloth", "fluid", "hair",
+                 "muscle", "atomic", "quantum", "relativistic", "thermodynamics",
+                 "electromagnetic", "particle", "crowd", "destruction")
+
+
+def selecionar_fisica(prompt: str) -> dict:
+    """Escolhe o PhysicsType do Arkher Studio a partir do pedido (determinístico)."""
+    t = _norm(prompt)
+    regras = (
+        (("roupa", "tecido", "capa", "bandeira", "pano", "cloth"), "cloth", "pedido envolve tecido/roupa"),
+        (("agua", "liquido", "fluido", "rio", "oceano"), "fluid", "pedido envolve líquido"),
+        (("cabelo", "pelo", "hair"), "hair", "pedido envolve cabelo/pelos"),
+        (("gelatina", "macio", "carne", "softbody", "mole"), "softbody", "pedido envolve corpo macio"),
+        (("destruicao", "quebrar", "explosao", "destroco", "desmoronar"), "destruction",
+         "pedido envolve destruição"),
+        (("particula", "fumaca", "fogo", "poeira", "efeito"), "particle", "pedido envolve partículas"),
+        (("multidao", "multidões", "npc", "boids", "agentes"), "crowd", "pedido envolve multidão/agentes"),
+        (("musculo", "anatomia", "corpo humano"), "muscle", "pedido envolve musculatura"),
+        (("gravidade", "basico", "simples", "newton"), "newtonian", "pedido pede física básica"),
+        (("veiculo", "caixa", "rigido", "empilhar", "fisica de objetos"), "rigidbody",
+         "pedido envolve corpos rígidos"),
+    )
+    escolha, motivo = "rigidbody", "padrão do ARKHER para física de objetos quando o pedido não especifica"
+    for chaves, tipo, razao in regras:
+        if any(c in t for c in chaves):
+            escolha, motivo = tipo, razao
+            break
+    return {
+        "descricao": f"Física '{escolha}' selecionada pelo ARKHER para o pedido.",
+        "escolha": escolha,
+        "motivo": motivo,
+        "opcoes": list(_TIPOS_FISICA),
+        "como_usar": "Passe 'escolha' para PhysicsEngine:SetPhysicsType() do Studio.",
+    }
+
+
 def gerar_terreno_studio(tipo: str, seed: str | None = None) -> dict:
     """Receita de terreno no formato do motor de terreno do Arkher Studio.
 

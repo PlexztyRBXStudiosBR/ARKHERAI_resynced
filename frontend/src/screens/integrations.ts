@@ -97,8 +97,8 @@ export function renderIntegrations(ctx: Ctx): HTMLElement {
     [
       { pt: "Arkher Studio — integração real", en: "Arkher Studio — real integration" },
       {
-        pt: "O repo PlexztyRBXStudiosBR/ia fala com este backend: rotas /real/* (chat, builds por tema livre, status) + conector Luau que materializa construções peça por peça, alimenta o Modeler (geometria real via MeshData/EditableMesh) e o Animator (keyframes procedurais). Pacote em integracoes/studio/.",
-        en: "The PlexztyRBXStudiosBR/ia repo talks to this backend: /real/* routes (chat, free-theme builds, status) + Luau connector that materializes builds piece by piece, feeds the Modeler (real geometry via MeshData/EditableMesh) and the Animator (procedural keyframes). Package in integracoes/studio/.",
+        pt: "O repo PlexztyRBXStudiosBR/ia fala com este backend: rotas /real/* (chat, builds, terreno, animação, estilo, física) + conector Luau cobrindo 10 subsistemas do Studio — Building, Modeling (EditableMesh), Animation, Terrain, Serialization, Scripting, Vault, ANG (estilo), Physics e Chat. Mapa honesto em Connector.Cobertura(). Pacote em integracoes/studio/.",
+        en: "The PlexztyRBXStudiosBR/ia repo talks to this backend: /real/* routes (chat, builds, terrain, animation, style, physics) + Luau connector covering 10 Studio subsystems — Building, Modeling (EditableMesh), Animation, Terrain, Serialization, Scripting, Vault, ANG (style), Physics and Chat. Honest map in Connector.Cobertura(). Package in integracoes/studio/.",
       },
     ],
   ];

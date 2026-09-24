@@ -1,4 +1,4 @@
-From 518b140a1987089b5c68a0edf3c02ba90c7fde30 Mon Sep 17 00:00:00 2001
+From 9586d445910197c479676627d3dfea651e972cea Mon Sep 17 00:00:00 2001
 From: PlexztyRBXStudiosBR
  <257159587+PlexztyRBXStudiosBR@users.noreply.github.com>
 Date: Thu, 24 Sep 2026 02:50:48 +0000
@@ -11,15 +11,15 @@ Content-Type: text/plain; charset=UTF-8
 Content-Transfer-Encoding: 8bit
 
 ---
- backend/src/routes/arkherai.js             | 156 +++++++-
- docs/ARKHER_AI_INTEGRATION.md              | 100 +++++
- src/shared/ArkherAI/ArkherAIConnector.luau | 441 +++++++++++++++++++++
- 3 files changed, 688 insertions(+), 9 deletions(-)
+ backend/src/routes/arkherai.js             | 188 +++++++-
+ docs/ARKHER_AI_INTEGRATION.md              | 107 +++++
+ src/shared/ArkherAI/ArkherAIConnector.luau | 491 +++++++++++++++++++++
+ 3 files changed, 777 insertions(+), 9 deletions(-)
  create mode 100644 docs/ARKHER_AI_INTEGRATION.md
  create mode 100644 src/shared/ArkherAI/ArkherAIConnector.luau
 
 diff --git a/backend/src/routes/arkherai.js b/backend/src/routes/arkherai.js
-index 021f46b..1218a9d 100644
+index 021f46b..593269f 100644
 --- a/backend/src/routes/arkherai.js
 +++ b/backend/src/routes/arkherai.js
 @@ -11,6 +11,58 @@ async function arkheraiRoutes(fastify, options) {
@@ -109,7 +109,7 @@ index 021f46b..1218a9d 100644
        } catch (err) {
          console.log(`[Arkher AI v1] Real backend chat failed, fallback to mock - Error:`, err.message);
        }
-@@ -353,6 +404,93 @@ return ${prompt.replace(/\s+/g, '')}
+@@ -353,6 +404,125 @@ return ${prompt.replace(/\s+/g, '')}
        message: 'Physics types - Real and advanced, atomic, quantum, all types - Backend for ARKHER AI v1 to know how to do everything best - Inspire reality top 1',
      };
    });
@@ -185,6 +185,38 @@ index 021f46b..1218a9d 100644
 +    }
 +  });
 +
++  // Estilo REAL: ARKHER escolhe o StyleProfile (ANG) a partir do pedido
++  fastify.post('/real/style', async (request, reply) => {
++    const { prompt } = request.body || {};
++    if (!prompt) return reply.code(400).send({ ok: false, error: 'prompt obrigatório' });
++    try {
++      await arkherFetch('/api/tools/style_gen/authorize', { method: 'POST' });
++      const res = await arkherFetch('/api/tools/style_gen/run', {
++        method: 'POST',
++        body: JSON.stringify({ prompt }),
++      });
++      return await res.json();
++    } catch (err) {
++      return reply.code(502).send({ ok: false, error: `ARKHER backend indisponível: ${err.message}` });
++    }
++  });
++
++  // Física REAL: ARKHER escolhe o PhysicsType a partir do pedido
++  fastify.post('/real/fisica', async (request, reply) => {
++    const { prompt } = request.body || {};
++    if (!prompt) return reply.code(400).send({ ok: false, error: 'prompt obrigatório' });
++    try {
++      await arkherFetch('/api/tools/fisica_gen/authorize', { method: 'POST' });
++      const res = await arkherFetch('/api/tools/fisica_gen/run', {
++        method: 'POST',
++        body: JSON.stringify({ prompt }),
++      });
++      return await res.json();
++    } catch (err) {
++      return reply.code(502).send({ ok: false, error: `ARKHER backend indisponível: ${err.message}` });
++    }
++  });
++
 +  // Animação REAL: keyframes procedurais (girar/flutuar/pulsar/vaivem/tremer)
 +  fastify.post('/real/anim', async (request, reply) => {
 +    const { tipo, seed, duracao } = request.body || {};
@@ -205,10 +237,10 @@ index 021f46b..1218a9d 100644
  module.exports = arkheraiRoutes;
 diff --git a/docs/ARKHER_AI_INTEGRATION.md b/docs/ARKHER_AI_INTEGRATION.md
 new file mode 100644
-index 0000000..7e1068f
+index 0000000..3927f70
 --- /dev/null
 +++ b/docs/ARKHER_AI_INTEGRATION.md
-@@ -0,0 +1,100 @@
+@@ -0,0 +1,107 @@
 +# ARKHER AI — integração REAL com o Arkher Studio
 +
 +O ARKHER AI (backend + modelo próprios, sem provedor externo) agora conversa
@@ -304,17 +336,24 @@ index 0000000..7e1068f
 +| Scripting | `Codigo(prompt)` — o modelo próprio gera Luau/Python |
 +| Vault | `ParaVault` — registro de assets gerados |
 +| Chat | `Chat` (SSE consumido) |
-+| ANG / Physics / Input / Publish | sem correspondência no ARKHER (ver `Connector.Cobertura()`) |
++| ANG (estilo) | `Estilo(prompt)` + `AplicarEstilo` → `StyleEnhancer:SetStyleProfile` (6 perfis) |
++| Physics | `Fisica(prompt)` + `AplicarFisica` → `PhysicsEngine:SetPhysicsType` (15 tipos) |
++| Input / Publish | lado do Studio — ver `Connector.Cobertura()` |
 +
 +Rotas Node novas: `POST /real/terrain` (5 biomas) e `POST /real/anim` (5 tipos).
 +`Connector.Cobertura()` devolve o mapa honesto do que está ligado e do que não
 +tem equivalente — nada fica fingindo integração.
++
++
++Rotas Node: `POST /real/style` e `POST /real/fisica` completam o conjunto —
++o ARKHER escolhe o estilo visual e o tipo de física a partir do pedido em
++linguagem natural, e os aplicadores injetam direto nos módulos do Studio.
 diff --git a/src/shared/ArkherAI/ArkherAIConnector.luau b/src/shared/ArkherAI/ArkherAIConnector.luau
 new file mode 100644
-index 0000000..f597463
+index 0000000..571df25
 --- /dev/null
 +++ b/src/shared/ArkherAI/ArkherAIConnector.luau
-@@ -0,0 +1,441 @@
+@@ -0,0 +1,491 @@
 +--!strict
 +-- ArkherAIConnector — integração REAL do ARKHER AI com o Arkher Studio.
 +--
@@ -718,6 +757,56 @@ index 0000000..f597463
 +	return ok and json or nil
 +end
 +
++-- ------------------------------------------------------------------ estilo (ANG)
++-- O ARKHER escolhe o StyleProfile a partir do pedido.
++function Connector.Estilo(prompt: string): (boolean, any)
++	if _token == "" then
++		Connector.Registrar()
++	end
++	request("POST", "/api/tools/style_gen/authorize")
++	local ok, res = request("POST", "/api/tools/style_gen/run", { prompt = prompt })
++	if not ok or typeof(res) ~= "table" then
++		return false, res
++	end
++	return true, (res :: any).result
++end
++
++-- Aplica o perfil escolhido no StyleEnhancer (ANG) do Studio.
++function Connector.AplicarEstilo(enhancer: any, perfil: string?): boolean
++	if enhancer == nil or typeof(perfil) ~= "string" then
++		return false
++	end
++	local ok = pcall(function()
++		enhancer:SetStyleProfile(perfil)
++	end)
++	return ok
++end
++
++-- ------------------------------------------------------------------ física
++-- O ARKHER escolhe o PhysicsType a partir do pedido.
++function Connector.Fisica(prompt: string): (boolean, any)
++	if _token == "" then
++		Connector.Registrar()
++	end
++	request("POST", "/api/tools/fisica_gen/authorize")
++	local ok, res = request("POST", "/api/tools/fisica_gen/run", { prompt = prompt })
++	if not ok or typeof(res) ~= "table" then
++		return false, res
++	end
++	return true, (res :: any).result
++end
++
++-- Aplica o tipo escolhido no PhysicsEngine do Studio.
++function Connector.AplicarFisica(engine: any, tipo: string?): boolean
++	if engine == nil or typeof(tipo) ~= "string" then
++		return false
++	end
++	local ok = pcall(function()
++		engine:SetPhysicsType(tipo)
++	end)
++	return ok
++end
++
 +-- ------------------------------------------------------------------ código
 +-- O modelo do ARKHER como gerador de código (Luau/Python) para o Scripting.
 +function Connector.Codigo(prompt: string): (boolean, any)
@@ -748,8 +837,8 @@ index 0000000..f597463
 +		Scripting = "ligado — Codigo (modelo proprio gera Luau/Python)",
 +		Vault = "ligado — ParaVault (registro de assets gerados)",
 +		Chat = "ligado — Chat (SSE consumido)",
-+		ANG = "sem correspondencia — super-resolucao/frame-gen nao tem equivalente no ARKHER",
-+		Physics = "parcial — o ARKHER nao simula fisica; presets ficam a cargo do PhysicsEngine",
++		ANG = "ligado (estilo) — Estilo/AplicarEstilo escolhe e aplica o StyleProfile no StyleEnhancer; frame-gen/super-res continuam sendo do proprio ANG",
++		Physics = "ligado (selecao) — Fisica/AplicarFisica escolhe e aplica o PhysicsType; a simulacao e do PhysicsEngine do Studio",
 +		Input = "lado do Studio — nao se aplica",
 +		Publish = "lado do Studio (Open Cloud) - nao se aplica",
 +	}

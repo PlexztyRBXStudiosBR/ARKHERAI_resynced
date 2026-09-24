@@ -340,6 +340,31 @@ def test_build_base_militar_interior_e_veiculos():
     assert "TanqueCanhao" in nomes and "TanqueEsteira" in nomes  # veículos
 
 
+def test_style_e_fisica_gen(auth_client):
+    """Seletores de estilo (ANG) e física, determinísticos e honestos."""
+    auth_client.post("/api/tools/style_gen/authorize")
+    auth_client.post("/api/tools/fisica_gen/authorize")
+    # estilo por palavra-chave + padrão
+    r = auth_client.post("/api/tools/style_gen/run", json={"prompt": "quero fotorrealista"})
+    assert r.json()["result"]["escolha"] == "photorealistic"
+    assert r.json()["result"]["escolha"] in r.json()["result"]["opcoes"]
+    r2 = auth_client.post("/api/tools/style_gen/run", json={"prompt": "jogo mobile rapido"})
+    assert r2.json()["result"]["escolha"] == "lowpoly"
+    r3 = auth_client.post("/api/tools/style_gen/run", json={"prompt": "tanto faz"})
+    assert r3.json()["result"]["escolha"] == "stylized"  # padrão honesto
+    # física por palavra-chave + padrão
+    f = auth_client.post("/api/tools/fisica_gen/run", json={"prompt": "a capa balança com o vento"})
+    assert f.json()["result"]["escolha"] == "cloth"
+    f2 = auth_client.post("/api/tools/fisica_gen/run", json={"prompt": "explosão destrói o muro"})
+    assert f2.json()["result"]["escolha"] == "destruction"
+    f3 = auth_client.post("/api/tools/fisica_gen/run", json={"prompt": "nada específico"})
+    assert f3.json()["result"]["escolha"] == "rigidbody"  # padrão honesto
+    # determinismo
+    a = auth_client.post("/api/tools/style_gen/run", json={"prompt": "anime japonês"}).json()["result"]
+    b = auth_client.post("/api/tools/style_gen/run", json={"prompt": "anime japonês"}).json()["result"]
+    assert a == b
+
+
 def test_terrain_gen_receita_studio(auth_client):
     """Receita de terreno compatível com o TerrainData do Arkher Studio."""
     auth_client.post("/api/tools/terrain_gen/authorize")

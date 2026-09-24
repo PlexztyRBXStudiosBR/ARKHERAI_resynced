@@ -401,6 +401,56 @@ function Connector.SerializarProjeto(world: any, ProjectFormat: any, meta: any?)
 	return ok and json or nil
 end
 
+-- ------------------------------------------------------------------ estilo (ANG)
+-- O ARKHER escolhe o StyleProfile a partir do pedido.
+function Connector.Estilo(prompt: string): (boolean, any)
+	if _token == "" then
+		Connector.Registrar()
+	end
+	request("POST", "/api/tools/style_gen/authorize")
+	local ok, res = request("POST", "/api/tools/style_gen/run", { prompt = prompt })
+	if not ok or typeof(res) ~= "table" then
+		return false, res
+	end
+	return true, (res :: any).result
+end
+
+-- Aplica o perfil escolhido no StyleEnhancer (ANG) do Studio.
+function Connector.AplicarEstilo(enhancer: any, perfil: string?): boolean
+	if enhancer == nil or typeof(perfil) ~= "string" then
+		return false
+	end
+	local ok = pcall(function()
+		enhancer:SetStyleProfile(perfil)
+	end)
+	return ok
+end
+
+-- ------------------------------------------------------------------ física
+-- O ARKHER escolhe o PhysicsType a partir do pedido.
+function Connector.Fisica(prompt: string): (boolean, any)
+	if _token == "" then
+		Connector.Registrar()
+	end
+	request("POST", "/api/tools/fisica_gen/authorize")
+	local ok, res = request("POST", "/api/tools/fisica_gen/run", { prompt = prompt })
+	if not ok or typeof(res) ~= "table" then
+		return false, res
+	end
+	return true, (res :: any).result
+end
+
+-- Aplica o tipo escolhido no PhysicsEngine do Studio.
+function Connector.AplicarFisica(engine: any, tipo: string?): boolean
+	if engine == nil or typeof(tipo) ~= "string" then
+		return false
+	end
+	local ok = pcall(function()
+		engine:SetPhysicsType(tipo)
+	end)
+	return ok
+end
+
 -- ------------------------------------------------------------------ código
 -- O modelo do ARKHER como gerador de código (Luau/Python) para o Scripting.
 function Connector.Codigo(prompt: string): (boolean, any)
@@ -431,8 +481,8 @@ function Connector.Cobertura(): { [string]: string }
 		Scripting = "ligado — Codigo (modelo proprio gera Luau/Python)",
 		Vault = "ligado — ParaVault (registro de assets gerados)",
 		Chat = "ligado — Chat (SSE consumido)",
-		ANG = "sem correspondencia — super-resolucao/frame-gen nao tem equivalente no ARKHER",
-		Physics = "parcial — o ARKHER nao simula fisica; presets ficam a cargo do PhysicsEngine",
+		ANG = "ligado (estilo) — Estilo/AplicarEstilo escolhe e aplica o StyleProfile no StyleEnhancer; frame-gen/super-res continuam sendo do proprio ANG",
+		Physics = "ligado (selecao) — Fisica/AplicarFisica escolhe e aplica o PhysicsType; a simulacao e do PhysicsEngine do Studio",
 		Input = "lado do Studio — nao se aplica",
 		Publish = "lado do Studio (Open Cloud) - nao se aplica",
 	}

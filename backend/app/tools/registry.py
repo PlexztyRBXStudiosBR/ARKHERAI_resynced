@@ -90,6 +90,20 @@ TOOLS: dict[str, dict] = {
         "permissoes": ["geracao_de_terreno_local"],
         "confirmacao": False,
     },
+    "style_gen": {
+        "id": "style_gen",
+        "nome": "Seletor de estilo visual (ANG)",
+        "descricao": "Escolhe o StyleProfile do Arkher Studio (lowpoly/anime/stylized/semirealistic/ultrarealistic/photorealistic) a partir do pedido. Determinístico.",
+        "permissoes": ["selecao_de_estilo_local"],
+        "confirmacao": False,
+    },
+    "fisica_gen": {
+        "id": "fisica_gen",
+        "nome": "Seletor de física",
+        "descricao": "Escolhe o PhysicsType do Arkher Studio (rigidbody/cloth/fluid/destruction/...) a partir do pedido. Determinístico.",
+        "permissoes": ["selecao_de_fisica_local"],
+        "confirmacao": False,
+    },
     "blender_gen": {
         "id": "blender_gen",
         "nome": "Conector Blender (3D real)",
@@ -279,6 +293,10 @@ def run(user_id: str, tool_id: str, args: dict) -> dict:
                 result = generators.gerar_terreno_studio(str(args.get("bioma", "")), args.get("seed"))
             except ValueError as e:
                 raise ToolError("INVALID_ARG", str(e))
+        elif tool_id == "style_gen":
+            result = generators.selecionar_estilo(str(args.get("prompt", "")))
+        elif tool_id == "fisica_gen":
+            result = generators.selecionar_fisica(str(args.get("prompt", "")))
         elif tool_id == "blender_gen":
             try:
                 seed = int(args.get("seed", 42))

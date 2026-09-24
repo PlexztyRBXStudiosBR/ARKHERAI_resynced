@@ -476,6 +476,38 @@ return ${prompt.replace(/\s+/g, '')}
     }
   });
 
+  // Estilo REAL: ARKHER escolhe o StyleProfile (ANG) a partir do pedido
+  fastify.post('/real/style', async (request, reply) => {
+    const { prompt } = request.body || {};
+    if (!prompt) return reply.code(400).send({ ok: false, error: 'prompt obrigatório' });
+    try {
+      await arkherFetch('/api/tools/style_gen/authorize', { method: 'POST' });
+      const res = await arkherFetch('/api/tools/style_gen/run', {
+        method: 'POST',
+        body: JSON.stringify({ prompt }),
+      });
+      return await res.json();
+    } catch (err) {
+      return reply.code(502).send({ ok: false, error: `ARKHER backend indisponível: ${err.message}` });
+    }
+  });
+
+  // Física REAL: ARKHER escolhe o PhysicsType a partir do pedido
+  fastify.post('/real/fisica', async (request, reply) => {
+    const { prompt } = request.body || {};
+    if (!prompt) return reply.code(400).send({ ok: false, error: 'prompt obrigatório' });
+    try {
+      await arkherFetch('/api/tools/fisica_gen/authorize', { method: 'POST' });
+      const res = await arkherFetch('/api/tools/fisica_gen/run', {
+        method: 'POST',
+        body: JSON.stringify({ prompt }),
+      });
+      return await res.json();
+    } catch (err) {
+      return reply.code(502).send({ ok: false, error: `ARKHER backend indisponível: ${err.message}` });
+    }
+  });
+
   // Animação REAL: keyframes procedurais (girar/flutuar/pulsar/vaivem/tremer)
   fastify.post('/real/anim', async (request, reply) => {
     const { tipo, seed, duracao } = request.body || {};
