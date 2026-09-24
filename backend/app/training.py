@@ -19,6 +19,8 @@ _LOCK = threading.Lock()
 _JOB: dict | None = None
 
 STEPS = {
+    "discover": ["-m", "model.training.discover"],
+    "prototype_lab": ["-m", "model.training.prototype_lab"],
     "prepare": ["-m", "model.training.prepare_dataset"],
     "validate": ["-m", "model.training.validate_dataset"],
     "tokenizer": ["-m", "model.training.train_tokenizer"],

@@ -71,6 +71,10 @@ def main() -> int:
         write_state({"status": "auto_treino", "ciclo": cycle, "tag": tag, "checkpoint_base": str(base) if base else None})
 
         stages: list[tuple[str, list[str]]] = [
+            # Descoberta antes do dataset: detecta módulos/rotas/formatos novos
+            # do Studio, site e integrações a cada ciclo.
+            ("discover", ["model.training.discover"]),
+            ("prototype_lab", ["model.training.prototype_lab"]),
             ("prepare", ["model.training.prepare_dataset"]),
             ("validate", ["model.training.validate_dataset"]),
         ]

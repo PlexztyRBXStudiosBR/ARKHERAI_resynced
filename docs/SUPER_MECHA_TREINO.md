@@ -15,9 +15,13 @@ PYTHONPATH=. .venv/bin/python -m model.training.auto_train --pause 30
 
 Cada ciclo faz:
 
-1. prepara o corpus;
-2. valida o dataset;
-3. treina retomando `model/checkpoints/latest.pt`;
+1. descobre automaticamente arquivos e estruturas novas do checkout inteiro
+   (Studio, site, backend e integrações), usando hashes incrementais;
+2. monta uma fila de protótipos por domínio (3D, animação, terreno, UI,
+   scripting e física) para serem executados e avaliados;
+3. prepara o corpus;
+4. valida o dataset;
+5. treina retomando `model/checkpoints/latest.pt`;
 4. salva uma versão com tag `auto-c000001`, `auto-c000002`...;
 5. avalia e gera relatório;
 6. aguarda o próximo ciclo.
@@ -38,7 +42,12 @@ O ciclo é contínuo e o conhecimento do modelo é acumulado por checkpoint. O
 pipeline só usa dados do corpus semente e dados adicionados com proveniência e
 licença; não raspa a internet, não treina com respostas inventadas e não chama
 IA externa no runtime. Ferramentas como Blender, Roblox Studio e avaliadores
-podem gerar artefatos de treino apenas quando o operador os exporta e revisa.
+podem gerar protótipos automaticamente, mas cada protótipo entra primeiro numa
+fila `aguarda_validacao`; somente testes aprovados e revisão humana podem
+promovê-lo a dado de treino. A pesquisa web pode ser disparada pelo produto
+pelas fontes autorizadas e seus resultados também passam por licença e revisão.
+Assim, o modelo anterior pode criar variações e testes para o próximo sem
+copiar cegamente seus próprios erros.
 
 ## Escada de versões
 
