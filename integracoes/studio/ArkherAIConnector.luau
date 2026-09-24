@@ -341,4 +341,101 @@ function Connector.AplicarAnimacao(animator: any, objeto: Instance, anim: any): 
 	return aplicados
 end
 
+-- ------------------------------------------------------------------ terreno
+-- Receita de terreno do ARKHER no formato do motor TerrainData do Studio.
+function Connector.Terreno(bioma: string, seed: number?): (boolean, any)
+	if _token == "" then
+		Connector.Registrar()
+	end
+	request("POST", "/api/tools/terrain_gen/authorize")
+	local ok, res = request("POST", "/api/tools/terrain_gen/run", {
+		bioma = bioma,
+		seed = tostring(seed or 42),
+	})
+	if not ok or typeof(res) ~= "table" then
+		return false, res
+	end
+	return true, (res :: any).result
+end
+
+-- O 'settings' da receita já é aceito por TerrainData.new() do Studio.
+function Connector.ParaTerrenoDoStudio(receita: any): any?
+	if typeof(receita) ~= "table" or receita.settings == nil then
+		return nil
+	end
+	return receita.settings
+end
+
+-- ------------------------------------------------------------------ ECS
+-- Converte as operações de build em entidades ECS (World do Arkher Studio).
+function Connector.ParaEntidades(ops: { any }, Entity: any, World: any, world: any): number
+	if typeof(ops) ~= "table" then
+		return 0
+	end
+	local n = 0
+	for _, op in ops do
+		if typeof(op) == "table" and op.op == "part" then
+			local e = Entity.new(tostring(op.nome or "Peca"))
+			local pos = op.pos or { 0, 0, 0 }
+			local size = op.size or { 4, 4, 4 }
+			local cor = op.cor or { 160, 160, 160 }
+			Entity.AddComponent(e, "Transform", {
+				position = Vector3.new(pos[1], pos[2], pos[3]),
+				size = Vector3.new(size[1], size[2], size[3]),
+			})
+			Entity.AddComponent(e, "Render", {
+				color = Color3.fromRGB(cor[1], cor[2], cor[3]),
+				visible = true,
+			})
+			Entity.AddTag(e, "arkher")
+			world:AddEntity(e)
+			n += 1
+		end
+	end
+	return n
+end
+
+-- Serializa o mundo (com as entidades ARKHER) no formato .arkher do Studio.
+function Connector.SerializarProjeto(world: any, ProjectFormat: any, meta: any?): string?
+	local ok, json = pcall(ProjectFormat.Serialize, world, meta or { geradoPor = "ARKHER AI" })
+	return ok and json or nil
+end
+
+-- ------------------------------------------------------------------ código
+-- O modelo do ARKHER como gerador de código (Luau/Python) para o Scripting.
+function Connector.Codigo(prompt: string): (boolean, any)
+	return Connector.Chat("Gere apenas o código pedido, sem explicações: " .. prompt)
+end
+
+-- ------------------------------------------------------------------ vault
+-- Registra um asset gerado pelo ARKHER no formato esperado pelo Arkher Vault.
+function Connector.ParaVault(mesh: any, nome: string?): any
+	return {
+		name = nome or ("arkher_asset_" .. os.time()),
+		type = "model",
+		source = "arkher_ai",
+		mesh = mesh,
+		tags = { "arkher", "generated" },
+	}
+end
+
+-- ------------------------------------------------------------------ cobertura
+-- Mapa honesto do que está ligado e do que não tem correspondência no ARKHER.
+function Connector.Cobertura(): { [string]: string }
+	return {
+		Building = "ligado — Construir/Materializar (Parts) e ParaEntidades (ECS)",
+		Modeling = "ligado — GerarMesh/ParaMeshData (EditableMesh) e InterfaceIA",
+		Animation = "ligado — GerarAnimacao/AplicarAnimacao (UniversalAnimator)",
+		Terrain = "ligado — Terreno/ParaTerrenoDoStudio (TerrainData nativo)",
+		Serialization = "ligado — SerializarProjeto (ProjectFormat .arkher)",
+		Scripting = "ligado — Codigo (modelo proprio gera Luau/Python)",
+		Vault = "ligado — ParaVault (registro de assets gerados)",
+		Chat = "ligado — Chat (SSE consumido)",
+		ANG = "sem correspondencia — super-resolucao/frame-gen nao tem equivalente no ARKHER",
+		Physics = "parcial — o ARKHER nao simula fisica; presets ficam a cargo do PhysicsEngine",
+		Input = "lado do Studio — nao se aplica",
+		Publish = "lado do Studio (Open Cloud) - nao se aplica",
+	}
+end
+
 return Connector

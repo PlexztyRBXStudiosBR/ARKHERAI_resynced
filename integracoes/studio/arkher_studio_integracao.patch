@@ -1,4 +1,4 @@
-From ea8c158a7a42d79566b78762d3bfc10ae0dd7ca6 Mon Sep 17 00:00:00 2001
+From 518b140a1987089b5c68a0edf3c02ba90c7fde30 Mon Sep 17 00:00:00 2001
 From: PlexztyRBXStudiosBR
  <257159587+PlexztyRBXStudiosBR@users.noreply.github.com>
 Date: Thu, 24 Sep 2026 02:50:48 +0000
@@ -11,15 +11,15 @@ Content-Type: text/plain; charset=UTF-8
 Content-Transfer-Encoding: 8bit
 
 ---
- backend/src/routes/arkherai.js             | 124 +++++++-
- docs/ARKHER_AI_INTEGRATION.md              |  82 +++++
- src/shared/ArkherAI/ArkherAIConnector.luau | 344 +++++++++++++++++++++
- 3 files changed, 541 insertions(+), 9 deletions(-)
+ backend/src/routes/arkherai.js             | 156 +++++++-
+ docs/ARKHER_AI_INTEGRATION.md              | 100 +++++
+ src/shared/ArkherAI/ArkherAIConnector.luau | 441 +++++++++++++++++++++
+ 3 files changed, 688 insertions(+), 9 deletions(-)
  create mode 100644 docs/ARKHER_AI_INTEGRATION.md
  create mode 100644 src/shared/ArkherAI/ArkherAIConnector.luau
 
 diff --git a/backend/src/routes/arkherai.js b/backend/src/routes/arkherai.js
-index 021f46b..828ed09 100644
+index 021f46b..1218a9d 100644
 --- a/backend/src/routes/arkherai.js
 +++ b/backend/src/routes/arkherai.js
 @@ -11,6 +11,58 @@ async function arkheraiRoutes(fastify, options) {
@@ -109,7 +109,7 @@ index 021f46b..828ed09 100644
        } catch (err) {
          console.log(`[Arkher AI v1] Real backend chat failed, fallback to mock - Error:`, err.message);
        }
-@@ -353,6 +404,61 @@ return ${prompt.replace(/\s+/g, '')}
+@@ -353,6 +404,93 @@ return ${prompt.replace(/\s+/g, '')}
        message: 'Physics types - Real and advanced, atomic, quantum, all types - Backend for ARKHER AI v1 to know how to do everything best - Inspire reality top 1',
      };
    });
@@ -168,15 +168,47 @@ index 021f46b..828ed09 100644
 +      return reply.code(502).send({ ok: false, error: `ARKHER backend indisponível: ${err.message}` });
 +    }
 +  });
++
++  // Terreno REAL: receita por bioma (montanha/deserto/planicie/neve/vulcao)
++  fastify.post('/real/terrain', async (request, reply) => {
++    const { bioma, seed } = request.body || {};
++    if (!bioma) return reply.code(400).send({ ok: false, error: 'bioma obrigatório' });
++    try {
++      await arkherFetch('/api/tools/terrain_gen/authorize', { method: 'POST' });
++      const res = await arkherFetch('/api/tools/terrain_gen/run', {
++        method: 'POST',
++        body: JSON.stringify({ bioma, seed: seed != null ? String(seed) : '42' }),
++      });
++      return await res.json();
++    } catch (err) {
++      return reply.code(502).send({ ok: false, error: `ARKHER backend indisponível: ${err.message}` });
++    }
++  });
++
++  // Animação REAL: keyframes procedurais (girar/flutuar/pulsar/vaivem/tremer)
++  fastify.post('/real/anim', async (request, reply) => {
++    const { tipo, seed, duracao } = request.body || {};
++    if (!tipo) return reply.code(400).send({ ok: false, error: 'tipo obrigatório' });
++    try {
++      await arkherFetch('/api/tools/anim_gen/authorize', { method: 'POST' });
++      const res = await arkherFetch('/api/tools/anim_gen/run', {
++        method: 'POST',
++        body: JSON.stringify({ tipo, seed: seed != null ? String(seed) : '42', duracao: duracao ?? 2.0 }),
++      });
++      return await res.json();
++    } catch (err) {
++      return reply.code(502).send({ ok: false, error: `ARKHER backend indisponível: ${err.message}` });
++    }
++  });
  }
  
  module.exports = arkheraiRoutes;
 diff --git a/docs/ARKHER_AI_INTEGRATION.md b/docs/ARKHER_AI_INTEGRATION.md
 new file mode 100644
-index 0000000..c8d6745
+index 0000000..7e1068f
 --- /dev/null
 +++ b/docs/ARKHER_AI_INTEGRATION.md
-@@ -0,0 +1,82 @@
+@@ -0,0 +1,100 @@
 +# ARKHER AI — integração REAL com o Arkher Studio
 +
 +O ARKHER AI (backend + modelo próprios, sem provedor externo) agora conversa
@@ -259,12 +291,30 @@ index 0000000..c8d6745
 +| `InterfaceIA()` | objeto no formato esperado pelo `ArkherEngineerResource` (`engineer.arkherAI = ...`) |
 +| `GerarAnimacao(tipo, seed, dur)` | keyframes procedurais (`girar/flutuar/pulsar/vaivem/tremer`) via `/api/tools/anim_gen` |
 +| `AplicarAnimacao(animator, obj, anim)` | registra o objeto e injeta os keyframes no `UniversalAnimator` (curva "humanized") |
++
++## Ponte completa (nada de fora)
++
++| Subsistema do Studio | Ligação com o ARKHER |
++|---|---|
++| Building | `Construir` + `Materializar` (Parts) / `ParaEntidades` (ECS) |
++| Modeling | `GerarMesh` + `ParaMeshData` → EditableMesh real / `InterfaceIA` |
++| Animation | `GerarAnimacao` + `AplicarAnimacao` (UniversalAnimator, curva humanized) |
++| Terrain | `Terreno(bioma)` + `ParaTerrenoDoStudio` → `TerrainData.new(settings)` nativo |
++| Serialization | `SerializarProjeto` → `ProjectFormat.Serialize` (.arkher) |
++| Scripting | `Codigo(prompt)` — o modelo próprio gera Luau/Python |
++| Vault | `ParaVault` — registro de assets gerados |
++| Chat | `Chat` (SSE consumido) |
++| ANG / Physics / Input / Publish | sem correspondência no ARKHER (ver `Connector.Cobertura()`) |
++
++Rotas Node novas: `POST /real/terrain` (5 biomas) e `POST /real/anim` (5 tipos).
++`Connector.Cobertura()` devolve o mapa honesto do que está ligado e do que não
++tem equivalente — nada fica fingindo integração.
 diff --git a/src/shared/ArkherAI/ArkherAIConnector.luau b/src/shared/ArkherAI/ArkherAIConnector.luau
 new file mode 100644
-index 0000000..a332163
+index 0000000..f597463
 --- /dev/null
 +++ b/src/shared/ArkherAI/ArkherAIConnector.luau
-@@ -0,0 +1,344 @@
+@@ -0,0 +1,441 @@
 +--!strict
 +-- ArkherAIConnector — integração REAL do ARKHER AI com o Arkher Studio.
 +--
@@ -606,6 +656,103 @@ index 0000000..a332163
 +		end
 +	end
 +	return aplicados
++end
++
++-- ------------------------------------------------------------------ terreno
++-- Receita de terreno do ARKHER no formato do motor TerrainData do Studio.
++function Connector.Terreno(bioma: string, seed: number?): (boolean, any)
++	if _token == "" then
++		Connector.Registrar()
++	end
++	request("POST", "/api/tools/terrain_gen/authorize")
++	local ok, res = request("POST", "/api/tools/terrain_gen/run", {
++		bioma = bioma,
++		seed = tostring(seed or 42),
++	})
++	if not ok or typeof(res) ~= "table" then
++		return false, res
++	end
++	return true, (res :: any).result
++end
++
++-- O 'settings' da receita já é aceito por TerrainData.new() do Studio.
++function Connector.ParaTerrenoDoStudio(receita: any): any?
++	if typeof(receita) ~= "table" or receita.settings == nil then
++		return nil
++	end
++	return receita.settings
++end
++
++-- ------------------------------------------------------------------ ECS
++-- Converte as operações de build em entidades ECS (World do Arkher Studio).
++function Connector.ParaEntidades(ops: { any }, Entity: any, World: any, world: any): number
++	if typeof(ops) ~= "table" then
++		return 0
++	end
++	local n = 0
++	for _, op in ops do
++		if typeof(op) == "table" and op.op == "part" then
++			local e = Entity.new(tostring(op.nome or "Peca"))
++			local pos = op.pos or { 0, 0, 0 }
++			local size = op.size or { 4, 4, 4 }
++			local cor = op.cor or { 160, 160, 160 }
++			Entity.AddComponent(e, "Transform", {
++				position = Vector3.new(pos[1], pos[2], pos[3]),
++				size = Vector3.new(size[1], size[2], size[3]),
++			})
++			Entity.AddComponent(e, "Render", {
++				color = Color3.fromRGB(cor[1], cor[2], cor[3]),
++				visible = true,
++			})
++			Entity.AddTag(e, "arkher")
++			world:AddEntity(e)
++			n += 1
++		end
++	end
++	return n
++end
++
++-- Serializa o mundo (com as entidades ARKHER) no formato .arkher do Studio.
++function Connector.SerializarProjeto(world: any, ProjectFormat: any, meta: any?): string?
++	local ok, json = pcall(ProjectFormat.Serialize, world, meta or { geradoPor = "ARKHER AI" })
++	return ok and json or nil
++end
++
++-- ------------------------------------------------------------------ código
++-- O modelo do ARKHER como gerador de código (Luau/Python) para o Scripting.
++function Connector.Codigo(prompt: string): (boolean, any)
++	return Connector.Chat("Gere apenas o código pedido, sem explicações: " .. prompt)
++end
++
++-- ------------------------------------------------------------------ vault
++-- Registra um asset gerado pelo ARKHER no formato esperado pelo Arkher Vault.
++function Connector.ParaVault(mesh: any, nome: string?): any
++	return {
++		name = nome or ("arkher_asset_" .. os.time()),
++		type = "model",
++		source = "arkher_ai",
++		mesh = mesh,
++		tags = { "arkher", "generated" },
++	}
++end
++
++-- ------------------------------------------------------------------ cobertura
++-- Mapa honesto do que está ligado e do que não tem correspondência no ARKHER.
++function Connector.Cobertura(): { [string]: string }
++	return {
++		Building = "ligado — Construir/Materializar (Parts) e ParaEntidades (ECS)",
++		Modeling = "ligado — GerarMesh/ParaMeshData (EditableMesh) e InterfaceIA",
++		Animation = "ligado — GerarAnimacao/AplicarAnimacao (UniversalAnimator)",
++		Terrain = "ligado — Terreno/ParaTerrenoDoStudio (TerrainData nativo)",
++		Serialization = "ligado — SerializarProjeto (ProjectFormat .arkher)",
++		Scripting = "ligado — Codigo (modelo proprio gera Luau/Python)",
++		Vault = "ligado — ParaVault (registro de assets gerados)",
++		Chat = "ligado — Chat (SSE consumido)",
++		ANG = "sem correspondencia — super-resolucao/frame-gen nao tem equivalente no ARKHER",
++		Physics = "parcial — o ARKHER nao simula fisica; presets ficam a cargo do PhysicsEngine",
++		Input = "lado do Studio — nao se aplica",
++		Publish = "lado do Studio (Open Cloud) - nao se aplica",
++	}
 +end
 +
 +return Connector

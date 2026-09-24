@@ -83,6 +83,13 @@ TOOLS: dict[str, dict] = {
         "permissoes": ["geracao_de_animacao_local"],
         "confirmacao": False,
     },
+    "terrain_gen": {
+        "id": "terrain_gen",
+        "nome": "Gerador de terreno (receita p/ motor do Studio)",
+        "descricao": "Compõe a receita de terreno (seed, escala, oitavas, erosão, camadas por bioma) no formato do TerrainData do Arkher Studio. Determinístico pela seed.",
+        "permissoes": ["geracao_de_terreno_local"],
+        "confirmacao": False,
+    },
     "blender_gen": {
         "id": "blender_gen",
         "nome": "Conector Blender (3D real)",
@@ -265,6 +272,11 @@ def run(user_id: str, tool_id: str, args: dict) -> dict:
                     args.get("seed"),
                     float(args.get("duracao", 2.0) or 2.0),
                 )
+            except ValueError as e:
+                raise ToolError("INVALID_ARG", str(e))
+        elif tool_id == "terrain_gen":
+            try:
+                result = generators.gerar_terreno_studio(str(args.get("bioma", "")), args.get("seed"))
             except ValueError as e:
                 raise ToolError("INVALID_ARG", str(e))
         elif tool_id == "blender_gen":

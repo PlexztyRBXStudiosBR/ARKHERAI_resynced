@@ -84,6 +84,19 @@ animator:Play()                                   -- curva "humanized" nativa de
 Tipos de animação: `girar`, `flutuar`, `pulsar`, `vaivem`, `tremer`
 (12 keyframes, determinísticos por seed; o backend valida e recusa tipo inválido).
 
+## Ponte completa — nada de fora
+
+| Subsistema do Studio | Ligação |
+|---|---|
+| Building | `Construir`/`Materializar` (Parts) · `ParaEntidades` (ECS com tag "arkher") |
+| Modeling | `GerarMesh`/`ParaMeshData` → EditableMesh · `InterfaceIA` |
+| Animation | `GerarAnimacao`/`AplicarAnimacao` → UniversalAnimator |
+| Terrain | `Terreno(bioma, seed)`/`ParaTerrenoDoStudio` → `TerrainData.new(settings)` (5 biomas; o Noise/Erosion nativos renderizam) |
+| Serialization | `SerializarProjeto` → `ProjectFormat.Serialize` (.arkher) |
+| Scripting | `Codigo(prompt)` — modelo próprio gera Luau/Python |
+| Vault | `ParaVault` — assets gerados no formato do Vault |
+| ANG / Physics / Input / Publish | sem correspondência no ARKHER — `Connector.Cobertura()` lista honestamente |
+
 ## Testado de ponta a ponta
 
 - status do modelo real ✓

@@ -459,6 +459,38 @@ return ${prompt.replace(/\s+/g, '')}
       return reply.code(502).send({ ok: false, error: `ARKHER backend indisponível: ${err.message}` });
     }
   });
+
+  // Terreno REAL: receita por bioma (montanha/deserto/planicie/neve/vulcao)
+  fastify.post('/real/terrain', async (request, reply) => {
+    const { bioma, seed } = request.body || {};
+    if (!bioma) return reply.code(400).send({ ok: false, error: 'bioma obrigatório' });
+    try {
+      await arkherFetch('/api/tools/terrain_gen/authorize', { method: 'POST' });
+      const res = await arkherFetch('/api/tools/terrain_gen/run', {
+        method: 'POST',
+        body: JSON.stringify({ bioma, seed: seed != null ? String(seed) : '42' }),
+      });
+      return await res.json();
+    } catch (err) {
+      return reply.code(502).send({ ok: false, error: `ARKHER backend indisponível: ${err.message}` });
+    }
+  });
+
+  // Animação REAL: keyframes procedurais (girar/flutuar/pulsar/vaivem/tremer)
+  fastify.post('/real/anim', async (request, reply) => {
+    const { tipo, seed, duracao } = request.body || {};
+    if (!tipo) return reply.code(400).send({ ok: false, error: 'tipo obrigatório' });
+    try {
+      await arkherFetch('/api/tools/anim_gen/authorize', { method: 'POST' });
+      const res = await arkherFetch('/api/tools/anim_gen/run', {
+        method: 'POST',
+        body: JSON.stringify({ tipo, seed: seed != null ? String(seed) : '42', duracao: duracao ?? 2.0 }),
+      });
+      return await res.json();
+    } catch (err) {
+      return reply.code(502).send({ ok: false, error: `ARKHER backend indisponível: ${err.message}` });
+    }
+  });
 }
 
 module.exports = arkheraiRoutes;

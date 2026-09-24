@@ -174,6 +174,72 @@ def gerar_roblox(tipo: str) -> dict:
 
 
 # ------------------------------------------------------------------ OBJ 3D
+def gerar_terreno_studio(tipo: str, seed: str | None = None) -> dict:
+    """Receita de terreno no formato do motor de terreno do Arkher Studio.
+
+    O ARKHER compõe os parâmetros (seed, escala, oitavas, erosão, bioma);
+    o motor de terreno do Studio renderiza nativamente com Noise/Erosion dele.
+    """
+    biomas = ("montanha", "deserto", "planicie", "neve", "vulcao")
+    b = (tipo or "").strip().lower()
+    if b not in biomas:
+        raise ValueError(f"Bioma desconhecido. Opções: {', '.join(biomas)}")
+    try:
+        semente = int(seed) if seed not in (None, "") else random.randrange(1, 100000)
+    except (TypeError, ValueError):
+        raise ValueError("seed deve ser um número inteiro")
+    rng = random.Random(semente)
+    perfis = {
+        "montanha": {"heightScale": 48.0, "octaves": 6, "gain": 0.55, "erosao": True,
+                     "camadas": [(1, -10, 2), (2, 2, 18), (3, 18, 60)]},
+        "deserto": {"heightScale": 10.0, "octaves": 4, "gain": 0.4, "erosao": False,
+                    "camadas": [(4, -5, 3), (5, 3, 12)]},
+        "planicie": {"heightScale": 6.0, "octaves": 3, "gain": 0.35, "erosao": True,
+                     "camadas": [(2, -4, 1), (6, 1, 8)]},
+        "neve": {"heightScale": 30.0, "octaves": 5, "gain": 0.5, "erosao": False,
+                 "camadas": [(2, -8, 2), (7, 2, 34)]},
+        "vulcao": {"heightScale": 40.0, "octaves": 6, "gain": 0.6, "erosao": True,
+                   "camadas": [(3, -6, 4), (8, 4, 44)]},
+    }
+    p = perfis[b]
+    settings = {
+        "chunkSize": 32,
+        "worldSizeChunks": 4,
+        "seed": semente,
+        "baseHeight": 0.0,
+        "heightScale": p["heightScale"] * rng.uniform(0.85, 1.15),
+        "noiseType": "perlin",
+        "octaves": p["octaves"],
+        "lacunarity": round(rng.uniform(1.9, 2.2), 3),
+        "gain": p["gain"],
+        "enableErosion": p["erosao"],
+        "enableBiomes": True,
+        "enableCaves": b in ("montanha", "vulcao"),
+        "materialLayers": [
+            {"materialId": mid, "minHeight": mn, "maxHeight": mx}
+            for mid, mn, mx in p["camadas"]
+        ],
+    }
+    # amostra central do heightfield (16x16) p/ preview rápido sem o motor
+    amostras = []
+    fases = [(rng.uniform(0, math.tau), rng.uniform(0.3, 1.2)) for _ in range(3)]
+    for iz in range(16):
+        linha = []
+        for ix in range(16):
+            h = 0.0
+            for fase, freq in fases:
+                h += math.sin(ix * freq + fase) * math.cos(iz * freq + fase)
+            linha.append(round(h / 3 * settings["heightScale"] / 10, 3))
+        amostras.append(linha)
+    return {
+        "descricao": f"Receita de terreno '{b}' (seed {semente}) para o motor de terreno do Arkher Studio.",
+        "bioma": b,
+        "settings": settings,
+        "amostras_16x16": amostras,
+        "como_usar": "Passe 'settings' para TerrainData.new() do Studio; o Noise/Erosion nativos renderizam.",
+    }
+
+
 def gerar_animacao(tipo: str, seed: str | None = None, duracao: float = 2.0) -> dict:
     """Keyframes procedurais prontos para animadores (UniversalAnimator etc.).
 

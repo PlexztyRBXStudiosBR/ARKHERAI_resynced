@@ -340,6 +340,29 @@ def test_build_base_militar_interior_e_veiculos():
     assert "TanqueCanhao" in nomes and "TanqueEsteira" in nomes  # veículos
 
 
+def test_terrain_gen_receita_studio(auth_client):
+    """Receita de terreno compatível com o TerrainData do Arkher Studio."""
+    auth_client.post("/api/tools/terrain_gen/authorize")
+    r = auth_client.post("/api/tools/terrain_gen/run", json={"bioma": "montanha", "seed": 5})
+    assert r.status_code == 200
+    res = r.json()["result"]
+    s = res["settings"]
+    # campos que o TerrainData.new() do Studio consome
+    for campo in ("chunkSize", "seed", "heightScale", "noiseType", "octaves", "enableErosion", "materialLayers"):
+        assert campo in s
+    assert len(res["amostras_16x16"]) == 16 and len(res["amostras_16x16"][0]) == 16
+    # determinístico
+    r2 = auth_client.post("/api/tools/terrain_gen/run", json={"bioma": "montanha", "seed": 5})
+    assert r2.json()["result"] == res
+    # todos os biomas
+    for bioma in ("deserto", "planicie", "neve", "vulcao"):
+        rb = auth_client.post("/api/tools/terrain_gen/run", json={"bioma": bioma, "seed": 1})
+        assert rb.status_code == 200 and rb.json()["result"]["bioma"] == bioma
+    # bioma inválido → erro honesto
+    r3 = auth_client.post("/api/tools/terrain_gen/run", json={"bioma": "marte"})
+    assert r3.status_code == 400
+
+
 def test_anim_gen_keyframes(auth_client):
     """Keyframes procedurais para o Animator do Arkher Studio."""
     auth_client.post("/api/tools/anim_gen/authorize")
