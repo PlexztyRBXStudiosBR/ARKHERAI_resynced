@@ -19,7 +19,17 @@ CHECKPOINT_PATH = Path(os.environ.get("ARKHER_CHECKPOINT", str(MODEL_DIR / "chec
 TOKENIZER_PATH = Path(os.environ.get("ARKHER_TOKENIZER", str(MODEL_DIR / "tokenizer" / "vocab" / "bpe_v1.json")))
 
 HOST = os.environ.get("ARKHER_HOST", "0.0.0.0")
-PORT = int(os.environ.get("ARKHER_PORT", "8710"))
+# Render fornece PORT automaticamente. Em variáveis do Render, "$PORT" não
+# é expandido dentro de outro value; por isso usamos PORT diretamente e
+# ignoramos valores literais inválidos como "$PORT".
+def _port() -> int:
+    raw = os.environ.get("PORT") or os.environ.get("ARKHER_PORT") or "8710"
+    try:
+        return int(raw)
+    except ValueError:
+        return 8710
+
+PORT = _port()
 
 CORS_ORIGINS = [
     o.strip()
