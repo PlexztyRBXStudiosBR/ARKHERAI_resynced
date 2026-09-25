@@ -37,7 +37,10 @@ export interface Ctx {
 
 export async function boot(container: HTMLElement): Promise<void> {
   const store = new Store();
-  const base = () => store.state.settings.backendBase.replace(/\/$/, "");
+  // Em Vercel, a API persistente vem de VITE_ARKHER_API. Em desenvolvimento
+  // vazio mantém o proxy/origem local configurado pelo projeto.
+  const configuredApi = (import.meta.env.VITE_ARKHER_API as string | undefined) ?? "";
+  const base = () => (store.state.settings.backendBase || configuredApi).replace(/\/$/, "");
   const api = makeApi(base, () => store.state.token);
 
   const ctx: Ctx = {
