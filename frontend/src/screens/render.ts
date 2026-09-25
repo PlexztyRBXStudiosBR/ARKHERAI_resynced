@@ -1,0 +1,9 @@
+import { el } from "../components/ui";
+import type { Ctx } from "../app/app";
+
+export function renderRender(ctx: Ctx): HTMLElement {
+  const root=el("div",{class:"panel"}); root.append(el("h1",{},"Render"),el("p",{class:"dim"},"Viewport estrutural local: carregue rbxlx/rbxmx para visualizar Parts, Models, cores, tamanhos e hierarquia."));
+  const input=el("input",{type:"file",class:"input",accept:".rbxlx,.rbxmx,.xml"}) as HTMLInputElement; const canvas=el("canvas",{class:"render-canvas"}) as HTMLCanvasElement; canvas.width=1000; canvas.height=600; root.append(input,canvas);
+  input.onchange=()=>{const f=input.files?.[0]; if(f) void f.text().then(x=>draw(x,canvas));}; return root;
+}
+function draw(xml:string,c:HTMLCanvasElement){const ctx=c.getContext("2d");if(!ctx)return;ctx.fillStyle="#101820";ctx.fillRect(0,0,c.width,c.height);ctx.fillStyle="#e4b537";ctx.font="18px monospace";ctx.fillText("ARKHER RENDER • aproximação estrutural",20,30);const doc=new DOMParser().parseFromString(xml,"text/xml");const items=[...Array.from(doc.querySelectorAll("Item"))].filter(x=>["Part","MeshPart","WedgePart","UnionOperation","SpawnLocation"].includes(x.getAttribute("class")||""));const n=Math.max(1,items.length);items.slice(0,3000).forEach((it,i)=>{const p=it.querySelector('Properties > Vector3[name="Position"]');const s=it.querySelector('Properties > Vector3[name="Size"]');const nums=(z:Element|null)=>z?((z.textContent||"").match(/[-+]?\d*\.?\d+/g)||[]).map(Number):[0,0,0];const pos=nums(p),size=nums(s);const x=40+((pos[0]||0)%900+900)%900,y=570-(((pos[2]||0)%500+500)%500),w=Math.max(3,Math.min(60,Math.abs(size[0]||4))),h=Math.max(3,Math.min(60,Math.abs(size[2]||4)));ctx.fillStyle=`hsl(${(i*47)%360},55%,55%)`;ctx.fillRect(x,y-h,w,h);});ctx.fillStyle="#aab4b8";ctx.font="12px monospace";ctx.fillText(`${items.length} objetos renderizados • sem execução de scripts/física`,20,580);}

@@ -10,6 +10,8 @@ import { el, toast } from "../components/ui";
 import { icon } from "../components/icons";
 import { renderChat, afterChatRender } from "../screens/chat";
 import { render3D } from "../screens/three_d";
+import { renderRender } from "../screens/render";
+import { renderTraining } from "../screens/training"
 import { renderIntegrations } from "../screens/integrations";
 import { renderCerebro } from "../screens/cerebro";
 import { renderTools } from "../screens/tools";
@@ -289,13 +291,15 @@ export async function boot(container: HTMLElement): Promise<void> {
     const screens: [ScreenId, StringKey][] = [
       ["chat", "tab_chat"],
       ["3d", "tab_3d"],
+      ["render", "tab_3d"],
+      ["training", "tab_cerebro"],
       ["integrations", "tab_integrations"],
       ["cerebro", "tab_cerebro"],
       ["tools", "tab_tools"],
       ["settings", "tab_settings"],
     ];
     const ICONES: Record<ScreenId, string> = {
-      chat: "chat", "3d": "cube", integrations: "plug", cerebro: "chip", tools: "tools", settings: "settings",
+      chat: "chat", "3d": "cube", render: "cube", training: "chip", integrations: "plug", cerebro: "chip", tools: "tools", settings: "settings",
     };
     for (const [id, key] of screens) {
       const b = el("button", { class: "tab" + (c.store.state.screen === id ? " on" : ""), "data-tab": id });
@@ -351,6 +355,8 @@ export async function boot(container: HTMLElement): Promise<void> {
       screenHost.append(renderChat(ctx));
       afterChatRender(ctx);
     } else if (s.screen === "3d") screenHost.append(render3D(ctx));
+    else if (s.screen === "render") screenHost.append(renderRender(ctx));
+    else if (s.screen === "training") screenHost.append(renderTraining(ctx));
     else if (s.screen === "integrations") screenHost.append(renderIntegrations(ctx));
     else if (s.screen === "cerebro") screenHost.append(renderCerebro(ctx));
     else if (s.screen === "tools") screenHost.append(renderTools(ctx));
@@ -361,6 +367,8 @@ export async function boot(container: HTMLElement): Promise<void> {
 const TAB_KEYS = {
   chat: "tab_chat",
   "3d": "tab_3d",
+  render: "tab_3d",
+  training: "tab_cerebro",
   integrations: "tab_integrations",
   cerebro: "tab_cerebro",
   tools: "tab_tools",
