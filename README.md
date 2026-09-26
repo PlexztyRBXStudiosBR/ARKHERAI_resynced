@@ -27,7 +27,7 @@ não de poder bruto nem de serviços externos.
 | Camada extra de segurança/correção de resposta | ✅ ativa (recusas, verificação aritmética, alegações de ações, redação de logs) |
 
 **Nunca declaramos "IA própria pronta" além disso.** Um modelo conversacional amplo
-exige dados e hardware documentados em `docs/HARDWARE.md`.
+exige dados e hardware documentados em `docs/HARDWARE.md`. porem ela deve no produto final superar qualqier ia de hoje, dev, equipe pequema e media em game dev. dai ela va se evoluindo.
 
 ---
 
