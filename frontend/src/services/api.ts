@@ -89,6 +89,32 @@ export function makeApi(baseUrl: () => string, token: () => string | null) {
     trainingNews: () => http<{ ok: boolean; news: TrainingNewsItem[] }>("GET", "/api/training/news", undefined, 8000),
     diagnostics: () => http<Record<string, unknown>>("GET", "/api/diagnostics"),
     produtoStatus: () => http<ProdutoStatus>("GET", "/api/produto/status", undefined, 8000),
+    linhagem: () => http<LinhagemPlano>("GET", "/api/cerebro/linhagem", undefined, 8000),
+    integrations: () => http<{ integrations: Integration[] }>("GET", "/api/integrations"),
+    authorizeIntegration: (id: string, token = "") =>
+      http<{ ok: boolean }>("POST", `/api/integrations/${id}/authorize`, { token }),
+    revokeIntegration: (id: string) => http<{ ok: boolean }>("POST", `/api/integrations/${id}/revoke`),
+    workspaceList: () => http<{ vms: Vm[] }>("GET", "/api/workspace"),
+    workspaceCreate: (body: { name: string; tailscale_ip: string; username: string; password: string }) =>
+      http<{ vm: Vm }>("POST", "/api/workspace", body),
+    workspaceDelete: (id: string) => http<{ ok: boolean }>("DELETE", `/api/workspace/${id}`),
+    workspaceHealth: (id: string) => http<{ ok: boolean; status: string; message?: string; agente?: unknown }>("GET", `/api/workspace/${id}/health`, undefined, 8000),
+    workspaceAutologon: (id: string) => http<{ ok: boolean }>("POST", `/api/workspace/${id}/autologon`, {}),
+    workspaceJob: (id: string, kind: string, args: Record<string, unknown> = {}) =>
+      http<{ result: unknown }>("POST", `/api/workspace/${id}/job`, { kind, args }),
+    acervo: () => http<Record<string, unknown>>("GET", "/api/acervo"),
+    acervoIngest: (root = "/storage/emulated/0/ArkherAITraining") =>
+      http<Record<string, unknown>>("POST", "/api/acervo/ingest", { root }),
+    acervoCiclo: (root = "/storage/emulated/0/ArkherAITraining", limite = 0) =>
+      http<Record<string, unknown>>("POST", "/api/acervo/ciclo", { root, limite }, 120000),
+    workspaceScreen: (id: string) =>
+      http<{ ok: boolean; b64?: string; mime?: string; message?: string }>("GET", `/api/workspace/${id}/screen`, undefined, 10000),
+    workspacePilot: (id: string, message: string) =>
+      http<{ ok: boolean; reply: string; actions?: unknown[]; gerado?: unknown }>("POST", `/api/workspace/${id}/pilot`, { message }, 45000),
+    studioCatalog: () => http<{ tabs: unknown[] }>("GET", "/api/studio/catalog"),
+    studioGenerate: (tab: string, recipe: string, seed = 42, prompt = "") =>
+      http<{ result: unknown }>("POST", "/api/studio/generate", { tab, recipe, seed, prompt }, 30000),
+    studioVault: () => http<{ itens: unknown[] }>("GET", "/api/studio/vault"),
     async getRaw(path: string): Promise<string> {
       const headers: Record<string, string> = {};
       const tk = token();
@@ -212,6 +238,56 @@ export interface ProdutoStatus {
   total: number;
   itens: ProdutoStatusItem[];
   fora_do_produto_por_decisao: string[];
+  pct_pack?: number;
+  linhagem?: LinhagemPlano;
+}
+
+export interface LinhagemRung {
+  gen: number;
+  nome: string;
+  pct_min: number;
+  pct_max: number;
+  n_layers: number;
+  d_model: number;
+  params_alvo: number;
+  params_estimados?: number;
+}
+
+export interface LinhagemPlano {
+  pct: number;
+  gen_atual: number;
+  atual: LinhagemRung;
+  proximo: LinhagemRung;
+  promover: boolean;
+  params_agora_formula: number;
+  params_proximo_formula: number;
+  regra: string;
+  formula: string;
+  barra?: { itens: { id: string; peso: number; pontos?: number; ok: boolean; detalhe: string }[] };
+}
+
+export interface Integration {
+  id: string;
+  nome: string;
+  categoria: string;
+  descricao: string;
+  precisa_token: boolean;
+  token_hint?: string;
+  arquivo?: string;
+  rota?: string;
+  authorized: boolean;
+  has_token: boolean;
+}
+
+export interface Vm {
+  id: string;
+  name: string;
+  tailscale_ip: string;
+  username: string;
+  status: string;
+  last_seen: string | null;
+  created_at: string;
+  agent_token?: string;
 }
 
 export interface TrainingNewsItem {

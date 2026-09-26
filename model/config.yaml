@@ -4,10 +4,13 @@
 # Este arquivo é a fonte de verdade da arquitetura. O código em
 # model/architecture/transformer.py lê estes valores como padrão.
 
+# Linhagem (não copiar IA de terceiro): cada 10% do produto = geração nova.
+# params = 4e6 * 2^((pct-20)/10). Mini atual = gen 2 ≈ 4 M. Ver model/training/linhagem.py
 model:
   name: "ARKHER-1 mini"
   family: "transformer-decoder"
   version: "0.1.0"
+  geracao: 2
   # Janela de contexto (tokens)
   context_window: 160
   # Arquitetura

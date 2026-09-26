@@ -31,6 +31,12 @@ const DEFS: Record<string, IconDef> = {
   },
   send: { paths: ["M3.5 11.8 20.5 4l-7.8 17-2.4-7.2-6.8-2z"] },
   close: { paths: ["M6 6l12 12M18 6 6 18"] },
+  monitor: {
+    paths: ["M4 5h16v11H4z", "M8 20h8M12 16v4"],
+  },
+  globe: {
+    paths: ["M12 3.5a8.5 8.5 0 1 0 0 17 8.5 8.5 0 0 0 0-17z", "M3.5 12h17", "M12 3.5c2.4 2.4 3.6 5.4 3.6 8.5s-1.2 6.1-3.6 8.5c-2.4-2.4-3.6-5.4-3.6-8.5S9.6 5.9 12 3.5z"],
+  },
 };
 
 export function icon(name: keyof typeof DEFS | string, size = 18): SVGElement {

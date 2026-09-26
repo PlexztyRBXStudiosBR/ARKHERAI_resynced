@@ -22,12 +22,14 @@ O script cria dentro da pasta:
 
 ```text
 _arkher/
-├── originais/   # cópias com hash, nunca apaga os arquivos originais
-├── rbxlx/       # XML convertido ou já existente
-├── rbxmx/       # XML convertido ou já existente
-├── previews/    # reservado para renders do Studio
-├── indices/     # manifest.json
-└── pendencias/  # binários que aguardam conversor
+├── originais/          # cópias com hash, nunca apaga os originais
+├── xml/rbxlx/<cat>/    # places XML (mapas, personagens, outros…)
+├── xml/rbxmx/<cat>/    # models XML nas mesmas categorias
+├── treino/             # versão pedagógica (próximo modelo, sem repetir hash)
+├── usuario/            # versão do pedido
+├── previews/           # renders do Studio (via Workspace)
+├── indices/            # manifest.json
+└── pendencias/         # binários que aguardam conversor
 ```
 
 ## Conversão automática

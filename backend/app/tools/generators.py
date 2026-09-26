@@ -412,3 +412,76 @@ def gerar_terreno(seed: str | None = None, tamanho: int = 16, amplitude: float =
         "arquivo": {"nome": f"terreno_arkher_{semente}.obj", "conteudo": conteudo},
         "como_usar": "Baixe o arquivo .obj e importe no Blender ou na sua engine.",
     }
+
+
+# --------------------------------------------------------------- textura PNG
+def _png_rgba(w: int, h: int, pixels: bytes) -> bytes:
+    import struct
+    import zlib
+
+    def chunk(tag: bytes, data: bytes) -> bytes:
+        return struct.pack(">I", len(data)) + tag + data + struct.pack(">I", zlib.crc32(tag + data) & 0xFFFFFFFF)
+
+    raw = b""
+    row = w * 4
+    for y in range(h):
+        raw += b"\x00" + pixels[y * row : (y + 1) * row]
+    return (
+        b"\x89PNG\r\n\x1a\n"
+        + chunk(b"IHDR", struct.pack(">IIBBBBB", w, h, 8, 6, 0, 0, 0))
+        + chunk(b"IDAT", zlib.compress(raw, 9))
+        + chunk(b"IEND", b"")
+    )
+
+
+def gerar_textura(pedido: str = "pedra", seed: int | str | None = 42, tamanho: int = 256) -> dict:
+    """PNG procedural tileable (sem modelo de terceiro, sem PIL)."""
+    import base64
+
+    semente = int(seed) if seed not in (None, "") else 42
+    rng = random.Random(semente)
+    n = _norm(pedido)
+    tamanho = max(64, min(512, int(tamanho)))
+    if "metal" in n or "ferro" in n:
+        base = (140, 145, 150)
+        modo = "metal"
+    elif "grama" in n or "mato" in n:
+        base = (46, 120, 52)
+        modo = "grama"
+    elif "areia" in n or "deserto" in n:
+        base = (194, 178, 128)
+        modo = "areia"
+    elif "lava" in n or "magma" in n:
+        base = (180, 40, 12)
+        modo = "lava"
+    elif "madeira" in n or "wood" in n:
+        base = (118, 74, 38)
+        modo = "madeira"
+    else:
+        base = (110, 108, 104)
+        modo = "pedra"
+    pix = bytearray(tamanho * tamanho * 4)
+    fases = [(rng.random() * math.tau, 0.04 + rng.random() * 0.12) for _ in range(3)]
+    for y in range(tamanho):
+        for x in range(tamanho):
+            # domínio toroidal → tileable
+            nx = math.sin(x / tamanho * math.tau)
+            ny = math.cos(y / tamanho * math.tau)
+            nse = 0.0
+            for fase, freq in fases:
+                nse += math.sin((nx * 8 + ny * 5) * freq * 20 + fase)
+            nse = (nse / len(fases) + 1) / 2
+            i = (y * tamanho + x) * 4
+            for c in range(3):
+                v = int(base[c] * (0.55 + 0.55 * nse) + rng.randint(-6, 6))
+                pix[i + c] = max(0, min(255, v))
+            pix[i + 3] = 255
+    png = _png_rgba(tamanho, tamanho, bytes(pix))
+    return {
+        "descricao": f"Textura {modo} {tamanho}×{tamanho} tileable (seed {semente}) gerada pela ARKHER.",
+        "como_usar": "Baixe o PNG e use como albedo no Blender/Studio (tile). Roughness/normal saem do mesmo noise no shader.",
+        "arquivo": {
+            "nome": f"arkher_tex_{modo}_{semente}.png",
+            "conteudo_b64": base64.b64encode(png).decode("ascii"),
+        },
+    }

@@ -62,15 +62,15 @@ def test_mensagem_grande_demais_rejeitada(auth_client):
 
 
 # ------------------------------------------------- modelo ausente (honesto)
-def test_chat_sem_modelo_devolve_erro_honesto(auth_client):
+def test_chat_sem_modelo_ainda_responde(auth_client):
+    """Sem checkpoint a camada especialista responde — não trava em 'instale a ponte'."""
     with auth_client.stream("POST", "/api/chat", json={"message": "oi"}) as r:
         text = "".join(r.iter_text())
     events = read_sse(text)
-    kinds = [ev for ev, _ in events]
-    assert "error" in kinds
-    err = [d for ev, d in events if ev == "error"][0]
-    assert err["code"] == "MODEL_NOT_INSTALLED"
-    assert "não está instalado" in err["message"].lower() or "not installed" in err["message"].lower()
+    done = [d for ev, d in events if ev == "done"]
+    assert done and done[0]["content"]
+    assert "instalar a ponte" not in done[0]["content"].lower()
+    assert done[0].get("kind") == "especialista"
 
 
 def test_model_load_sem_checkpoint_409(auth_client):
@@ -438,7 +438,22 @@ def test_produto_status(auth_client):
     ids = {i["id"] for i in d["itens"]}
     assert {"interface", "modelo", "pontes", "render", "deploy"} <= ids
     assert isinstance(d["prontos"], int)
-    assert "desktop remoto" in " ".join(d["fora_do_produto_por_decisao"])
+    assert "linhagem" in d
+    assert d["linhagem"]["atual"]["gen"] >= 1
+    assert d["linhagem"]["proximo"]["params_alvo"] >= d["linhagem"]["atual"]["params_alvo"]
+    joined = " ".join(d["fora_do_produto_por_decisao"])
+    assert "shell arbitrário" in joined
+    assert "provedores externos de IA" in joined
+
+
+def test_cerebro_linhagem(auth_client):
+    r = auth_client.get("/api/cerebro/linhagem")
+    assert r.status_code == 200
+    d = r.json()
+    assert d["ok"] is True
+    assert 0 <= d["pct"] <= 100
+    assert d["atual"]["n_layers"] >= 2
+    assert "4e6" in d["formula"]
 
 
 def test_training_news(auth_client):
@@ -504,10 +519,11 @@ def test_compositor_aberto_sem_lista_fixa():
         build_gen.compor("zzz qqq nada reconhecível", 1)
 
 
-def test_build_pede_permissao_para_ponte(auth_client):
+def test_build_gera_no_chat_sem_ponte(auth_client):
     ev = _feito_sse(auth_client, "construa uma base militar no roblox")
-    assert ev.get("kind") == "erro"
-    assert "permissão" in ev["content"]
+    assert ev.get("kind") == "arquivo"
+    assert ev["arquivo"]["nome"].endswith(".rbxlx")
+    assert "instalar a ponte" not in ev.get("content", "").lower()
 
 
 def test_addon_blender_servido_e_compila(auth_client, tmp_path):
@@ -597,10 +613,10 @@ def test_intencao_roblox_salvamento(auth_client):
     assert "```lua" in ev["content"]
 
 
-def test_intencao_exige_autorizacao(auth_client):
+def test_intencao_gera_sem_autorizacao_previa(auth_client):
     ev = _feito_sse(auth_client, "crie um personagem no blender")
-    assert ev.get("kind") == "erro"
-    assert "bloqueada" in ev["content"]
+    assert ev.get("kind") == "arquivo"
+    assert "import bpy" in ev["arquivo"]["conteudo"]
 
 
 # ------------------------------------------------------------- feedback
