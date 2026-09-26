@@ -9,13 +9,12 @@ import type { StringKey } from "../services/i18n";
 import { el, toast } from "../components/ui";
 import { icon } from "../components/icons";
 import { renderChat, afterChatRender } from "../screens/chat";
-import { render3D } from "../screens/three_d";
-import { renderRender } from "../screens/render";
-import { renderTraining } from "../screens/training"
 import { renderIntegrations } from "../screens/integrations";
+import { renderWorkspace, stopWorkspaceLive } from "../screens/workspace";
 import { renderCerebro } from "../screens/cerebro";
-import { renderTools } from "../screens/tools";
 import { renderSettings } from "../screens/settings";
+import { renderStudio } from "../screens/studio";
+import { renderVault } from "../screens/vault";
 import { saveToken } from "../state/store";
 
 export interface Ctx {
@@ -99,7 +98,7 @@ export async function boot(container: HTMLElement): Promise<void> {
     } catch (e) {
       store.setUiFromHealth(false, undefined, e as ApiError);
     }
-    render();
+    refreshChrome();
   }
 
   async function refreshSessions(): Promise<void> {
@@ -285,24 +284,67 @@ export async function boot(container: HTMLElement): Promise<void> {
     const header = el("header", { class: "topbar" });
     const mark = el("span", { class: "mark" });
     mark.append(icon("logo", 20));
+    const gear = el("button", { class: "ghost", title: t("tab_settings", c.store.state.settings.lang), id: "gear-btn" });
+    gear.append(icon("settings", 16));
+    gear.onclick = () => {
+      c.store.set({ screen: "settings" });
+      render();
+    };
     header.append(
       el("div", { class: "logo" }, mark, el("span", { class: "name" }, "ARKHER AI")),
       el("div", { class: "sp" }),
       statusPill(c),
+      gear,
     );
     const nav = el("nav", { class: "tabs", id: "tabs" });
     const screens: [ScreenId, StringKey][] = [
       ["chat", "tab_chat"],
-      ["3d", "tab_3d"],
-      ["render", "tab_3d"],
-      ["training", "tab_cerebro"],
+      ["workspace", "tab_workspace"],
+      ["places", "tab_places"],
+      ["models", "tab_models"],
+      ["luau", "tab_luau"],
+      ["terrain", "tab_terrain"],
+      ["animacao", "tab_animacao"],
+      ["materiais", "tab_materiais"],
+      ["lighting", "tab_lighting"],
+      ["ui", "tab_ui"],
+      ["audio", "tab_audio"],
+      ["fisica", "tab_fisica"],
+      ["netcode", "tab_netcode"],
+      ["vfx", "tab_vfx"],
+      ["blender", "tab_blender"],
+      ["design", "tab_design"],
+      ["pesquisa", "tab_pesquisa"],
+      ["codigo", "tab_codigo"],
+      ["pipeline", "tab_pipeline"],
+      ["vault", "tab_vault"],
       ["integrations", "tab_integrations"],
       ["cerebro", "tab_cerebro"],
-      ["tools", "tab_tools"],
-      ["settings", "tab_settings"],
     ];
     const ICONES: Record<ScreenId, string> = {
-      chat: "chat", "3d": "cube", render: "cube", training: "chip", integrations: "plug", cerebro: "chip", tools: "tools", settings: "settings",
+      chat: "chat",
+      workspace: "monitor",
+      places: "cube",
+      models: "cube",
+      luau: "chip",
+      terrain: "globe",
+      animacao: "cube",
+      materiais: "cube",
+      lighting: "globe",
+      ui: "chat",
+      audio: "globe",
+      fisica: "tools",
+      netcode: "plug",
+      vfx: "cube",
+      blender: "cube",
+      design: "chip",
+      pesquisa: "globe",
+      codigo: "chip",
+      pipeline: "tools",
+      vault: "download",
+      integrations: "plug",
+      cerebro: "chip",
+      settings: "settings",
     };
     for (const [id, key] of screens) {
       const b = el("button", { class: "tab" + (c.store.state.screen === id ? " on" : ""), "data-tab": id });
@@ -333,48 +375,70 @@ export async function boot(container: HTMLElement): Promise<void> {
     return el("div", { class: "chip status" }, el("span", { class: "dot " + cls }), el("b", {}, label));
   }
 
-  function render(): void {
+  function refreshChrome(): void {
     const s = store.state;
     applyTheme(store);
-    const screenHost = document.getElementById("screen");
     const tabsHost = document.getElementById("tabs");
-    if (!screenHost || !tabsHost) return;
-
-    tabsHost.querySelectorAll(".tab").forEach((b) => {
-      const id = (b as HTMLElement).dataset["tab"];
-      b.classList.toggle("on", id === s.screen);
-      const key = TAB_KEYS[id as keyof typeof TAB_KEYS];
-      const lab = (b as HTMLElement).querySelector(".lab");
-      if (lab) lab.textContent = t(key, s.settings.lang);
-    });
-    const pillHost = document.querySelector(".topbar .chip.status");
-    if (pillHost) {
-      const novo = statusPill(ctx);
-      pillHost.replaceWith(novo);
+    if (tabsHost) {
+      tabsHost.querySelectorAll(".tab").forEach((b) => {
+        const id = (b as HTMLElement).dataset["tab"];
+        b.classList.toggle("on", id === s.screen);
+        const key = TAB_KEYS[id as keyof typeof TAB_KEYS];
+        const lab = (b as HTMLElement).querySelector(".lab");
+        if (lab && key) lab.textContent = t(key, s.settings.lang);
+      });
     }
+    const pillHost = document.querySelector(".topbar .chip.status");
+    if (pillHost) pillHost.replaceWith(statusPill(ctx));
+  }
 
+  function render(): void {
+    const s = store.state;
+    refreshChrome();
+    const screenHost = document.getElementById("screen");
+    if (!screenHost) return;
+    stopWorkspaceLive();
     screenHost.textContent = "";
+    const studioTabs = new Set([
+      "places", "models", "luau", "terrain", "animacao", "materiais",
+      "lighting", "ui", "audio", "fisica", "netcode", "vfx", "blender",
+      "design", "pesquisa", "codigo", "pipeline",
+    ]);
     if (s.screen === "chat") {
       screenHost.append(renderChat(ctx));
       afterChatRender(ctx);
-    } else if (s.screen === "3d") screenHost.append(render3D(ctx));
-    else if (s.screen === "render") screenHost.append(renderRender(ctx));
-    else if (s.screen === "training") screenHost.append(renderTraining(ctx));
+    } else if (s.screen === "workspace") screenHost.append(renderWorkspace(ctx));
+    else if (studioTabs.has(s.screen)) screenHost.append(renderStudio(ctx, s.screen));
+    else if (s.screen === "vault") screenHost.append(renderVault(ctx));
     else if (s.screen === "integrations") screenHost.append(renderIntegrations(ctx));
     else if (s.screen === "cerebro") screenHost.append(renderCerebro(ctx));
-    else if (s.screen === "tools") screenHost.append(renderTools(ctx));
     else if (s.screen === "settings") screenHost.append(renderSettings(ctx));
   }
 }
 
 const TAB_KEYS = {
   chat: "tab_chat",
-  "3d": "tab_3d",
-  render: "tab_3d",
-  training: "tab_cerebro",
+  workspace: "tab_workspace",
+  places: "tab_places",
+  models: "tab_models",
+  luau: "tab_luau",
+  terrain: "tab_terrain",
+  animacao: "tab_animacao",
+  materiais: "tab_materiais",
+  lighting: "tab_lighting",
+  ui: "tab_ui",
+  audio: "tab_audio",
+  fisica: "tab_fisica",
+  netcode: "tab_netcode",
+  vfx: "tab_vfx",
+  blender: "tab_blender",
+  design: "tab_design",
+  pesquisa: "tab_pesquisa",
+  codigo: "tab_codigo",
+  pipeline: "tab_pipeline",
+  vault: "tab_vault",
   integrations: "tab_integrations",
   cerebro: "tab_cerebro",
-  tools: "tab_tools",
   settings: "tab_settings",
 } as const;
 

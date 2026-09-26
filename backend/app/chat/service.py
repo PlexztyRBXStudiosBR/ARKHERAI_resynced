@@ -1,9 +1,9 @@
 """Fluxo de conversa do ARKHER: validação, guardas, memória, modelo próprio e SSE.
 
 Regras duras:
-- somente o modelo próprio gera respostas de linguagem;
-- sem modelo → erro honesto MODEL_NOT_INSTALLED (nunca resposta simulada);
-- ferramentas passam pelo backend (autorização + auditoria);
+- respostas de linguagem: modelo próprio se ready, senão camada especialista da casa;
+- nunca provedor de IA externo;
+- geração (3D, place, textura, animação) acontece no próprio chat;
 - memória só entra no contexto se o usuário permitiu.
 """
 from __future__ import annotations
@@ -18,7 +18,7 @@ import unicodedata
 from datetime import datetime, timezone
 
 from backend.app import config
-from backend.app.chat import feedback as feedback_service
+from backend.app.chat import composer, dual, feedback as feedback_service
 from backend.app.chat import knowledge
 from backend.app.memory import service as memory_service
 from backend.app.model import runtime as model_runtime
@@ -175,6 +175,8 @@ _TOOL_CMDS = {
     "/place": ("rbxlx_gen", "tipo"),
     "/construir": ("build_gen", "tema"),
     "/ponte": ("ponte_instalar", None),
+    "/pesquisa": ("web_search", "consulta"),
+    "/figma": ("figma_gen", "file_key"),
 }
 
 
@@ -200,8 +202,16 @@ def _detectar_tarefa(texto: str) -> tuple[str, dict] | None:
         r"heliponto|heliporto|mastro|bandeira|antena|radar|veiculo|veiculos|jipe|jipes|"
         r"carro|carros|sacos|trincheira|muro|muralha|cerco|base|cidade|vila|militar|exercito|"
         r"castelo|castelos|fortaleza|cidadela|bunker|bunkers|tanque|tanques)\b", t)
+    if pedido and re.search(r"\b(jogo inteiro|game completo|equipe media|time medio|time medio)\b", t):
+        return ("jogo_completo", {"tema": texto, "seed": seed})
     if pedido and estrutura:
         return ("build_gen", {"tema": texto, "seed": seed})
+    if re.search(r"\bfigma\b", t):
+        km = re.search(r"(?:figma\.com/(?:file|design)/([A-Za-z0-9]+))", texto)
+        return ("figma_gen", {"file_key": km.group(1) if km else "", "seed": seed})
+    bus = re.search(r"\b(?:pesquisa|pesquisar|busca(?:r)?(?:\s+na\s+web)?)\s+(.{3,200})$", t)
+    if bus:
+        return ("web_search", {"consulta": bus.group(1).strip()})
     if pedido and re.search(r"\b(ponte|plugin)\b", t) and re.search(r"\b(instal|ativa|ativação|ligar)\w*\b", t):
         return ("ponte_instalar", {})
     # place nativo do Roblox Studio (.rbxlx): obby/arena/base
@@ -222,6 +232,8 @@ def _detectar_tarefa(texto: str) -> tuple[str, dict] | None:
             return ("roblox_gen", {"tipo": "checkpoint"})
         if "dia" in t and "noite" in t:
             return ("roblox_gen", {"tipo": "dia_noite"})
+    if ("textura" in t or "albedo" in t or "normal map" in t) and not re.search(r"\b(blender|personagem|cena)\b", t):
+        return ("tex_gen", {"pedido": texto, "seed": seed})
     if "blender" in t or "3d" in t or "personagem" in t or "robo" in t or "cenario" in t or "modelo" in t or "animacao" in t:
         if "animacao" in t or "anima " in t or "textura" in t or "animado" in t:
             return ("blender_gen", {"cena": "animacao", "seed": seed})
@@ -273,16 +285,24 @@ def _formatar_ferramenta(tool_id: str, result: dict) -> tuple[str, str, dict | N
             "Use o botão de download na resposta para baixar o .rbxlx."
         )
         return corpo, "arquivo", result["arquivo"]
+    if tool_id == "tex_gen":
+        corpo = (
+            f"{result['descricao']}\n\nComo usar: {result['como_usar']}\n\n"
+            "Use o botão de download neste chat — a textura já veio pronta."
+        )
+        return corpo, "arquivo", result["arquivo"]
     if tool_id == "build_gen":
+        extra = ""
+        meta = result.get("dual") or {}
+        if meta.get("nova_para_treino"):
+            extra = "\n\nVersão de treino arquivada (amostra nova; não entra de novo se o hash já foi visto)."
+        elif meta.get("ok") and meta.get("nova_para_treino") is False:
+            extra = "\n\nVersão de treino: amostra já vista — não vou retreinar isto."
         corpo = (
             f"{result['descricao']}\n\n"
-            "Construção ao vivo nos programas abertos:\n"
-            "1. Peça uma vez 'instalar a ponte' e autorize (eu entrego plugin do Studio + addon do Blender);\n"
-            "2. No painel da ponte, cole o endereço do servidor e o token;\n"
-            "3. Clique em **Construir agora** — ela monta peça por peça, em tempo real, "
-            "no Roblox Studio (peças) ou no Blender (meshes reais com material e cor).\n\n"
-            "Sem ponte instalada? Baixe o .rbxlx anexo e abra direto no Studio.\n\n"
-            f"Como usar: {result['como_usar']}"
+            "Gerei **no chat**: place .rbxlx com o que você descreveu, mais spawn, luz e colisão "
+            "para ficar jogável. Não preciso de ponte para criar.\n\n"
+            f"Como usar: {result['como_usar']}{extra}"
         )
         return corpo, "arquivo", result["arquivo"]
     if tool_id == "ponte_instalar":
@@ -291,28 +311,44 @@ def _formatar_ferramenta(tool_id: str, result: dict) -> tuple[str, str, dict | N
             "Com a ponte conectada, basta pedir a construção no chat — sem lista fixa: "
             "descreva o que quiser (torres, casas, quartéis, árvores, muros…)."
         ), "ferramenta", None
+    if tool_id == "jogo_completo":
+        extra = ""
+        if result.get("provas"):
+            extra = "\n\nProvas 2D/3D: " + ("PASSAM" if result["provas"].get("ok") else "FALHAM")
+        return (
+            f"{result.get('descricao')}{extra}\n\n{result.get('como_usar')}",
+            "arquivo",
+            result.get("arquivo"),
+        )
+    if tool_id == "figma_gen":
+        extra = "Modo " + str(result.get("modo") or "kit") + "."
+        if result.get("arquivo"):
+            return f"{result.get('descricao')}\n\n{extra}\n{result.get('como_usar')}", "arquivo", result["arquivo"]
+        return f"{result.get('message') or result.get('descricao')}", "ferramenta", None
+    if tool_id == "web_search":
+        return (
+            "Pesquisa (fontes abertas/licenciadas, não é ChatGPT):\n\n```json\n"
+            + json.dumps(result, ensure_ascii=False, indent=1)[:6000]
+            + "\n```",
+            "ferramenta",
+            None,
+        )
     if tool_id == "file_read":
         conteudo = result["conteudo"][:8000]
         return f"Conteúdo de `{result['nome']}` ({result['caracteres']} caracteres):\n\n```\n{conteudo}\n```", "ferramenta", None
     return "Resultado da ferramenta `" + tool_id + "`:\n\n```json\n" + json.dumps(result, ensure_ascii=False, indent=1)[:6000] + "\n```", "ferramenta", None
 
 
-def executar_ferramenta(user_id: str, tool_id: str, args: dict) -> tuple[str, str, list[str], dict | None]:
+def executar_ferramenta(user_id: str, tool_id: str, args: dict, pedido: str = "") -> tuple[str, str, list[str], dict | None]:
     """Executa ferramenta por id+args (usado por comandos e pela intenção natural)."""
     try:
-        result = tools.run(user_id, tool_id, args)
+        nativo = tool_id in getattr(tools, "CHAT_NATIVE", ())
+        result = tools.run(user_id, tool_id, args, require_auth=not nativo)
+        if result.get("arquivo") and result["arquivo"].get("conteudo"):
+            result["dual"] = dual.guardar(user_id, pedido or str(args), result["arquivo"])
         corpo, kind, arquivo = _formatar_ferramenta(tool_id, result)
         return corpo, kind, [tool_id], arquivo
     except tools.ToolError as e:
-        if e.code == "NOT_AUTHORIZED" and tool_id == "build_gen":
-            return (
-                "Para construir dentro do seu programa, preciso da sua permissão para usar a ponte.\n\n"
-                "1. Autorize a ferramenta **Construção ao vivo** na aba Ferramentas;\n"
-                "2. Peça a construção de novo — se a ponte ainda não estiver instalada, "
-                "eu te entrego o plugin (Studio) e o addon (Blender) para você instalar.\n\n"
-                "Você mantém o controle dos programas; eu só construo.",
-                "erro", [], None,
-            )
         return f"Ferramenta bloqueada: {e.message}", "erro", [], None
 
 
@@ -394,11 +430,10 @@ def chat_stream(user_id: str, session_id: str | None, message: str, memory_enabl
             yield sse("done", done_payload)
             return
 
-        # intenção em linguagem natural: pediu, a ARKHER executa via conector
-        # autorizado (mesma autorização + auditoria dos comandos explícitos)
+        # intenção em linguagem natural: gera no próprio chat (3D, place, textura…)
         tarefa = _detectar_tarefa(message)
         if tarefa is not None:
-            resposta, kind, ran, arquivo = executar_ferramenta(user_id, tarefa[0], tarefa[1])
+            resposta, kind, ran, arquivo = executar_ferramenta(user_id, tarefa[0], tarefa[1], pedido=message)
             add_message(sid, "assistant", resposta, kind=kind)
             yield sse("token", {"t": resposta})
             done_payload = {"content": resposta, "kind": kind, "tools": ran}
@@ -407,16 +442,20 @@ def chat_stream(user_id: str, session_id: str | None, message: str, memory_enabl
             yield sse("done", done_payload)
             return
 
-        # modelo próprio — sem fallback, sem simulação
+        # modelo próprio quando está pronto; senão a camada especialista responde qualquer pergunta
         st = model_runtime.status()
-        if st["state"] == "model_not_installed":
-            yield sse("error", {"ok": False, "code": "MODEL_NOT_INSTALLED", "message": MODEL_NOT_INSTALLED_MSG})
-            return
         if st["state"] in ("model_loading", "loading"):
             yield sse("error", {"ok": False, "code": "MODEL_LOADING", "message": MODEL_LOADING_MSG})
             return
-        if st["state"] == "error":
-            yield sse("error", {"ok": False, "code": "MODEL_ERROR", "message": f"O modelo próprio falhou ao carregar: {st.get('error', 'erro desconhecido')}"})
+        if st["state"] != "ready":
+            resposta = composer.responder(message)
+            add_message(sid, "assistant", resposta, kind="especialista")
+            for i in range(0, len(resposta), 48):
+                if stop_event.is_set():
+                    yield sse("done", {"content": "", "cancelled": True})
+                    return
+                yield sse("token", {"t": resposta[i:i + 48]})
+            yield sse("done", {"content": resposta, "kind": "especialista", "content_hash": feedback_service.hash_content(resposta)})
             return
 
         history = session_messages(sid, user_id)[:-1]  # última já é a mensagem atual

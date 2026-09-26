@@ -62,6 +62,6 @@ Estes itens estão com tudo pronto do lado do código; dependem de rodar:
 
 ## Resumo em uma frase
 
-O produto está **funcionalmente completo como v1**; a distância para o
-"produto final potente" é, quase toda, **rodar os ciclos de treino e publicar**
-— passos seus, com o caminho pronto — e não escrever mais código.
+**v1 ainda não está completa.** v1 = criar com Studio/Blender/Figma, web
+licenciada, comandos e sandbox na VM; modelo no disco só para aprender.
+v2 = nível estúdio. Ver `docs/V1.md`.

@@ -21,7 +21,7 @@ from pathlib import Path
 from backend.app import config
 from backend.app.memory import service as memory_service
 from backend.app.storage import db
-from backend.app.tools import blender_gen, build_gen, generators, rbxlx_gen, web_search
+from backend.app.tools import blender_gen, build_gen, figma_gen, generators, rbxlx_gen, web_search
 
 MAX_UPLOAD_BYTES = 2 * 1024 * 1024
 MAX_READ_CHARS = 200_000
@@ -104,6 +104,20 @@ TOOLS: dict[str, dict] = {
         "permissoes": ["selecao_de_fisica_local"],
         "confirmacao": False,
     },
+    "jogo_completo": {
+        "id": "jogo_completo",
+        "nome": "Jogo inteiro (atelier)",
+        "descricao": "Place + HUD sem cara de IA + sistemas servidor + protagonista Blender + provas 2D/3D.",
+        "permissoes": ["geracao_de_place_roblox", "modelagem_no_blender"],
+        "confirmacao": False,
+    },
+    "figma_gen": {
+        "id": "figma_gen",
+        "nome": "Figma → HUD",
+        "descricao": "Lê o seu arquivo Figma (token pessoal) e vira ScreenGui. Sem token, kit próprio — não inventa o frame.",
+        "permissoes": ["leitura_figma_autorizada"],
+        "confirmacao": False,
+    },
     "web_search": {
         "id": "web_search",
         "nome": "Pesquisa na web (fontes abertas)",
@@ -135,10 +149,24 @@ TOOLS: dict[str, dict] = {
     "ponte_instalar": {
         "id": "ponte_instalar",
         "nome": "Instalação das pontes (Studio + Blender)",
-        "descricao": "Com sua permissão, libera o plugin do Roblox Studio e o addon do Blender para a ARKHER construir/modelar ao vivo nos programas abertos.",
+        "descricao": "Opcional: plugin do Studio e addon do Blender para aplicar no programa aberto. O chat já gera os arquivos sem isso.",
         "permissoes": ["instalacao_assistida_da_ponte"],
         "confirmacao": True,
     },
+    "tex_gen": {
+        "id": "tex_gen",
+        "nome": "Gerador de textura PNG",
+        "descricao": "PNG procedural tileable (pedra, grama, metal, areia, lava, madeira) gerado no próprio backend, sem modelo de terceiro.",
+        "permissoes": ["geracao_de_textura_local"],
+        "confirmacao": False,
+    },
+}
+
+# Ferramentas que o chat executa direto (a super-IA gera no próprio recado).
+CHAT_NATIVE = {
+    "calc", "roblox_gen", "obj_gen", "anim_gen", "terrain_gen", "style_gen",
+    "fisica_gen", "blender_gen", "rbxlx_gen", "build_gen", "text_analysis", "tex_gen",
+    "web_search", "figma_gen", "jogo_completo",
 }
 
 
@@ -258,12 +286,12 @@ def _file_read(user_id: str, name: str) -> dict:
     return {"nome": name, "caracteres": len(text), "conteudo": text}
 
 
-def run(user_id: str, tool_id: str, args: dict) -> dict:
+def run(user_id: str, tool_id: str, args: dict, require_auth: bool = True) -> dict:
     """Valida autorização, executa e registra a ação."""
     if tool_id not in TOOLS:
         raise ToolError("UNKNOWN_TOOL", "Ferramenta desconhecida.")
-    if not is_authorized(user_id, tool_id):
-        raise ToolError("NOT_AUTHORIZED", "Ferramenta sem autorização. Autorize na tela Ferramentas.")
+    if require_auth and not is_authorized(user_id, tool_id):
+        raise ToolError("NOT_AUTHORIZED", "Ferramenta sem autorização. Autorize na aba Integrações.")
     t0 = time.monotonic()
     try:
         if tool_id == "calc":
@@ -309,6 +337,19 @@ def run(user_id: str, tool_id: str, args: dict) -> dict:
                 )
             except ValueError as e:
                 raise ToolError("INVALID_ARG", str(e))
+        elif tool_id == "jogo_completo":
+            from backend.app.studio import jogo as _jogo
+
+            result = _jogo.completo(str(args.get("tema") or args.get("prompt") or "atelier"), int(args.get("seed") or 42))
+        elif tool_id == "figma_gen":
+            token = ""
+            try:
+                from backend.app.integrations import service as integ
+
+                token = str((integ.token_de(user_id, "figma") or ""))
+            except Exception:
+                token = str(args.get("token") or "")
+            result = figma_gen.puxar(str(args.get("file_key") or args.get("key") or ""), token, int(args.get("seed") or 1))
         elif tool_id == "style_gen":
             result = generators.selecionar_estilo(str(args.get("prompt", "")))
         elif tool_id == "fisica_gen":
@@ -354,12 +395,18 @@ def run(user_id: str, tool_id: str, args: dict) -> dict:
                     f"{len(build['ops'])} peças, build `{build['build_id']}`)."
                 ),
                 "como_usar": (
-                    "Com uma ponte ARKHER conectada (Studio ou Blender), clique em "
-                    "'Construir agora' e ela monta peça por peça no programa aberto. "
-                    "Sem ponte? Baixe o .rbxlx anexo e abra direto no Studio."
+                    "Baixe o .rbxlx neste chat e abra no Roblox Studio. "
+                    "Duas versões: a sua (pedido + o necessário para jogar) e a de treino "
+                    "(arquivada para o próximo modelo, sem amostra repetida). "
+                    "Se o Workspace estiver online, a ARKHER pode importar no Studio da VM com a sua permissão."
                 ),
                 "arquivo": {"nome": f"arkher_{nome_seguro}_seed{build['seed']}.rbxlx", "conteudo": xml},
             }
+        elif tool_id == "tex_gen":
+            try:
+                result = generators.gerar_textura(str(args.get("pedido", args.get("tema", "pedra"))), args.get("seed"))
+            except ValueError as e:
+                raise ToolError("INVALID_ARG", str(e))
         elif tool_id == "ponte_instalar":
             result = {
                 "descricao": "Permissão registrada. As pontes estão liberadas para construir ao vivo.",

@@ -77,14 +77,25 @@ def main() -> int:
             ("prototype_lab", ["model.training.prototype_lab"]),
             ("prepare", ["model.training.prepare_dataset"]),
             ("validate", ["model.training.validate_dataset"]),
+            # amostras novas (hash); o modelo anterior ensina o próximo sem repetir
+            ("evolve", ["model.training.evolve"]),
         ]
         for name, cmd in stages:
             if run(cmd[0], *cmd[1:], logfile=logfile) != 0:
                 state.update({"status": "erro", "etapa": name, "atualizado": now()})
                 LOOP_STATE.write_text(json.dumps(state, ensure_ascii=False, indent=2), encoding="utf-8")
                 return 2
+        from model.training import linhagem as _lin
+
+        plano = _lin.plano()
         train_args = ["--epochs", str(args.epochs), "--tag", tag]
-        if base:
+        if plano["promover"]:
+            nxt = plano["proximo"]
+            train_args += ["--gen", str(nxt["gen"])]
+            if base:
+                train_args += ["--teacher", str(base)]
+            log(f"promovendo gen {plano['gen_atual']} → {nxt['gen']} ({nxt['nome']} ~{nxt['params_alvo']:,} params); professor={base}")
+        elif base:
             train_args += ["--resume", str(base)]
         if run("model.training.train", *train_args, logfile=logfile) != 0:
             state.update({"status": "erro", "etapa": "train", "atualizado": now()})

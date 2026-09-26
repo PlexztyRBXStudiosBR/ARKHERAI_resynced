@@ -18,8 +18,14 @@ from backend.app.memory import service as memory_service
 from backend.app.model import runtime as model_runtime
 from backend.app.security import ratelimit
 from backend.app.storage import db
+from backend.app.acervo import service as acervo_service
+from backend.app.chat import dual
+from backend.app.integrations import service as integ_service
+from backend.app.studio import kits as studio_kits
+from backend.app.workspace import pilot as workspace_pilot
 from backend.app.tools import build_gen
 from backend.app.tools import registry as tools
+from backend.app.workspace import service as workspace_service
 
 STARTED_AT = time.time()
 
@@ -418,20 +424,227 @@ def produto_status(user: dict = auth.CurrentUser):
         },
     ]
     prontos = sum(1 for i in itens if i["ok"])
+    from model.training import linhagem as _linhagem
+
+    lin = _linhagem.plano()
     return {
         "ok": True,
         "prontos": prontos,
         "total": len(itens),
+        "pct_pack": lin["pct"],
+        "linhagem": {
+            "pct": lin["pct"],
+            "gen_atual": lin["gen_atual"],
+            "atual": lin["atual"],
+            "proximo": lin["proximo"],
+            "promover": lin["promover"],
+            "params_agora_formula": lin["params_agora_formula"],
+            "params_proximo_formula": lin["params_proximo_formula"],
+            "regra": lin["regra"],
+            "formula": lin["formula"],
+        },
         "itens": itens,
         "fora_do_produto_por_decisao": [
-            "busca em web no runtime (regra: zero chamadas externas)",
-            "desktop remoto/VM em runner de CI (termos do serviço)",
-            "shell arbitrário exposto na interface (segurança)",
-            "IA controlando PC/VM ou runners de CI como máquinas pessoais (termos do serviço + segurança)",
+            "provedores externos de IA no runtime (a ARKHER é própria; HF só como operário de treino)",
+            "shell arbitrário exposto na interface (o agente do Workspace só aceita jobs permitidos)",
+            "IPs públicos no Workspace (SSRF — só Tailscale 100.x e LAN)",
             "raspagem de web/vídeos sem licença declarada (treino só com fontes licenciadas)",
             "scripts de executor/trapaça para jogos online (prejudica outros jogadores)",
         ],
     }
+
+
+@router.get("/api/cerebro/linhagem")
+def cerebro_linhagem(user: dict = auth.CurrentUser):
+    from model.training import linhagem as _linhagem
+
+    return _linhagem.plano()
+
+
+@router.get("/api/cerebro/professores")
+def cerebro_professores(user: dict = auth.CurrentUser):
+    from model.training import professores as _prof
+
+    return _prof.listar()
+
+
+# ------------------------------------------------------------- integrações
+class IntegIn(BaseModel):
+    token: str = Field(default="", max_length=400)
+
+
+@router.get("/api/integrations")
+def integrations_list(user: dict = auth.CurrentUser):
+    return {"ok": True, "integrations": integ_service.listar(user["id"])}
+
+
+@router.post("/api/integrations/{iid}/authorize")
+def integrations_auth(iid: str, body: IntegIn | None = None, user: dict = auth.CurrentUser):
+    try:
+        token = (body.token if body else "") or ""
+        return {"ok": True, **integ_service.authorize(user["id"], iid, token or None)}
+    except KeyError:
+        raise HTTPException(status_code=404, detail={"ok": False, "code": "UNKNOWN", "message": "Integração desconhecida."})
+
+
+@router.post("/api/integrations/{iid}/revoke")
+def integrations_revoke(iid: str, user: dict = auth.CurrentUser):
+    integ_service.revoke(user["id"], iid)
+    return {"ok": True}
+
+
+# ------------------------------------------------------------- workspace (PC virtual)
+class VmIn(BaseModel):
+    name: str = Field(default="PC virtual", max_length=60)
+    tailscale_ip: str = Field(min_length=7, max_length=45)
+    username: str = Field(min_length=1, max_length=80)
+    password: str = Field(min_length=1, max_length=200)
+
+
+class VmJobIn(BaseModel):
+    kind: str = Field(min_length=1, max_length=40)
+    args: dict = Field(default_factory=dict)
+
+
+@router.get("/api/workspace")
+def workspace_list(user: dict = auth.CurrentUser):
+    return {"ok": True, "vms": workspace_service.listar(user["id"])}
+
+
+@router.post("/api/workspace")
+def workspace_create(body: VmIn, user: dict = auth.CurrentUser):
+    try:
+        vm = workspace_service.criar(user["id"], body.name, body.tailscale_ip, body.username, body.password)
+    except workspace_service.WorkspaceError as e:
+        raise HTTPException(status_code=400, detail={"ok": False, "code": e.code, "message": e.message})
+    return {"ok": True, "vm": vm}
+
+
+@router.delete("/api/workspace/{vid}")
+def workspace_delete(vid: str, user: dict = auth.CurrentUser):
+    if not workspace_service.apagar(user["id"], vid):
+        raise HTTPException(status_code=404, detail={"ok": False, "code": "NOT_FOUND", "message": "PC virtual não encontrado."})
+    return {"ok": True}
+
+
+@router.get("/api/workspace/{vid}/health")
+def workspace_health(vid: str, user: dict = auth.CurrentUser):
+    if workspace_service.obter(user["id"], vid) is None:
+        raise HTTPException(status_code=404, detail={"ok": False, "code": "NOT_FOUND", "message": "PC virtual não encontrado."})
+    return workspace_service.health(user["id"], vid)
+
+
+@router.post("/api/workspace/{vid}/autologon")
+def workspace_autologon(vid: str, user: dict = auth.CurrentUser):
+    try:
+        return {"ok": True, **workspace_service.autologon(user["id"], vid)}
+    except workspace_service.WorkspaceError as e:
+        status = 404 if e.code == "NOT_FOUND" else 502
+        raise HTTPException(status_code=status, detail={"ok": False, "code": e.code, "message": e.message})
+
+
+@router.post("/api/workspace/{vid}/job")
+def workspace_job(vid: str, body: VmJobIn, user: dict = auth.CurrentUser):
+    try:
+        return {"ok": True, "result": workspace_service.job(user["id"], vid, body.kind, body.args)}
+    except workspace_service.WorkspaceError as e:
+        status = 404 if e.code == "NOT_FOUND" else 400
+        raise HTTPException(status_code=status, detail={"ok": False, "code": e.code, "message": e.message})
+
+
+@router.get("/api/workspace/agent.py", response_class=PlainTextResponse)
+def workspace_agent_src(user: dict = auth.CurrentUser):
+    path = Path(__file__).resolve().parents[3] / "workers" / "workspace" / "agent.py"
+    return PlainTextResponse(path.read_text(encoding="utf-8"))
+
+
+@router.get("/api/workspace/{vid}/screen")
+def workspace_screen(vid: str, user: dict = auth.CurrentUser):
+    try:
+        return {"ok": True, **workspace_service.screen(user["id"], vid)}
+    except workspace_service.WorkspaceError as e:
+        status = 404 if e.code == "NOT_FOUND" else 502
+        raise HTTPException(status_code=status, detail={"ok": False, "code": e.code, "message": e.message})
+
+
+class PilotIn(BaseModel):
+    message: str = Field(min_length=1, max_length=2000)
+
+
+@router.post("/api/workspace/{vid}/pilot")
+def workspace_pilot_post(vid: str, body: PilotIn, user: dict = auth.CurrentUser):
+    try:
+        return workspace_pilot.piloto(user["id"], vid, body.message)
+    except workspace_service.WorkspaceError as e:
+        status = 404 if e.code == "NOT_FOUND" else 502
+        raise HTTPException(status_code=status, detail={"ok": False, "code": e.code, "message": e.message})
+
+
+# ------------------------------------------------------------- estúdio (abas de produção)
+class StudioGenIn(BaseModel):
+    tab: str = Field(min_length=1, max_length=40)
+    recipe: str = Field(min_length=1, max_length=40)
+    seed: int = Field(default=42, ge=0, le=999999)
+    prompt: str = Field(default="", max_length=400)
+
+
+@router.get("/api/studio/catalog")
+def studio_catalog(user: dict = auth.CurrentUser):
+    return {"ok": True, "tabs": studio_kits.CATALOGO}
+
+
+@router.post("/api/studio/generate")
+def studio_generate(body: StudioGenIn, user: dict = auth.CurrentUser):
+    try:
+        res = studio_kits.gerar(body.tab, body.recipe, body.seed, body.prompt)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail={"ok": False, "code": "BAD_RECIPE", "message": str(e)})
+    if res.get("arquivo") and res["arquivo"].get("conteudo"):
+        res["dual"] = dual.guardar(user["id"], f"{body.tab}/{body.recipe} {body.prompt}", res["arquivo"])
+    return {"ok": True, "result": res}
+
+
+@router.get("/api/studio/vault")
+def studio_vault(user: dict = auth.CurrentUser):
+    return {"ok": True, "itens": studio_kits.listar_vault()}
+
+
+# ------------------------------------------------------------- acervo Roblox (celular)
+class AcervoIn(BaseModel):
+    root: str = Field(default="/storage/emulated/0/ArkherAITraining", max_length=400)
+
+
+@router.get("/api/acervo")
+def acervo_get(root: str = "/storage/emulated/0/ArkherAITraining", user: dict = auth.CurrentUser):
+    return acervo_service.status(root)
+
+
+@router.post("/api/acervo/ingest")
+def acervo_ingest(body: AcervoIn, user: dict = auth.CurrentUser):
+    return acervo_service.ingerir(body.root)
+
+
+class AcervoCicloIn(BaseModel):
+    root: str = Field(default="/storage/emulated/0/ArkherAITraining", max_length=400)
+    limite: int = Field(default=0, ge=0, le=5000)
+
+
+@router.post("/api/acervo/ciclo")
+def acervo_ciclo(body: AcervoCicloIn, user: dict = auth.CurrentUser):
+    """Pack inteiro: hash → XML/análise → cofre → parâmetros da linhagem no fim."""
+    return acervo_service.ciclo(body.root, user_id=user["id"], limite=body.limite)
+
+
+@router.get("/api/acervo/cofres")
+def acervo_cofres(root: str = "/storage/emulated/0/ArkherAITraining", user: dict = auth.CurrentUser):
+    from backend.app.acervo import cofres as _cofres
+
+    return _cofres.resumo(Path(root))
+
+
+@router.get("/api/acervo/ler")
+def acervo_ler(path: str, user: dict = auth.CurrentUser):
+    return acervo_service.ler(path)
 
 
 # ------------------------------------------------------------- diagnóstico

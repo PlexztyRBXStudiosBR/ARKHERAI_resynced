@@ -42,6 +42,8 @@ def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--epochs", type=int, default=3)
     ap.add_argument("--resume", type=str, default=None)
+    ap.add_argument("--teacher", type=str, default=None, help="checkpoint do modelo anterior (destila o novo)")
+    ap.add_argument("--gen", type=int, default=0, help="geração da linhagem; 0 = config.yaml")
     ap.add_argument("--tag", type=str, default="demo")
     args = ap.parse_args()
 
@@ -64,7 +66,50 @@ def main() -> None:
     train_idx = perm[n_val:]
     log(f"sequências: treino={len(train_idx)} validação={len(val_idx)}")
 
-    if args.resume:
+    from model.training import linhagem as _lin
+
+    teacher = None
+    teacher_ctx = ctx
+    gen_meta = args.gen or 2
+    if args.gen:
+        rung = _lin.rung_por_gen(args.gen)
+        ctx = int(rung["context_window"])
+        data = build_sequences(ids, ctx)
+        n_val = max(4, len(data) // 10)
+        perm = torch.randperm(len(data))
+        val_idx = perm[:n_val]
+        train_idx = perm[n_val:]
+        cfg = ArkherConfig(
+            vocab_size=min(len(tok.vocab), int(rung["vocab_size"])),
+            context_window=ctx,
+            n_layers=int(rung["n_layers"]),
+            n_heads=int(rung["n_heads"]),
+            d_model=int(rung["d_model"]),
+            d_ff=int(rung["d_ff"]),
+            dropout=float(m["dropout"]),
+            tie_embeddings=bool(m["tie_embeddings"]),
+        )
+        model = Arkher1(cfg)
+        start_epoch = 0
+        global_step = 0
+        gen_meta = int(rung["gen"])
+        log(f"geração {gen_meta} {rung['nome']} (alvo ~{rung['params_alvo']:,})")
+        if args.teacher or args.resume:
+            tpath = args.teacher or args.resume
+            tpay = torch.load(tpath, map_location="cpu", weights_only=False)
+            tcfg = ArkherConfig.from_dict(tpay["config"])
+            teacher = Arkher1(tcfg)
+            teacher.load_state_dict(tpay["state_dict"])
+            teacher.eval()
+            for p in teacher.parameters():
+                p.requires_grad_(False)
+            teacher_ctx = tcfg.context_window
+            st = model.state_dict()
+            ncopy = _lin.copiar_state_compativel(tpay["state_dict"], st)
+            model.load_state_dict(st)
+            log(f"professor {tpath}: {ncopy} tensores copiados; resto nasce nesta geração")
+            args.resume = None
+    elif args.resume:
         payload = torch.load(args.resume, map_location="cpu", weights_only=False)
         cfg = ArkherConfig.from_dict(payload["config"])
         model = Arkher1(cfg)
@@ -118,7 +163,17 @@ def main() -> None:
             lr = base_lr * min(1.0, global_step / max(1, warmup))
             for g in opt.param_groups:
                 g["lr"] = lr
-            _, loss = model(x, tgt)
+            logits, loss = model(x, tgt)
+            if teacher is not None:
+                tlen = min(x.size(1), teacher_ctx)
+                with torch.no_grad():
+                    t_logits, _ = teacher(x[:, :tlen])
+                # destila só o vocabulário comum
+                v = min(logits.size(-1), t_logits.size(-1))
+                s = torch.nn.functional.log_softmax(logits[:, :tlen, :v] / 2.0, dim=-1)
+                tt = torch.nn.functional.softmax(t_logits[:, :, :v] / 2.0, dim=-1)
+                kl = torch.nn.functional.kl_div(s, tt, reduction="batchmean") * 4.0
+                loss = 0.6 * loss + 0.4 * kl
             opt.zero_grad(set_to_none=True)
             loss.backward()
             torch.nn.utils.clip_grad_norm_(model.parameters(), float(tcfg["gradient_clip"]))
@@ -148,7 +203,7 @@ def main() -> None:
         log(f"época {epoch + 1}/{args.epochs} perda_treino={total / nb:.4f} perda_val={val_loss:.4f} ({time.time() - t0:.0f}s)")
 
     CHECKPOINT_DIR.mkdir(parents=True, exist_ok=True)
-    version = f"arkher1-mini-v{m['version']}-{args.tag}"
+    version = f"arkher1-g{gen_meta}-v{m['version']}-{args.tag}"
     out = CHECKPOINT_DIR / f"{version}.pt"
     torch.save(
         {
@@ -164,6 +219,8 @@ def main() -> None:
                 "final_train_loss": round(total / max(1, nb), 4),
                 "final_val_loss": round(val_loss, 4),
                 "tokens": len(ids),
+                "gen": gen_meta,
+                "teacher": args.teacher,
             },
         },
         out,
@@ -181,6 +238,12 @@ def main() -> None:
         "perda": history[-200:],
     })
     log(f"checkpoint salvo: {out}")
+    try:
+        from model.training import linhagem as _lin2
+
+        _lin2.registrar(gen_meta, args.teacher, 0, 0)
+    except Exception as e:  # noqa: BLE001
+        log(f"aviso: linhagem não registrada ({e})")
 
 
 if __name__ == "__main__":

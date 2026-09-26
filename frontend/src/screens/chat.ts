@@ -77,8 +77,11 @@ function statusBanner(ctx: Ctx): HTMLElement | null {
     const b = el("div", { class: "banner info" }, t("model_quality_note", lang));
     return b;
   }
-  if (s.ui === "backend_ready_model_missing" || s.ui === "error") {
-    return el("div", { class: "banner warn" }, t("err_model", lang));
+  if (s.ui === "backend_ready_model_missing") {
+    return el("div", { class: "banner info" }, t("model_quality_note", lang));
+  }
+  if (s.ui === "error") {
+    return el("div", { class: "banner warn" }, t("err_generic", lang));
   }
   if (s.ui === "offline") {
     return el("div", { class: "banner err" }, t("err_backend", lang));
@@ -190,6 +193,14 @@ function messageEl(ctx: Ctx, m: Message, streaming: boolean): HTMLElement {
           ver3d.append(icon("cube", 15), " " + t("view_3d", lang));
           ver3d.onclick = () => openViewer(m.arquivo!.nome, m.arquivo!.conteudo!);
           actions.append(ver3d);
+        }
+        if (m.arquivo.nome.toLowerCase().endsWith(".png") && m.arquivo.conteudo_b64) {
+          const img = el("img", {
+            class: "tex-preview",
+            alt: m.arquivo.nome,
+            src: "data:image/png;base64," + m.arquivo.conteudo_b64,
+          });
+          bubble.append(img);
         }
       }
     }

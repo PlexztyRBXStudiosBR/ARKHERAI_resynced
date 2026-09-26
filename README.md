@@ -18,7 +18,7 @@ não de poder bruto nem de serviços externos.
 
 | Peça | Estado |
 | --- | --- |
-| Interface (chat, memória, ferramentas, treino, config) | ✅ pronta e testada |
+| Interface (chat super-IA, integrações, Workspace, cérebro, config) | ✅ pronta e testada |
 | Backend próprio (API, auth, SSE, segurança) | ✅ pronto e testado |
 | Modelo próprio **ARKHER-1 mini** | ✅ instalado (checkpoint `v0.1.0-gamedev`) |
 | Qualidade do modelo | ⚠️ **experimental** — 3,98 M de parâmetros treinados em CPU num corpus semente de ~89 mil tokens, com foco em game dev. Responde bem os temas do corpus (3D, animação, Roblox, engines, netcode, identidade); fora disso, é limitada. |
@@ -74,7 +74,10 @@ PYTHONPATH=. .venv/bin/python -m model.training.evaluate          # perda/perple
 PYTHONPATH=. .venv/bin/python -m model.training.report            # relatório versionado
 ```
 
-Ou use a aba **Treino** do site (roda no servidor, nunca no navegador, com confirmação).
+Ou use a aba **Cérebro** do site (roda no servidor, nunca no navegador, com confirmação).
+O modelo anterior treina o próximo **só com amostras novas** (`python -m model.training.evolve`).
+
+Abas: **Conversa** (qualquer pergunta + gera 3D/animação/textura/place), **Integrações** (~20 permissões de fonte), **Workspace** (PC virtual Tailscale + auto-logon), **Cérebro**, **Config**.
 
 ## Documentação
 

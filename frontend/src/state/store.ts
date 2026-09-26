@@ -11,7 +11,30 @@ export type UiState =
   | "generating"
   | "error";
 
-export type Screen = "chat" | "3d" | "render" | "training" | "integrations" | "cerebro" | "tools" | "settings";
+export type Screen =
+  | "chat"
+  | "workspace"
+  | "places"
+  | "models"
+  | "luau"
+  | "terrain"
+  | "animacao"
+  | "materiais"
+  | "lighting"
+  | "ui"
+  | "audio"
+  | "fisica"
+  | "netcode"
+  | "vfx"
+  | "blender"
+  | "design"
+  | "pesquisa"
+  | "codigo"
+  | "pipeline"
+  | "vault"
+  | "integrations"
+  | "cerebro"
+  | "settings";
 
 export interface Settings {
   userName: string;

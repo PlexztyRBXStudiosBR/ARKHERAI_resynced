@@ -73,6 +73,27 @@ CREATE TABLE IF NOT EXISTS feedback (
   note TEXT NOT NULL DEFAULT '',
   created_at TEXT NOT NULL
 );
+CREATE TABLE IF NOT EXISTS integration_auth (
+  user_id TEXT NOT NULL,
+  integration_id TEXT NOT NULL,
+  authorized_at TEXT NOT NULL,
+  token_enc TEXT,
+  has_token INTEGER NOT NULL DEFAULT 0,
+  PRIMARY KEY (user_id, integration_id)
+);
+CREATE TABLE IF NOT EXISTS vms (
+  id TEXT PRIMARY KEY,
+  user_id TEXT NOT NULL REFERENCES users(id),
+  name TEXT NOT NULL,
+  tailscale_ip TEXT NOT NULL,
+  username TEXT NOT NULL,
+  password_enc TEXT NOT NULL,
+  agent_token_enc TEXT NOT NULL,
+  agent_token_hash TEXT NOT NULL DEFAULT '',
+  status TEXT NOT NULL DEFAULT 'offline',
+  last_seen TEXT,
+  created_at TEXT NOT NULL
+);
 CREATE INDEX IF NOT EXISTS idx_messages_session ON messages(session_id, created_at);
 CREATE INDEX IF NOT EXISTS idx_sessions_user ON sessions(user_id, updated_at);
 CREATE INDEX IF NOT EXISTS idx_memories_user ON memories(user_id);
