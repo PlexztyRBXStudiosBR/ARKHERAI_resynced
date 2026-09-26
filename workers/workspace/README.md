@@ -1,35 +1,31 @@
-# Workspace — PC virtual da ARKHER
+# Workspace — PC virtual (Windows App) + DsOS
 
-Inspirado no protótipo [ArkherAI](https://github.com/PlexztyRBXStudiosBR/ArkherAI)
-(`agent.py`, DsOS, Tailscale). **Sem modelos de IA de terceiro.** O chat
-continua sendo a ARKHER própria; o agente só opera o *seu* PC.
+Olhos e mãos do protótipo ArkherAI (`/screen`, `/input`, `/app`, `/guiready`,
+`/frame`). **Sem** `/infer`, Shap-E, Puter, HF no chat, **sem** `/exec` aberto.
 
-## No PC / VM (Windows recomendado p/ Studio)
+Um processo só na **8765** (agente + DsOS). Dois prints (8765+8766) travam.
 
-1. Instale Tailscale e anote o IP `100.x.x.x`.
-2. Copie esta pasta para a VM.
-3. Rode, com o token que o site mostra **uma vez** ao criar o PC:
+## Erro que gerava “sem frame”
+
+O agente antigo devolve `img` (data URL) e captura com PowerShell **`-STA`** +
+`VirtualScreen` + arquivo. O nosso pedia só `b64` e dumpava JPEG no stdout
+sem `-STA` → online (health) e tela vazia.
+
+## Na VM (Windows App / sessão desbloqueada)
+
+1. No site: cadastre IP Tailscale `100.x`, usuário, senha. Guarde o `agt_`.
+2. Baixe o **agente** no Workspace.
+3. **Dentro da sessão do Windows App** (não serviço, não lock screen):
 
 ```powershell
 $env:ARKHER_AGENT_TOKEN = "agt_…"
-python workers/workspace/agent.py
+python arkher_agent.py
 ```
 
-4. No site, aba **Workspace**: nome, IP Tailscale, usuário Windows, senha.
-5. **Testar conexão** → deve ficar *online*.
-6. **Auto-logon** aplica `AutoAdminLogon` nesta VM (precisa de admin). Depois
-   de um reboot, a sessão gráfica abre sozinha para o Studio/Blender.
+4. **Tela ao vivo**. Toque: curto = clique, longo = direito, arrasta = drag.
+5. **HUD** = você dirige Studio/Blender (setas, ESC, TAB, teclado). A IA não clica.
 
-Trabalhos permitidos (não é shell aberto): print da tela, abrir Studio/Blender/VS Code,
-converter rbxl→rbxlx se `rbx-util` existir, importar place, rodar script Blender,
-sincronizar arquivo gerado no chat.
+`dsos_core.py` é a porta 8766 do desenho antigo. Não rode junto com o agent.
 
-## No celular (acervo)
-
-```bash
-python tools/roblox_dataset_ingest.py /storage/emulated/0/ArkherAITraining --once
-```
-
-XML vai para `_arkher/xml/rbxlx/<categoria>/` e `_arkher/xml/rbxmx/<categoria>/`.
-A ARKHER lê esses XML, manda ao Studio do Workspace (com sua permissão) e cria
-**duas versões**: a sua e a de treino (amostra nova; hash já visto não treina de novo).
+Trabalhos do piloto (chat ao lado, HUD desligado): abrir Studio/Blender, print,
+importar place, converter XML, digitar, clicar.

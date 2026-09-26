@@ -315,8 +315,22 @@ a { color: var(--acc); }
 .ws-desk { display: flex; flex-direction: column; min-width: 0; border-right: 1px solid var(--line); }
 .ws-bar { display: flex; gap: 8px; padding: 8px; align-items: center; background: var(--panel); border-bottom: 1px solid var(--line); }
 .ws-bar .input { max-width: 280px; }
-.ws-screen { flex: 1; min-height: 0; background: #050807; display: grid; place-items: center; position: relative; }
-.ws-frame { max-width: 100%; max-height: 100%; object-fit: contain; cursor: crosshair; }
+.ws-screen { flex: 1; min-height: 0; background: #050807; display: grid; place-items: center; position: relative; touch-action: none; overflow: hidden; }
+.ws-frame { max-width: 100%; max-height: 100%; object-fit: contain; cursor: crosshair; user-select: none; -webkit-user-drag: none; }
+.ws-win { font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 28vw; }
+.ws-hud {
+  display: none; position: absolute; right: 8px; bottom: 8px; z-index: 3;
+  background: var(--panel); border: 1px solid var(--line); padding: 8px; width: min(240px, 92vw);
+}
+.ws-hud.on { display: block; }
+.ws-hud p { margin: 0 0 6px; font-size: 12px; }
+.ws-pad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; margin-bottom: 6px; }
+.ws-hud-row { display: flex; gap: 4px; flex-wrap: wrap; margin-bottom: 6px; }
+.ws-hk {
+  min-width: 36px; min-height: 36px; padding: 4px 8px; border: 1px solid var(--line);
+  background: var(--panel2); color: var(--tx); border-radius: 0; font: inherit;
+}
+.ws-hud-kb { width: 100%; }
 .ws-setup { display: none; padding: 10px; border-top: 1px solid var(--line); }
 .ws-setup.on { display: block; }
 .ws-pilot { display: flex; flex-direction: column; min-width: 0; background: var(--panel); }
