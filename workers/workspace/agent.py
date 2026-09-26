@@ -455,20 +455,43 @@ def open_app(nome: str) -> dict:
     return {"ok": False, "message": r.get("err") or "app não permitida"}
 
 
+def _rbx_python_convert(src_p: Path, dest_p: Path) -> dict | None:
+    here = Path(__file__).resolve()
+    candidates = [here.parent, here.parents[2] if len(here.parents) >= 2 else here.parent]
+    for root in candidates:
+        if str(root) not in sys.path:
+            sys.path.insert(0, str(root))
+    try:
+        from backend.app.acervo.rbx_binary import convert_file  # type: ignore
+    except Exception:
+        return None
+    convert_file(src_p, dest_p)
+    return {"ok": True, "dest": str(dest_p), "modo": "arkher", "bytes": dest_p.stat().st_size}
+
+
 def convert_rbx(src: str, dest: str | None = None) -> dict:
     src_p = Path(src)
     if not src_p.is_file():
         return {"ok": False, "message": "arquivo fonte inexistente"}
-    tool = shutil.which("rbx-util") or shutil.which("rbx-dom")
     dest_p = Path(dest) if dest else WORK / (src_p.stem + (".rbxlx" if src_p.suffix.lower() == ".rbxl" else ".rbxmx"))
-    if src_p.open("rb").read(80).lstrip().startswith(b"<"):
+    head = src_p.open("rb").read(80).lstrip()
+    if head.startswith(b"<") and not head.startswith(b"<roblox!"):
         if src_p.resolve() != dest_p.resolve():
             shutil.copy2(src_p, dest_p)
         return {"ok": True, "dest": str(dest_p), "modo": "xml_copy", "bytes": dest_p.stat().st_size}
-    if not tool:
-        return {"ok": False, "message": "rbx-util ausente; XML já existentes são copiados. Binário fica pendente."}
-    r = subprocess.run([tool, "convert", str(src_p), str(dest_p)], capture_output=True, text=True, timeout=900)
-    return {"ok": r.returncode == 0 and dest_p.exists(), "dest": str(dest_p), "out": (r.stdout or r.stderr or "")[-1000:]}
+    try:
+        got = _rbx_python_convert(src_p, dest_p)
+        if got and dest_p.exists() and dest_p.stat().st_size > 40:
+            return got
+    except Exception as e:  # noqa: BLE001
+        py_err = f"{type(e).__name__}: {e}"
+    else:
+        py_err = ""
+    tool = shutil.which("rbx-util") or shutil.which("rbx-dom")
+    if tool:
+        r = subprocess.run([tool, "convert", str(src_p), str(dest_p)], capture_output=True, text=True, timeout=900)
+        return {"ok": r.returncode == 0 and dest_p.exists(), "dest": str(dest_p), "out": (r.stdout or r.stderr or "")[-1000:]}
+    return {"ok": False, "message": py_err or "conversor falhou no binário"}
 
 
 def import_place(path: str) -> dict:
