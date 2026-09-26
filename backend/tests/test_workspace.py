@@ -1,5 +1,16 @@
 from backend.app.acervo.convert import categoria, ingerir, pastas
-from backend.app.workspace.service import ip_permitido
+from backend.app.workspace.service import _frame_b64, ip_permitido
+
+
+def test_frame_b64_agente_antigo_so_img():
+    raw = "B" * 120
+    got = _frame_b64({"ok": True, "img": "data:image/jpeg;base64," + raw, "w": 800, "h": 450})
+    assert got == raw
+
+
+def test_frame_b64_nosso_b64():
+    raw = "C" * 120
+    assert _frame_b64({"ok": True, "b64": raw, "img": "data:image/jpeg;base64," + raw}) == raw
 
 
 def test_ip_permitido_tailscale_e_lan():

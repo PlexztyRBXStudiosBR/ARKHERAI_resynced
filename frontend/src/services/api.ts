@@ -107,8 +107,49 @@ export function makeApi(baseUrl: () => string, token: () => string | null) {
       http<Record<string, unknown>>("POST", "/api/acervo/ingest", { root }),
     acervoCiclo: (root = "/storage/emulated/0/ArkherAITraining", limite = 0) =>
       http<Record<string, unknown>>("POST", "/api/acervo/ciclo", { root, limite }, 120000),
-    workspaceScreen: (id: string) =>
-      http<{ ok: boolean; b64?: string; mime?: string; message?: string }>("GET", `/api/workspace/${id}/screen`, undefined, 10000),
+    workspaceScreen: (id: string, scale = 0.45, q = 50) =>
+      http<{
+        ok: boolean;
+        b64?: string;
+        img?: string;
+        mime?: string;
+        message?: string;
+        w?: number;
+        h?: number;
+        real_w?: number;
+        real_h?: number;
+        titulo?: string;
+      }>("GET", `/api/workspace/${id}/screen?scale=${scale}&q=${q}`, undefined, 14000),
+    workspaceInput: (id: string, acts: Record<string, unknown>[]) =>
+      http<{ ok: boolean; res?: unknown[] }>("POST", `/api/workspace/${id}/input`, { acts }, 20000),
+    workspaceGuiReady: (id: string) =>
+      http<{ ok: boolean; nota?: string; err?: string }>("GET", `/api/workspace/${id}/guiready`, undefined, 10000),
+    async workspaceFrame(id: string, scale = 0.45, q = 50): Promise<{ blob: Blob; realW: number; realH: number; titulo: string }> {
+      const headers: Record<string, string> = {};
+      const tk = token();
+      if (tk) {
+        headers["Authorization"] = `Bearer ${tk}`;
+        headers["X-Arkher-Token"] = tk;
+      }
+      const res = await fetch(`${baseUrl()}/api/workspace/${id}/frame?scale=${scale}&q=${q}`, { headers });
+      if (!res.ok) {
+        let msg = `HTTP ${res.status}`;
+        try {
+          const j = await res.json();
+          msg = j?.detail?.message || j?.message || msg;
+        } catch {
+          /* jpeg 503 json */
+        }
+        throw { code: `HTTP_${res.status}`, message: msg, status: res.status } as ApiError;
+      }
+      const blob = await res.blob();
+      return {
+        blob,
+        realW: Number(res.headers.get("X-Arkher-Real-W") || 0),
+        realH: Number(res.headers.get("X-Arkher-Real-H") || 0),
+        titulo: res.headers.get("X-Arkher-Title") || "",
+      };
+    },
     workspacePilot: (id: string, message: string) =>
       http<{ ok: boolean; reply: string; actions?: unknown[]; gerado?: unknown }>("POST", `/api/workspace/${id}/pilot`, { message }, 45000),
     studioCatalog: () => http<{ tabs: unknown[] }>("GET", "/api/studio/catalog"),

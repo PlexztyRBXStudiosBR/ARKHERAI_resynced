@@ -1,17 +1,11 @@
 #!/usr/bin/env python3
-"""Agente ARKHER do PC virtual — stdlib only.
+"""Agente ARKHER — olhos e mãos do PC virtual (Windows App / Tailscale).
 
-Inspirado no protótipo ArkherAI (agent.py / DsOS), SEM modelos de IA
-de terceiros: nada de Puter, Shap-E, TripoSR, HF inferência no chat.
-O chat da ARKHER é próprio; este processo só opera o *seu* PC.
+Protocolo do protótipo ArkherAI (agent.py + DsOS): /health /screen /frame
+/guiready /input /app. SEM /infer, SEM Shap-E, SEM /exec aberto, SEM modelo
+de terceiro. Um processo só (8765) pra não haver dois prints travando.
 
-  ARKHER_AGENT_TOKEN=agt_… python workers/workspace/agent.py
-
-Rotas (todas exigem o token):
-  GET  /health
-  POST /autologon     AutoAdminLogon Windows (credenciais da VM do usuário)
-  POST /job           trabalhos permitidos (não é shell aberto)
-  GET  /screen
+  ARKHER_AGENT_TOKEN=agt_… python agent.py
 """
 from __future__ import annotations
 
@@ -22,29 +16,42 @@ import platform
 import shutil
 import subprocess
 import sys
+import threading
 import time
+import urllib.request
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
-import urllib.request
-from urllib.parse import urlparse
+from urllib.parse import parse_qs, urlparse
 
-PORT = int(os.environ.get("ARKHER_AGENT_PORT", "8765"))
+PORT = int(os.environ.get("ARKHER_AGENT_PORT") or os.environ.get("DSOS_PORT") or "8765")
 TOKEN = os.environ.get("ARKHER_AGENT_TOKEN", "")
 STATE = Path(os.environ.get("ARKHER_STATE") or Path.home() / "arkher_state")
 WORK = STATE / "work"
 WORK.mkdir(parents=True, exist_ok=True)
 IS_WIN = platform.system() == "Windows"
 BOOT = time.time()
+PWSH = shutil.which("powershell") or shutil.which("pwsh") or "powershell"
+_GRAB_LOCK = threading.Lock()
+_LAST_JPEG = {"raw": b"", "meta": {}}
 
-APPS = {
-    "studio": [
-        r"%LOCALAPPDATA%\Roblox\Versions",
-        "RobloxStudioBeta.exe",
-        "RobloxStudio.exe",
-    ],
-    "blender": ["blender", "Blender.exe"],
-    "code": ["code", "Code.exe"],
+PS_GUI = r"""
+Add-Type -AssemblyName System.Windows.Forms,System.Drawing
+Add-Type @'
+using System;using System.Runtime.InteropServices;
+public class M {
+  [DllImport("user32.dll")] public static extern bool SetCursorPos(int x,int y);
+  [DllImport("user32.dll")] public static extern void mouse_event(uint f,uint x,uint y,uint d,int e);
+  [DllImport("user32.dll")] public static extern bool GetCursorPos(out POINT p);
+  [DllImport("user32.dll")] public static extern IntPtr GetForegroundWindow();
+  [DllImport("user32.dll")] public static extern int GetWindowTextLength(IntPtr h);
+  [DllImport("user32.dll")] public static extern int GetWindowText(IntPtr h,System.Text.StringBuilder s,int n);
+  public struct POINT { public int X; public int Y; }
+  public static string Title(){ IntPtr h=GetForegroundWindow(); int n=GetWindowTextLength(h);
+    var sb=new System.Text.StringBuilder(n+1); GetWindowText(h,sb,sb.Capacity); return sb.ToString(); }
+  public static string Cursor(){ POINT p; GetCursorPos(out p); return p.X+"|"+p.Y; }
 }
+'@
+"""
 
 
 def _auth(handler) -> bool:
@@ -52,28 +59,321 @@ def _auth(handler) -> bool:
     if got.startswith("Bearer "):
         got = got[7:]
     got = got or handler.headers.get("X-Arkher-Agent", "")
+    q = parse_qs(urlparse(handler.path).query)
+    got = got or (q.get("token") or [""])[0]
     if not TOKEN:
         return False
     return got == TOKEN
 
 
+def ps(script: str, timeout: int = 60) -> tuple[str, str]:
+    p = subprocess.run(
+        [PWSH, "-NoProfile", "-NonInteractive", "-STA", "-Command", script],
+        capture_output=True,
+        timeout=timeout,
+    )
+    return p.stdout.decode("utf-8", "replace"), p.stderr.decode("utf-8", "replace")
+
+
+def ps_str(s: str) -> str:
+    return "'" + str(s).replace("'", "''") + "'"
+
+
+def sendkeys_escape(txt: str) -> str:
+    out = []
+    for ch in str(txt):
+        if ch in "+^%~(){}[]":
+            out.append("{" + ch + "}")
+        elif ch == "\n":
+            out.append("{ENTER}")
+        elif ch == "\t":
+            out.append("{TAB}")
+        else:
+            out.append(ch)
+    return "".join(out)
+
+
+def grab_screen(scale: float = 0.5, quality: int = 55) -> dict:
+    """JPEG da tela — mesmo método do ArkherAI (STA + VirtualScreen + arquivo)."""
+    scale = max(0.15, min(1.0, float(scale)))
+    quality = max(20, min(90, int(quality)))
+    if not _GRAB_LOCK.acquire(blocking=False):
+        if _LAST_JPEG["raw"]:
+            meta = dict(_LAST_JPEG["meta"])
+            meta["b64"] = base64.b64encode(_LAST_JPEG["raw"]).decode()
+            meta["skipped"] = True
+            return meta
+        return {"err": "captura ocupada"}
+    try:
+        return _grab_screen_locked(scale, quality)
+    finally:
+        _GRAB_LOCK.release()
+
+
+def _grab_screen_locked(scale: float, quality: int) -> dict:
+    if not IS_WIN:
+        disp = os.environ.get("DISPLAY") or os.environ.get("DSOS_DISPLAY") or ":0"
+        out = STATE / "shot.jpg"
+        try:
+            if shutil.which("import"):
+                subprocess.run(
+                    ["import", "-display", disp, "-window", "root", "-quality", str(quality), str(out)],
+                    timeout=20,
+                    check=False,
+                )
+            elif shutil.which("ffmpeg"):
+                subprocess.run(
+                    ["ffmpeg", "-y", "-loglevel", "quiet", "-f", "x11grab", "-i", disp, "-frames:v", "1", "-q:v", "6", str(out)],
+                    timeout=20,
+                    check=False,
+                )
+            else:
+                return {"err": "sem ferramenta de captura (sem sessão gráfica / sem import|ffmpeg)"}
+            if not out.exists() or out.stat().st_size < 80:
+                return {"err": "captura falhou (sem sessão gráfica em " + disp + "?)"}
+            raw = out.read_bytes()
+            _LAST_JPEG["raw"] = raw
+            meta = {"b64": base64.b64encode(raw).decode(), "w": 0, "h": 0, "real_w": 0, "real_h": 0, "titulo": ""}
+            _LAST_JPEG["meta"] = {k: meta[k] for k in ("w", "h", "real_w", "real_h", "titulo")}
+            return meta
+        except Exception as e:  # noqa: BLE001
+            return {"err": str(e)}
+    f = str(STATE / "shot.jpg").replace("'", "''")
+    script = PS_GUI + f"""
+$b=[System.Windows.Forms.SystemInformation]::VirtualScreen
+$bmp=New-Object System.Drawing.Bitmap $b.Width,$b.Height
+$g=[System.Drawing.Graphics]::FromImage($bmp)
+$g.CopyFromScreen($b.X,$b.Y,0,0,$bmp.Size)
+$w=[int]($b.Width*{scale}); $h=[int]($b.Height*{scale})
+if({scale} -ne 1.0){{ $r=New-Object System.Drawing.Bitmap $bmp,$w,$h; $bmp.Dispose(); $bmp=$r }}
+$cod=[System.Drawing.Imaging.ImageCodecInfo]::GetImageEncoders()|?{{$_.MimeType -eq 'image/jpeg'}}
+$pr=New-Object System.Drawing.Imaging.EncoderParameters 1
+$pr.Param[0]=New-Object System.Drawing.Imaging.EncoderParameter ([System.Drawing.Imaging.Encoder]::Quality),{quality}
+$bmp.Save('{f}',$cod,$pr); $bmp.Dispose()
+Write-Output "$w|$h|$($b.Width)|$($b.Height)|$([M]::Title())"
+"""
+    err = ""
+    try:
+        out, err = ps(script, 25)
+        parts = (out.strip().splitlines() or [""])[-1].split("|")
+        raw = (STATE / "shot.jpg").read_bytes()
+        if len(raw) < 80:
+            return {"err": "print vazio. Abra o Windows App, desbloqueie, rode este agente NA sessão. " + err[:200]}
+        meta = {
+            "b64": base64.b64encode(raw).decode(),
+            "w": int(parts[0]) if len(parts) > 1 else 0,
+            "h": int(parts[1]) if len(parts) > 1 else 0,
+            "real_w": int(parts[2]) if len(parts) > 3 else 0,
+            "real_h": int(parts[3]) if len(parts) > 3 else 0,
+            "titulo": parts[4] if len(parts) > 4 else "",
+        }
+        _LAST_JPEG["raw"] = raw
+        _LAST_JPEG["meta"] = {k: meta[k] for k in ("w", "h", "real_w", "real_h", "titulo")}
+        return meta
+    except Exception as e:  # noqa: BLE001
+        return {"err": f"{e} :: {err[:300]}"}
+
+
+def screen_payload(scale: float = 0.5, quality: int = 55) -> dict:
+    g = grab_screen(scale, quality)
+    if g.get("err"):
+        return {"ok": False, "err": g["err"], "message": g["err"]}
+    b64 = g["b64"]
+    return {
+        "ok": True,
+        "b64": b64,
+        "img": "data:image/jpeg;base64," + b64,
+        "mime": "image/jpeg",
+        "w": g.get("w") or 0,
+        "h": g.get("h") or 0,
+        "real_w": g.get("real_w") or 0,
+        "real_h": g.get("real_h") or 0,
+        "titulo": g.get("titulo") or "",
+    }
+
+
+def gui_ready() -> dict:
+    if not IS_WIN:
+        disp = os.environ.get("DISPLAY") or os.environ.get("DSOS_DISPLAY") or ":0"
+        tem = os.path.exists("/tmp/.X11-unix/X" + disp.lstrip(":"))
+        return {
+            "ok": tem,
+            "display": disp,
+            "nota": None if tem else "sem servidor X em " + disp,
+        }
+    try:
+        out, _ = ps("(quser) 2>&1 | Out-String", 20)
+        ativo = "Active" in out or "Ativo" in out
+        if not ativo:
+            g = grab_screen(0.2, 30)
+            ativo = bool(g.get("b64")) and (g.get("real_w") or 0) > 0
+        return {
+            "ok": ativo,
+            "sessoes": out.strip()[:500],
+            "nota": None if ativo else (
+                "SEM SESSÃO GRÁFICA — entre pelo Windows App e rode este agente "
+                "dentro dessa sessão (não lock screen)."
+            ),
+        }
+    except Exception as e:  # noqa: BLE001
+        return {"ok": False, "err": str(e), "nota": str(e)}
+
+
+def do_input(act: dict) -> dict:
+    d = (act.get("do") or act.get("t") or "").lower().strip()
+    try:
+        x, y = int(float(act.get("x", 0) or 0)), int(float(act.get("y", 0) or 0))
+    except Exception:
+        x, y = 0, 0
+    if d in ("wait",):
+        time.sleep(max(0.0, min(float(act.get("sec", 1) or 1), 8)))
+        return {"ok": True}
+    if d in ("app", "abrir"):
+        return abrir_app(str(act.get("nome") or act.get("app") or ""), act.get("caminho"))
+    if d in ("trackpad",):
+        try:
+            dx, dy = int(float(act.get("dx", 0) or 0)), int(float(act.get("dy", 0) or 0))
+        except Exception:
+            dx, dy = 0, 0
+        if not IS_WIN:
+            return {"ok": False, "err": "trackpad só no Windows neste agente"}
+        S = PS_GUI + f"$c=[M]::Cursor() -split '\\|'; [M]::SetCursorPos(([int]$c[0])+({dx}),([int]$c[1])+({dy}))"
+        try:
+            out, err = ps(S, 8)
+            return {"ok": not err.strip(), "err": err.strip()[:200] or None}
+        except Exception as e:  # noqa: BLE001
+            return {"ok": False, "err": str(e)}
+    if not IS_WIN:
+        if not shutil.which("xdotool"):
+            return {"ok": False, "err": "sem xdotool"}
+        env = dict(os.environ)
+        env.setdefault("DISPLAY", os.environ.get("DSOS_DISPLAY", ":0"))
+
+        def xd(*a):
+            p = subprocess.run(["xdotool", *a], env=env, capture_output=True, text=True, timeout=15)
+            return {"ok": p.returncode == 0, "err": (p.stderr or "")[:200] or None}
+
+        if d == "move":
+            return xd("mousemove", str(x), str(y))
+        if d in ("click", "down"):
+            return xd("mousemove", str(x), str(y), "click", "1")
+        if d in ("dblclick", "dbl"):
+            return xd("mousemove", str(x), str(y), "click", "--repeat", "2", "1")
+        if d == "right":
+            return xd("mousemove", str(x), str(y), "click", "3")
+        if d == "type" or d == "text":
+            return xd("type", "--delay", "12", "--", str(act.get("text") or act.get("txt") or ""))
+        if d in ("key", "hotkey"):
+            return xd("key", str(act.get("key") or act.get("combo") or act.get("k") or "Return"))
+        return {"ok": False, "err": f"acao desconhecida: {d}"}
+    S = PS_GUI
+    if d == "move":
+        S += f"[M]::SetCursorPos({x},{y})"
+    elif d in ("click", "dblclick", "dbl", "right", "middle"):
+        down, up = (2, 4) if d in ("click", "dblclick", "dbl") else ((8, 16) if d == "right" else (32, 64))
+        S += f"[M]::SetCursorPos({x},{y});Start-Sleep -m 40;"
+        S += f"[M]::mouse_event({down},0,0,0,0);[M]::mouse_event({up},0,0,0,0);"
+        if d in ("dblclick", "dbl"):
+            S += f"Start-Sleep -m 80;[M]::mouse_event({down},0,0,0,0);[M]::mouse_event({up},0,0,0,0);"
+    elif d == "down":
+        S += f"[M]::SetCursorPos({x},{y});[M]::mouse_event(2,0,0,0,0);"
+    elif d == "up":
+        S += f"[M]::SetCursorPos({x},{y});[M]::mouse_event(4,0,0,0,0);"
+    elif d == "drag":
+        x2, y2 = int(float(act.get("x2", 0) or 0)), int(float(act.get("y2", 0) or 0))
+        S += (
+            f"[M]::SetCursorPos({x},{y});Start-Sleep -m 50;[M]::mouse_event(2,0,0,0,0);"
+            f"Start-Sleep -m 60;"
+        )
+        for i in range(1, 9):
+            S += f"[M]::SetCursorPos({x + (x2 - x) * i // 8},{y + (y2 - y) * i // 8});Start-Sleep -m 16;"
+        S += "[M]::mouse_event(4,0,0,0,0);"
+    elif d == "scroll":
+        amt = int(float(act.get("amount", act.get("dy", -400)) or -400))
+        S += f"[M]::SetCursorPos({x},{y});[M]::mouse_event(2048,0,0,{amt & 0xFFFFFFFF},0);"
+    elif d in ("type", "text"):
+        S += f"[System.Windows.Forms.SendKeys]::SendWait({ps_str(sendkeys_escape(act.get('text') or act.get('txt') or ''))})"
+    elif d == "key":
+        S += f"[System.Windows.Forms.SendKeys]::SendWait({ps_str(act.get('key') or act.get('k') or '{ENTER}')})"
+    elif d == "hotkey":
+        S += f"[System.Windows.Forms.SendKeys]::SendWait({ps_str(act.get('combo') or '')})"
+    else:
+        return {"ok": False, "err": f"acao desconhecida: {d}"}
+    try:
+        out, err = ps(S, 20)
+        return {"ok": not err.strip(), "out": out.strip()[:200], "err": err.strip()[:200] or None}
+    except Exception as e:  # noqa: BLE001
+        return {"ok": False, "err": str(e)}
+
+
+APPS_WIN = {
+    "roblox": [
+        r"$env:LOCALAPPDATA\Roblox\Versions\*\RobloxStudioBeta.exe",
+        r"$env:LOCALAPPDATA\Roblox\Versions\*\RobloxStudioLauncherBeta.exe",
+        r"C:\Program Files (x86)\Roblox\Versions\*\RobloxStudioBeta.exe",
+    ],
+    "studio": [
+        r"$env:LOCALAPPDATA\Roblox\Versions\*\RobloxStudioBeta.exe",
+        r"$env:LOCALAPPDATA\Roblox\Versions\*\RobloxStudioLauncherBeta.exe",
+    ],
+    "blender": [r"C:\Program Files\Blender Foundation\*\blender.exe", "blender"],
+    "explorer": ["explorer.exe"],
+    "notepad": ["notepad.exe"],
+    "cmd": ["cmd.exe"],
+    "powershell": ["powershell.exe"],
+    "edge": [r"C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe", "msedge.exe"],
+    "chrome": [r"C:\Program Files\Google\Chrome\Application\chrome.exe", "chrome.exe"],
+}
+
+
+def abrir_app(nome: str, caminho: str | None = None) -> dict:
+    nome = (nome or "").lower().strip()
+    if nome in ("robloxstudio",):
+        nome = "studio"
+    if not IS_WIN:
+        return {"ok": False, "err": "abrir app neste agente é Windows (Windows App / Studio)."}
+    cands = [caminho] if caminho else APPS_WIN.get(nome)
+    if not cands:
+        return {"ok": False, "err": "não sei abrir %r. Conhecidos: %s" % (nome, ", ".join(APPS_WIN))}
+    lista = ",".join(ps_str(c) for c in cands)
+    script = f"""
+$ok=$false
+foreach($c in @({lista})){{
+  $c2=$ExecutionContext.InvokeCommand.ExpandString($c)
+  $p=$null
+  if($c2 -match '[\\\\/]'){{ $p=Get-Item -Path $c2 -ErrorAction SilentlyContinue | Sort-Object LastWriteTime -Descending | Select-Object -First 1 -ExpandProperty FullName }}
+  else {{ $p=(Get-Command $c2 -ErrorAction SilentlyContinue | Select-Object -First 1).Source; if(-not $p){{ $p=$c2 }} }}
+  if($p){{ try {{ Start-Process $p; Write-Output "OK|$p"; $ok=$true; break }} catch {{ }} }}
+}}
+if(-not $ok){{ Write-Output "NAO|nenhum candidato existe" }}
+"""
+    try:
+        out, err = ps(script, 40)
+        ln = (out.strip().splitlines() or ["NAO|sem saida"])[-1]
+        if ln.startswith("OK|"):
+            return {"ok": True, "exe": ln[3:]}
+        return {"ok": False, "err": f"{nome}: {ln[4:] if '|' in ln else ln} {err[:200]}".strip()}
+    except Exception as e:  # noqa: BLE001
+        return {"ok": False, "err": str(e)}
+
+
 def machine() -> dict:
-    info = {
+    return {
         "host": platform.node(),
+        "os": "windows" if IS_WIN else platform.system().lower(),
         "sistema": platform.system(),
-        "release": platform.release(),
         "python": platform.python_version(),
         "uptime_s": int(time.time() - BOOT),
+        "port": PORT,
         "cwd": str(WORK),
+        "dsos": True,
     }
-    return info
 
 
 def autologon(username: str, password: str) -> dict:
     if not IS_WIN:
         return {"ok": False, "message": "Auto-logon é Windows (registry AutoAdminLogon)."}
-    # Não ecoa a senha. Script gerado localmente e executado.
-    ps = r"""
+    ps_script = r"""
 $ErrorActionPreference='Stop'
 $u = $env:ARKHER_AUTO_USER
 $p = $env:ARKHER_AUTO_PASS
@@ -87,17 +387,12 @@ Write-Output 'ARKHER_AUTOLOGON_OK'
     env["ARKHER_AUTO_PASS"] = password
     try:
         r = subprocess.run(
-            ["powershell", "-NoProfile", "-NonInteractive", "-Command", ps],
+            [PWSH, "-NoProfile", "-NonInteractive", "-Command", ps_script],
             capture_output=True, text=True, timeout=30, env=env,
         )
         ok = r.returncode == 0 and "ARKHER_AUTOLOGON_OK" in (r.stdout or "")
-        return {
-            "ok": ok,
-            "code": r.returncode,
-            "out": (r.stdout or "")[-2000:],
-            "err": (r.stderr or "")[-1000:],
-        }
-    except Exception as e:
+        return {"ok": ok, "code": r.returncode, "out": (r.stdout or "")[-2000:], "err": (r.stderr or "")[-1000:]}
+    except Exception as e:  # noqa: BLE001
         return {"ok": False, "message": f"{type(e).__name__}: {e}"}
 
 
@@ -112,31 +407,7 @@ def _which(names) -> str | None:
     return None
 
 
-def screenshot() -> dict:
-    if IS_WIN:
-        ps = (
-            "Add-Type -AssemblyName System.Windows.Forms,System.Drawing; "
-            "$b = [System.Windows.Forms.Screen]::PrimaryScreen.Bounds; "
-            "$bmp = New-Object System.Drawing.Bitmap $b.Width,$b.Height; "
-            "$g = [System.Drawing.Graphics]::FromImage($bmp); "
-            "$g.CopyFromScreen($b.Location,[Drawing.Point]::Empty,$b.Size); "
-            "$ms = New-Object IO.MemoryStream; "
-            "$bmp.Save($ms,[Drawing.Imaging.ImageFormat]::Jpeg); "
-            "[Convert]::ToBase64String($ms.ToArray())"
-        )
-        r = subprocess.run(
-            ["powershell", "-NoProfile", "-NonInteractive", "-Command", ps],
-            capture_output=True, text=True, timeout=20,
-        )
-        b64 = (r.stdout or "").strip()
-        if r.returncode == 0 and b64:
-            return {"ok": True, "mime": "image/jpeg", "b64": b64[: 2_000_000]}
-        return {"ok": False, "message": (r.stderr or "falha no print")[-400:]}
-    return {"ok": False, "message": "screenshot só implementado no Windows neste agente."}
-
-
 def install_app(nome: str) -> dict:
-    """Instala só Studio ou Blender — lista fechada, sem shell livre."""
     nome = (nome or "").lower().strip()
     if nome in ("studio", "roblox", "robloxstudio"):
         got = _which(["RobloxStudioBeta.exe", "RobloxStudio.exe"])
@@ -147,7 +418,7 @@ def install_app(nome: str) -> dict:
         setup = WORK / "RobloxStudioLauncherBeta.exe"
         if not setup.exists():
             try:
-                urllib.request.urlretrieve(  # noqa: S310 — URL oficial da Roblox
+                urllib.request.urlretrieve(  # noqa: S310
                     "https://setup.rbxcdn.com/RobloxStudioLauncherBeta.exe",
                     setup,
                 )
@@ -166,42 +437,22 @@ def install_app(nome: str) -> dict:
                  "--accept-package-agreements", "--accept-source-agreements"],
                 capture_output=True, text=True, timeout=600,
             )
-            return {
-                "ok": r.returncode == 0,
-                "app": "blender",
-                "out": (r.stdout or r.stderr or "")[-1500:],
-            }
+            return {"ok": r.returncode == 0, "app": "blender", "out": (r.stdout or r.stderr or "")[-1500:]}
         return {"ok": False, "message": "Blender: instale ou coloque no PATH. Sem winget neste PC."}
     return {"ok": False, "message": f"install não permitido: {nome}"}
 
 
 def open_app(nome: str) -> dict:
-    nome = (nome or "").lower()
-    if nome in ("studio", "roblox", "robloxstudio"):
-        exe = _which(["RobloxStudioBeta.exe", "RobloxStudio.exe"])
-        if not exe:
-            inst = install_app("studio")
-            exe = _which(["RobloxStudioBeta.exe", "RobloxStudio.exe"])
-            if not exe:
-                return {"ok": False, "message": "Studio não estava instalado; iniciei o instalador oficial.", "install": inst}
-        subprocess.Popen([exe], cwd=str(WORK))
-        return {"ok": True, "app": "studio", "exe": exe}
-    if nome in ("blender",):
-        exe = _which(["blender", "Blender.exe"])
-        if not exe:
-            inst = install_app("blender")
-            exe = _which(["blender", "Blender.exe"])
-            if not exe:
-                return {"ok": False, "message": "Blender não estava instalado; tentei o winget.", "install": inst}
-        subprocess.Popen([exe], cwd=str(WORK))
-        return {"ok": True, "app": "blender", "exe": exe}
-    if nome in ("code", "vscode"):
-        exe = _which(["code", "Code.exe"])
-        if not exe:
-            return {"ok": False, "message": "VS Code não encontrado."}
-        subprocess.Popen([exe, str(WORK)])
-        return {"ok": True, "app": "code"}
-    return {"ok": False, "message": f"app não permitida: {nome}"}
+    r = abrir_app(nome)
+    if r.get("ok"):
+        return r
+    if nome.lower() in ("studio", "roblox", "robloxstudio", "blender"):
+        inst = install_app(nome)
+        r2 = abrir_app(nome)
+        if r2.get("ok"):
+            return r2
+        return {"ok": False, "message": r.get("err") or r2.get("err"), "install": inst}
+    return {"ok": False, "message": r.get("err") or "app não permitida"}
 
 
 def convert_rbx(src: str, dest: str | None = None) -> dict:
@@ -224,9 +475,8 @@ def import_place(path: str) -> dict:
     p = Path(path)
     if not p.is_file():
         return {"ok": False, "message": "place não encontrado"}
-    # Abre o XML no Studio (o Studio associa .rbxlx)
     if IS_WIN:
-        os.startfile(str(p))  # noqa: S606 — arquivo local do usuário
+        os.startfile(str(p))  # noqa: S606
         return {"ok": True, "opened": str(p)}
     subprocess.Popen(["xdg-open", str(p)])
     return {"ok": True, "opened": str(p)}
@@ -251,39 +501,6 @@ def sync_file(nome: str, conteudo: str, conteudo_b64: str = "") -> dict:
     return {"ok": True, "path": str(alvo), "bytes": alvo.stat().st_size}
 
 
-def click(x: int, y: int) -> dict:
-    x, y = int(x), int(y)
-    if not (0 <= x <= 10000 and 0 <= y <= 10000):
-        return {"ok": False, "message": "coordenada fora do limite"}
-    if not IS_WIN:
-        return {"ok": False, "message": "click só no Windows neste agente"}
-    ps = (
-        "Add-Type -AssemblyName System.Windows.Forms; "
-        f"[System.Windows.Forms.Cursor]::Position = New-Object System.Drawing.Point {x},{y}; "
-        "Add-Type -TypeDefinition 'using System; using System.Runtime.InteropServices; "
-        "public class M { [DllImport(\"user32.dll\")] public static extern void mouse_event(int d,int x,int y,int c,int e); }'; "
-        "[M]::mouse_event(0x0002,0,0,0,0); [M]::mouse_event(0x0004,0,0,0,0)"
-    )
-    r = subprocess.run(["powershell", "-NoProfile", "-NonInteractive", "-Command", ps], capture_output=True, text=True, timeout=8)
-    return {"ok": r.returncode == 0, "x": x, "y": y, "err": (r.stderr or "")[-300:]}
-
-
-def type_text(text: str) -> dict:
-    text = (text or "")[:200]
-    if not text:
-        return {"ok": False, "message": "texto vazio"}
-    if not IS_WIN:
-        return {"ok": False, "message": "digitar só no Windows neste agente"}
-    # SendKeys: escapa só o necessário, sem comandos de sistema.
-    safe = text.replace("{", "{{").replace("}", "}}")
-    ps = (
-        "Add-Type -AssemblyName System.Windows.Forms; "
-        f"[System.Windows.Forms.SendKeys]::SendWait('{safe.replace(chr(39), chr(39)+chr(39))}')"
-    )
-    r = subprocess.run(["powershell", "-NoProfile", "-NonInteractive", "-Command", ps], capture_output=True, text=True, timeout=8)
-    return {"ok": r.returncode == 0, "n": len(text)}
-
-
 def ls(path: str | None = None) -> dict:
     p = Path(path) if path else WORK
     if not p.exists():
@@ -294,9 +511,26 @@ def ls(path: str | None = None) -> dict:
     return {"ok": True, "path": str(p), "itens": itens}
 
 
+def janelas() -> dict:
+    if not IS_WIN:
+        return {"ok": True, "janelas": []}
+    out, err = ps(
+        "Get-Process | Where-Object {$_.MainWindowTitle} | "
+        "Select-Object -First 40 Id,ProcessName,MainWindowTitle | ConvertTo-Json -Compress",
+        20,
+    )
+    try:
+        data = json.loads(out or "[]")
+        if isinstance(data, dict):
+            data = [data]
+        return {"ok": True, "janelas": data}
+    except Exception:
+        return {"ok": False, "err": err[:300] or out[:300]}
+
+
 def run_job(kind: str, args: dict) -> dict:
     if kind == "screenshot":
-        return screenshot()
+        return screen_payload(0.5, 55)
     if kind == "install_app":
         return install_app(str(args.get("app", "")))
     if kind == "open_app":
@@ -314,9 +548,9 @@ def run_job(kind: str, args: dict) -> dict:
             str(args.get("conteudo_b64", "") or ""),
         )
     if kind == "click":
-        return click(int(args.get("x", 0) or 0), int(args.get("y", 0) or 0))
+        return do_input({"do": "click", "x": args.get("x", 0), "y": args.get("y", 0)})
     if kind == "type":
-        return type_text(str(args.get("text", "")))
+        return do_input({"do": "type", "text": str(args.get("text", ""))[:200]})
     if kind == "ls":
         return ls(args.get("path"))
     if kind in ("health", "status"):
@@ -325,42 +559,104 @@ def run_job(kind: str, args: dict) -> dict:
 
 
 class Handler(BaseHTTPRequestHandler):
+    protocol_version = "HTTP/1.1"
+
     def log_message(self, fmt, *args):
         sys.stderr.write("[arkher-agent] " + (fmt % args) + "\n")
+
+    def _cors(self):
+        self.send_header("Access-Control-Allow-Origin", "*")
+        self.send_header("Access-Control-Allow-Headers", "*")
+        self.send_header("Access-Control-Allow-Methods", "GET,POST,OPTIONS")
+        self.send_header("Access-Control-Allow-Private-Network", "true")
+        self.send_header("Cache-Control", "no-store")
 
     def _json(self, code: int, payload: dict):
         raw = json.dumps(payload, ensure_ascii=False).encode("utf-8")
         self.send_response(code)
         self.send_header("Content-Type", "application/json; charset=utf-8")
         self.send_header("Content-Length", str(len(raw)))
+        self._cors()
         self.end_headers()
-        self.wfile.write(raw)
+        try:
+            self.wfile.write(raw)
+        except Exception:
+            pass
+
+    def _jpeg(self, raw: bytes, code: int = 200):
+        self.send_response(code)
+        self.send_header("Content-Type", "image/jpeg")
+        self.send_header("Content-Length", str(len(raw)))
+        self._cors()
+        self.send_header("X-Arkher-W", str(_LAST_JPEG["meta"].get("w") or 0))
+        self.send_header("X-Arkher-H", str(_LAST_JPEG["meta"].get("h") or 0))
+        self.send_header("X-Arkher-Real-W", str(_LAST_JPEG["meta"].get("real_w") or 0))
+        self.send_header("X-Arkher-Real-H", str(_LAST_JPEG["meta"].get("real_h") or 0))
+        self.send_header("X-Arkher-Title", str(_LAST_JPEG["meta"].get("titulo") or "")[:180])
+        self.end_headers()
+        try:
+            self.wfile.write(raw)
+        except Exception:
+            pass
 
     def _body(self) -> dict:
         n = int(self.headers.get("Content-Length") or 0)
         if n <= 0:
             return {}
-        return json.loads(self.rfile.read(n).decode("utf-8"))
+        return json.loads(self.rfile.read(n).decode("utf-8") or "{}")
+
+    def do_OPTIONS(self):
+        self._json(200, {"ok": True})
 
     def do_GET(self):
         if not _auth(self):
             return self._json(401, {"ok": False, "code": "UNAUTHORIZED"})
-        path = urlparse(self.path).path
-        if path == "/health":
+        u = urlparse(self.path)
+        q = parse_qs(u.query)
+        path = u.path.rstrip("/") or "/"
+        if path in ("/", "/health"):
             return self._json(200, {"ok": True, **machine()})
-        if path == "/screen":
-            return self._json(200, screenshot())
+        if path in ("/screen", "/dsos/screen"):
+            sc = float((q.get("scale") or ["0.45"])[0])
+            qa = int((q.get("q") or ["50"])[0])
+            p = screen_payload(sc, qa)
+            return self._json(200, p)
+        if path in ("/frame", "/dsos/frame"):
+            sc = float((q.get("scale") or q.get("s") or ["0.45"])[0])
+            if sc > 1:
+                sc = sc / 100.0
+            qa = int((q.get("q") or ["50"])[0])
+            p = screen_payload(sc, qa)
+            if not p.get("ok"):
+                return self._json(503, p)
+            return self._jpeg(base64.b64decode(p["b64"]))
+        if path in ("/guiready", "/dsos/guiready"):
+            return self._json(200, gui_ready())
+        if path in ("/janelas", "/dsos/janelas"):
+            return self._json(200, janelas())
         return self._json(404, {"ok": False, "code": "NOT_FOUND"})
 
     def do_POST(self):
         if not _auth(self):
             return self._json(401, {"ok": False, "code": "UNAUTHORIZED"})
-        path = urlparse(self.path).path
-        body = self._body()
+        path = urlparse(self.path).path.rstrip("/") or "/"
+        try:
+            body = self._body()
+        except Exception:
+            return self._json(400, {"ok": False, "err": "json invalido"})
         if path == "/autologon":
             return self._json(200, autologon(str(body.get("username", "")), str(body.get("password", ""))))
         if path == "/job":
             return self._json(200, run_job(str(body.get("kind", "")), body.get("args") or {}))
+        if path in ("/input", "/dsos/input"):
+            acts = body.get("acts") or body.get("eventos") or ([body] if (body.get("do") or body.get("t")) else [])
+            res = []
+            for a in acts[:40]:
+                res.append(do_input(a if isinstance(a, dict) else {}))
+            return self._json(200, {"ok": all(r.get("ok") for r in res) if res else False, "res": res})
+        if path in ("/app", "/abrir", "/dsos/abrir"):
+            r = abrir_app(str(body.get("nome") or body.get("app") or body.get("bin") or ""), body.get("caminho"))
+            return self._json(200 if r.get("ok") else 400, r)
         return self._json(404, {"ok": False, "code": "NOT_FOUND"})
 
 
@@ -369,7 +665,8 @@ def main() -> int:
         print("defina ARKHER_AGENT_TOKEN", file=sys.stderr)
         return 2
     httpd = ThreadingHTTPServer(("0.0.0.0", PORT), Handler)
-    print(f"ARKHER agent {PORT} host={platform.node()}", flush=True)
+    httpd.daemon_threads = True
+    print(f"ARKHER agent+DsOS {PORT} host={platform.node()} win={IS_WIN}", flush=True)
     httpd.serve_forever()
     return 0
 

@@ -155,7 +155,7 @@ def _segredos(user_id: str, vm_id: str) -> tuple[str, str, str]:
     return r["tailscale_ip"], _dec(r["password_enc"]), _dec(r["agent_token_enc"])
 
 
-def _agent(ip: str, token: str, method: str, path: str, body: dict | None = None, timeout: float = HEALTH_TIMEOUT) -> dict:
+def _req(ip: str, token: str, method: str, path: str, body: dict | None = None, timeout: float = HEALTH_TIMEOUT):
     if not ip_permitido(ip):
         raise WorkspaceError("BAD_IP", "IP não permitido.")
     url = f"http://{ip}:{AGENT_PORT}{path}"
@@ -166,15 +166,22 @@ def _agent(ip: str, token: str, method: str, path: str, body: dict | None = None
     if data is not None:
         req.add_header("Content-Type", "application/json")
     try:
-        with urllib.request.urlopen(req, timeout=timeout) as resp:
-            raw = resp.read().decode("utf-8", errors="replace")
-            return json.loads(raw) if raw else {}
+        return urllib.request.urlopen(req, timeout=timeout)
     except urllib.error.HTTPError as e:
         raise WorkspaceError("AGENT_HTTP", f"Agente respondeu HTTP {e.code}.") from e
     except urllib.error.URLError as e:
         raise WorkspaceError("AGENT_OFFLINE", f"Agente inacessível em {ip}:{AGENT_PORT} — {e.reason}.") from e
     except TimeoutError as e:
         raise WorkspaceError("AGENT_TIMEOUT", "O agente não respondeu a tempo.") from e
+
+
+def _agent(ip: str, token: str, method: str, path: str, body: dict | None = None, timeout: float = HEALTH_TIMEOUT) -> dict:
+    try:
+        with _req(ip, token, method, path, body, timeout) as resp:
+            raw = resp.read().decode("utf-8", errors="replace")
+            return json.loads(raw) if raw else {}
+    except json.JSONDecodeError as e:
+        raise WorkspaceError("AGENT_HTTP", "Agente não devolveu JSON.") from e
 
 
 def health(user_id: str, vm_id: str) -> dict:
@@ -237,11 +244,113 @@ def token_agente(user_id: str, vm_id: str) -> str:
     return token
 
 
-def screen(user_id: str, vm_id: str) -> dict:
+def _frame_b64(shot: dict) -> str:
+    """O agente antigo manda só `img` (data URL). O nosso manda `b64` e `img`."""
+    if not isinstance(shot, dict):
+        return ""
+    for k in ("b64", "img", "jpeg", "jpg", "png", "image", "image_b64", "data"):
+        v = shot.get(k)
+        if isinstance(v, str) and len(v) > 80:
+            if v.startswith("data:"):
+                v = v.split(",", 1)[-1]
+            return "".join(v.split())
+    inner = shot.get("result") or shot.get("screen") or {}
+    if isinstance(inner, dict):
+        return _frame_b64(inner)
+    return ""
+
+
+def screen(user_id: str, vm_id: str, scale: float = 0.45, quality: int = 50) -> dict:
     ip, _pw, token = _segredos(user_id, vm_id)
-    shot = _agent(ip, token, "GET", "/screen", timeout=8.0)
+    scale = max(0.15, min(1.0, float(scale or 0.45)))
+    quality = max(20, min(90, int(quality or 50)))
+    qs = f"/screen?scale={scale}&q={quality}"
+    try:
+        shot = _agent(ip, token, "GET", qs, timeout=14.0)
+    except WorkspaceError:
+        try:
+            shot = _agent(ip, token, "POST", "/job", {"kind": "screenshot", "args": {}}, timeout=14.0)
+        except WorkspaceError as e:
+            return {"ok": False, "b64": "", "message": e.message}
     db.execute(
         "UPDATE vms SET status = ?, last_seen = ? WHERE id = ? AND user_id = ?",
         ("online", _now(), vm_id, user_id),
     )
-    return shot
+    b64 = _frame_b64(shot if isinstance(shot, dict) else {})
+    if b64:
+        return {
+            "ok": True,
+            "b64": b64,
+            "mime": "image/jpeg",
+            "w": shot.get("w") if isinstance(shot, dict) else 0,
+            "h": shot.get("h") if isinstance(shot, dict) else 0,
+            "real_w": shot.get("real_w") if isinstance(shot, dict) else 0,
+            "real_h": shot.get("real_h") if isinstance(shot, dict) else 0,
+            "titulo": (shot.get("titulo") if isinstance(shot, dict) else "") or "",
+        }
+    msg = ""
+    if isinstance(shot, dict):
+        msg = str(shot.get("message") or shot.get("error") or shot.get("err") or "")
+    if not msg:
+        msg = (
+            "sem frame: o agente está online mas não capturou a tela. "
+            "Rode o agent.py DESTE repo DENTRO da sessão do Windows App (tela desbloqueada)."
+        )
+    return {"ok": False, "b64": "", "message": msg}
+
+
+def frame_jpeg(user_id: str, vm_id: str, scale: float = 0.45, quality: int = 50) -> tuple[bytes, dict]:
+    """JPEG cru (DsOS /frame). Se o agente antigo não tiver /frame, cai no /screen JSON."""
+    ip, _pw, token = _segredos(user_id, vm_id)
+    scale = max(0.15, min(1.0, float(scale or 0.45)))
+    quality = max(20, min(90, int(quality or 50)))
+    try:
+        with _req(ip, token, "GET", f"/frame?scale={scale}&q={quality}", timeout=14.0) as resp:
+            ctype = (resp.headers.get("Content-Type") or "").lower()
+            raw = resp.read()
+            if "jpeg" in ctype or (raw[:2] == b"\xff\xd8"):
+                meta = {
+                    "w": resp.headers.get("X-Arkher-W"),
+                    "h": resp.headers.get("X-Arkher-H"),
+                    "real_w": resp.headers.get("X-Arkher-Real-W"),
+                    "real_h": resp.headers.get("X-Arkher-Real-H"),
+                    "titulo": resp.headers.get("X-Arkher-Title") or "",
+                }
+                db.execute(
+                    "UPDATE vms SET status = ?, last_seen = ? WHERE id = ? AND user_id = ?",
+                    ("online", _now(), vm_id, user_id),
+                )
+                return raw, meta
+    except WorkspaceError:
+        pass
+    shot = screen(user_id, vm_id, scale, quality)
+    if not shot.get("b64"):
+        raise WorkspaceError("NO_FRAME", shot.get("message") or "sem frame")
+    return base64.b64decode(shot["b64"]), shot
+
+
+def input_acts(user_id: str, vm_id: str, acts: list) -> dict:
+    ip, _pw, token = _segredos(user_id, vm_id)
+    body = {"acts": [a for a in (acts or []) if isinstance(a, dict)][:40]}
+    try:
+        return _agent(ip, token, "POST", "/input", body, timeout=20.0)
+    except WorkspaceError:
+        # agente nosso antigo: job click/type um a um
+        out = []
+        for a in body["acts"][:8]:
+            d = (a.get("do") or a.get("t") or "").lower()
+            if d in ("click", "dblclick", "right"):
+                out.append(job(user_id, vm_id, "click", {"x": a.get("x", 0), "y": a.get("y", 0)}))
+            elif d in ("type", "text"):
+                out.append(job(user_id, vm_id, "type", {"text": a.get("text") or a.get("txt") or ""}))
+            else:
+                out.append({"ok": False, "err": "agente sem /input para " + d})
+        return {"ok": all(x.get("ok") for x in out) if out else False, "res": out}
+
+
+def guiready(user_id: str, vm_id: str) -> dict:
+    ip, _pw, token = _segredos(user_id, vm_id)
+    try:
+        return _agent(ip, token, "GET", "/guiready", timeout=10.0)
+    except WorkspaceError as e:
+        return {"ok": False, "nota": e.message}

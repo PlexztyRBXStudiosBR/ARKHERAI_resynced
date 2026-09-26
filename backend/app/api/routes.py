@@ -4,8 +4,8 @@ from __future__ import annotations
 import platform
 import time
 
-from fastapi import APIRouter, Body, HTTPException, Request
-from fastapi.responses import PlainTextResponse, StreamingResponse
+from fastapi import APIRouter, Body, HTTPException, Query, Request
+from fastapi.responses import PlainTextResponse, Response, StreamingResponse
 from pathlib import Path
 from pydantic import BaseModel, Field
 
@@ -559,12 +559,58 @@ def workspace_agent_src(user: dict = auth.CurrentUser):
 
 
 @router.get("/api/workspace/{vid}/screen")
-def workspace_screen(vid: str, user: dict = auth.CurrentUser):
+def workspace_screen(
+    vid: str,
+    user: dict = auth.CurrentUser,
+    scale: float = Query(default=0.45, ge=0.15, le=1.0),
+    q: int = Query(default=50, ge=20, le=90),
+):
     try:
-        return {"ok": True, **workspace_service.screen(user["id"], vid)}
+        shot = workspace_service.screen(user["id"], vid, scale, q)
+        return {**shot, "ok": shot.get("ok", False)}
     except workspace_service.WorkspaceError as e:
         status = 404 if e.code == "NOT_FOUND" else 502
         raise HTTPException(status_code=status, detail={"ok": False, "code": e.code, "message": e.message})
+
+
+@router.get("/api/workspace/{vid}/frame")
+def workspace_frame(
+    vid: str,
+    user: dict = auth.CurrentUser,
+    scale: float = Query(default=0.45, ge=0.15, le=1.0),
+    q: int = Query(default=50, ge=20, le=90),
+):
+    try:
+        raw, meta = workspace_service.frame_jpeg(user["id"], vid, scale, q)
+    except workspace_service.WorkspaceError as e:
+        status = 404 if e.code == "NOT_FOUND" else 503
+        raise HTTPException(status_code=status, detail={"ok": False, "code": e.code, "message": e.message})
+    headers = {"Cache-Control": "no-store"}
+    if meta.get("real_w"):
+        headers["X-Arkher-Real-W"] = str(meta.get("real_w") or "")
+        headers["X-Arkher-Real-H"] = str(meta.get("real_h") or "")
+        headers["X-Arkher-Title"] = str(meta.get("titulo") or "")[:180]
+    return Response(content=raw, media_type="image/jpeg", headers=headers)
+
+
+class VmInputIn(BaseModel):
+    acts: list = Field(default_factory=list)
+
+
+@router.post("/api/workspace/{vid}/input")
+def workspace_input(vid: str, body: VmInputIn, user: dict = auth.CurrentUser):
+    try:
+        return workspace_service.input_acts(user["id"], vid, body.acts)
+    except workspace_service.WorkspaceError as e:
+        status = 404 if e.code == "NOT_FOUND" else 502
+        raise HTTPException(status_code=status, detail={"ok": False, "code": e.code, "message": e.message})
+
+
+@router.get("/api/workspace/{vid}/guiready")
+def workspace_guiready(vid: str, user: dict = auth.CurrentUser):
+    if workspace_service.obter(user["id"], vid) is None:
+        raise HTTPException(status_code=404, detail={"ok": False, "code": "NOT_FOUND", "message": "PC virtual não encontrado."})
+    return workspace_service.guiready(user["id"], vid)
 
 
 class PilotIn(BaseModel):
