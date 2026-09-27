@@ -1,5 +1,6 @@
 from backend.app.acervo.convert import categoria, ingerir, pastas
 from backend.app.workspace.service import _frame_b64, ip_permitido
+from backend.app.workspace.usuario import usuario_sessao
 
 
 def test_frame_b64_agente_antigo_so_img():
@@ -11,6 +12,15 @@ def test_frame_b64_agente_antigo_so_img():
 def test_frame_b64_nosso_b64():
     raw = "C" * 120
     assert _frame_b64({"ok": True, "b64": raw, "img": "data:image/jpeg;base64," + raw}) == raw
+
+
+def test_usuario_sessao_e_nexus_nunca_runneradmin(monkeypatch):
+    monkeypatch.delenv("ARKHER_WIN_USER", raising=False)
+    monkeypatch.setenv("USERNAME", "runneradmin")
+    monkeypatch.setenv("USER", "runneradmin")
+    assert usuario_sessao() == "nexus"
+    monkeypatch.setenv("ARKHER_WIN_USER", "nexus")
+    assert usuario_sessao() == "nexus"
 
 
 def test_ip_permitido_tailscale_e_lan():

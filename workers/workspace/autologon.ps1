@@ -1,7 +1,7 @@
 # Auto-logon Windows da VM ARKHER. Rode como Administrador UMA vez.
-# Uso: .\autologon.ps1 -User "seuuser" -Password "..."
+# Uso: .\autologon.ps1 -Password "..."   (user padrao: nexus)
 param(
-  [Parameter(Mandatory=$true)][string]$User,
+  [string]$User = "nexus",
   [Parameter(Mandatory=$true)][string]$Password
 )
 $ErrorActionPreference = "Stop"

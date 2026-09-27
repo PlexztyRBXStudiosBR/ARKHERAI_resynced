@@ -24,13 +24,29 @@ from pathlib import Path
 from urllib.parse import parse_qs, urlparse
 
 PORT = int(os.environ.get("ARKHER_AGENT_PORT") or os.environ.get("DSOS_PORT") or "8765")
+NEXUS_HOME = Path(r"C:\Users\nexus")
+
+
+def usuario_sessao() -> str:
+    forced = (os.environ.get("ARKHER_WIN_USER") or "").strip()
+    if forced and forced.lower() not in ("runneradmin", "runnervm99s1a"):
+        return forced[:80]
+    return "nexus"
+
+
+def home_sessao() -> Path:
+    if os.environ.get("ARKHER_STATE"):
+        return Path(os.environ["ARKHER_STATE"]).parent if Path(os.environ["ARKHER_STATE"]).name == "arkher_state" else Path(os.environ["ARKHER_STATE"])
+    if NEXUS_HOME.is_dir():
+        return NEXUS_HOME
+    return Path.home()
 
 
 def agent_token() -> str:
     t = (os.environ.get("ARKHER_AGENT_TOKEN") or "").strip()
     if t:
         return t
-    for p in (STATE / "agent.token", Path.home() / "arkher_state" / "agent.token"):
+    for p in (STATE / "agent.token", NEXUS_HOME / "arkher_state" / "agent.token", Path.home() / "arkher_state" / "agent.token"):
         try:
             v = p.read_text(encoding="utf-8").strip()
             if v:
@@ -38,7 +54,9 @@ def agent_token() -> str:
         except OSError:
             continue
     return ""
-STATE = Path(os.environ.get("ARKHER_STATE") or Path.home() / "arkher_state")
+
+
+STATE = Path(os.environ.get("ARKHER_STATE") or (home_sessao() / "arkher_state"))
 WORK = STATE / "work"
 WORK.mkdir(parents=True, exist_ok=True)
 IS_WIN = platform.system() == "Windows"
@@ -388,6 +406,7 @@ def _ts_ip() -> str:
 def machine() -> dict:
     return {
         "host": platform.node(),
+        "user": usuario_sessao(),
         "os": "windows" if IS_WIN else platform.system().lower(),
         "sistema": platform.system(),
         "python": platform.python_version(),
@@ -411,7 +430,7 @@ Set-ItemProperty 'HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Winlogon' -
 Write-Output 'ARKHER_AUTOLOGON_OK'
 """
     env = os.environ.copy()
-    env["ARKHER_AUTO_USER"] = username
+    env["ARKHER_AUTO_USER"] = (username or usuario_sessao())[:80]
     env["ARKHER_AUTO_PASS"] = password
     try:
         r = subprocess.run(
@@ -522,6 +541,19 @@ def convert_rbx(src: str, dest: str | None = None) -> dict:
     return {"ok": False, "message": py_err or "conversor falhou no binário"}
 
 
+def studio_places_job(root: str = "") -> dict:
+    here = Path(__file__).resolve()
+    repo = here.parents[2] if len(here.parents) >= 2 else here.parent
+    script = repo / "tools" / "studio_places.py"
+    if not script.is_file():
+        return {"ok": False, "message": "tools/studio_places.py ausente"}
+    cmd = [sys.executable, str(script)]
+    if root:
+        cmd.append(root)
+    r = subprocess.run(cmd, capture_output=True, text=True, timeout=900)
+    return {"ok": r.returncode == 0, "out": (r.stdout or "")[-2000:], "err": (r.stderr or "")[-1000:]}
+
+
 def import_place(path: str) -> dict:
     p = Path(path)
     if not p.is_file():
@@ -590,6 +622,8 @@ def run_job(kind: str, args: dict) -> dict:
         return convert_rbx(str(args.get("src", "")), args.get("dest"))
     if kind == "import_place":
         return import_place(str(args.get("path", "")))
+    if kind == "studio_places":
+        return studio_places_job(str(args.get("root") or ""))
     if kind == "blender_script":
         return blender_script(str(args.get("conteudo", "")), str(args.get("nome", "arkher.py")))
     if kind == "sync_file":

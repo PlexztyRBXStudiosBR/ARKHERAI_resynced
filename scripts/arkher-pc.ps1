@@ -8,11 +8,20 @@ param(
   [switch]$Tarefa
 )
 $ErrorActionPreference = "Continue"
+$WinUser = "nexus"
+$WinHome = "C:\Users\nexus"
+if (-not (Test-Path $WinHome)) { $WinHome = $env:USERPROFILE }
+$env:ARKHER_WIN_USER = $WinUser
+$env:USERPROFILE = $WinHome
 $Root = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
+if (Test-Path (Join-Path $WinHome "ARKHERAI_resynced")) {
+  $Root = Join-Path $WinHome "ARKHERAI_resynced"
+}
 $Py = Join-Path $Root ".venv\Scripts\python.exe"
 if (-not (Test-Path $Py)) { $Py = (Get-Command python -ErrorAction SilentlyContinue).Source }
 if (-not $Py) { throw "python/.venv nao encontrado em $Root" }
-$TokenDir = Join-Path $env:USERPROFILE "arkher_state"
+$TokenDir = Join-Path $WinHome "arkher_state"
+$env:ARKHER_STATE = $TokenDir
 New-Item -ItemType Directory -Force $TokenDir | Out-Null
 $TokenFile = Join-Path $TokenDir "agent.token"
 if (-not (Test-Path $TokenFile) -or -not (Get-Content $TokenFile -ErrorAction SilentlyContinue)) {
@@ -76,8 +85,11 @@ function Start-Arkher {
 if ($Tarefa) {
   $script = Join-Path $PSScriptRoot "arkher-pc.ps1"
   $act = "powershell.exe -WindowStyle Hidden -ExecutionPolicy Bypass -File `"$script`" -Ligar"
-  schtasks /Create /TN "ARKHER-PC" /TR $act /SC ONLOGON /RL LIMITED /F | Out-Host
-  Write-Host "Tarefa ARKHER-PC no logon. Proximo login sobe sozinho."
+  schtasks /Create /TN "ARKHER-PC" /TR $act /SC ONLOGON /RU $WinUser /IT /F 2>$null | Out-Host
+  if ($LASTEXITCODE -ne 0) {
+    schtasks /Create /TN "ARKHER-PC" /TR $act /SC ONLOGON /F | Out-Host
+  }
+  Write-Host "Tarefa ARKHER-PC no logon de $WinUser (nao runneradmin)."
   Start-Arkher
   return
 }

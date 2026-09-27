@@ -265,6 +265,7 @@ function formAdd(ctx: Ctx, after: () => void): HTMLElement {
   name.value = "PC virtual";
   const ip = el("input", { class: "input", placeholder: t("workspace_ip", lang), maxlength: "45" }) as HTMLInputElement;
   const user = el("input", { class: "input", placeholder: t("workspace_user", lang), maxlength: "80" }) as HTMLInputElement;
+  user.value = "nexus";
   const pass = el("input", { class: "input", type: "password", placeholder: t("workspace_pass", lang), maxlength: "200" }) as HTMLInputElement;
   const add = el("button", { class: "pri" }, t("workspace_add", lang));
   add.onclick = async () => {

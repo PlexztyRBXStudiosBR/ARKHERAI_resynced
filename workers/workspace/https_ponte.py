@@ -22,7 +22,10 @@ HOP = {"connection", "keep-alive", "proxy-authenticate", "proxy-authorization", 
 
 
 def cert_paths() -> tuple[Path, Path]:
-    d = Path(os.environ.get("ARKHER_STATE", str(Path.home() / "arkher_state")))
+    d = Path(os.environ.get("ARKHER_STATE") or "")
+    if not d:
+        nexus = Path(r"C:\Users\nexus") / "arkher_state"
+        d = nexus if nexus.is_dir() or (nexus.parent.is_dir()) else Path.home() / "arkher_state"
     crt = Path(os.environ.get("ARKHER_TLS_CRT", str(d / f"{HOST}.crt")))
     key = Path(os.environ.get("ARKHER_TLS_KEY", str(d / f"{HOST}.key")))
     return crt, key
