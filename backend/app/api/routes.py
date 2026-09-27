@@ -511,6 +511,37 @@ def workspace_list(user: dict = auth.CurrentUser):
     return {"ok": True, "vms": workspace_service.listar(user["id"])}
 
 
+@router.get("/api/ponte")
+def ponte_status(user: dict = auth.CurrentUser):
+    return workspace_service.ponte()
+
+
+class VmAutoIn(BaseModel):
+    username: str = Field(default="", max_length=80)
+    password: str = Field(default="", max_length=200)
+
+
+@router.post("/api/workspace/auto")
+def workspace_auto(body: VmAutoIn = VmAutoIn(), user: dict = auth.CurrentUser):
+    try:
+        return workspace_service.auto_este_pc(user["id"], body.username, body.password)
+    except workspace_service.WorkspaceError as e:
+        raise HTTPException(status_code=400, detail={"ok": False, "code": e.code, "message": e.message})
+
+
+class VmDetectIn(BaseModel):
+    repo: str = Field(default="", max_length=120)
+
+
+@router.post("/api/workspace/detect-github")
+def workspace_detect(body: VmDetectIn = VmDetectIn(), user: dict = auth.CurrentUser):
+    try:
+        return workspace_service.detect_github(user["id"], body.repo)
+    except workspace_service.WorkspaceError as e:
+        status = 400 if e.code in ("NO_GITHUB", "NO_RUN", "NO_IP", "BAD_IP", "BAD_PASSWORD") else 502
+        raise HTTPException(status_code=status, detail={"ok": False, "code": e.code, "message": e.message})
+
+
 @router.post("/api/workspace")
 def workspace_create(body: VmIn, user: dict = auth.CurrentUser):
     try:

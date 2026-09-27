@@ -61,6 +61,9 @@ export async function boot(container: HTMLElement): Promise<void> {
 
   applyTheme(store);
   renderShell(container, ctx);
+  if (typeof location !== "undefined" && location.hostname.endsWith("vercel.app") && !base()) {
+    toast("Vercel não é o backend. Config → cole https://SEU-PC.ts.net (Tailscale Serve). Sem isso o celular não vê a tela.");
+  }
 
   // identidade de dispositivo (auth própria, modo local)
   try {

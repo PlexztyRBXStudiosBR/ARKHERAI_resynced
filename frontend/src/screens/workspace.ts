@@ -37,7 +37,7 @@ export function renderWorkspace(ctx: Ctx): HTMLElement {
   const screen = el("div", { class: "ws-screen" });
   const img = el("img", { alt: "tela da VM", class: "ws-frame" }) as HTMLImageElement;
   img.draggable = false;
-  const placeholder = el("p", { class: "dim ws-ph" }, "Windows App → cadastre o IP 100.x → Tela ao vivo. Toque na tela. HUD pra dirigir o Studio/Blender sem a IA.");
+  const placeholder = el("p", { class: "dim ws-ph" }, "Este PC / Detectar VM → Tela ao vivo. No celular use o site da Vercel com o backend HTTPS do PC (Config).");
   const hud = makeHud(ctx, () => selectedId);
   screen.append(placeholder, hud);
   desk.append(bar, screen);
@@ -347,7 +347,31 @@ function formAdd(ctx: Ctx, after: () => void): HTMLElement {
     const src = await ctx.api.getRaw("/api/workspace/agent.py");
     ctx.download("arkher_agent.py", src);
   };
-  box.append(name, ip, user, pass, el("div", { class: "row" }, add, ping, auto, dl));
+  const este = el("button", { class: "pri" }, "Este PC");
+  este.onclick = async () => {
+    try {
+      const r = await ctx.api.workspaceAuto();
+      selectedId = r.vm.id;
+      if (r.vm.agent_token) toast("Token do agente (uma vez): " + r.vm.agent_token);
+      toast(r.reuso ? "PC já cadastrado" : "Este PC ligado");
+      after();
+    } catch (e) {
+      toast((e as { message?: string }).message ?? "erro");
+    }
+  };
+  const det = el("button", {}, "Detectar VM");
+  det.onclick = async () => {
+    try {
+      const r = await ctx.api.workspaceDetectGithub("");
+      selectedId = r.vm.id;
+      if (r.vm.agent_token) toast("Token do agente (uma vez): " + r.vm.agent_token);
+      toast("VM " + (r.ip || "") + " — rode o agente nela com o token");
+      after();
+    } catch (e) {
+      toast((e as { message?: string }).message ?? "erro");
+    }
+  };
+  box.append(name, ip, user, pass, el("div", { class: "row" }, este, det, add, ping, auto, dl));
   return box;
 }
 

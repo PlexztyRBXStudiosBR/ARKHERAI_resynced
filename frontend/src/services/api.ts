@@ -98,6 +98,10 @@ export function makeApi(baseUrl: () => string, token: () => string | null) {
     workspaceCreate: (body: { name: string; tailscale_ip: string; username: string; password: string }) =>
       http<{ vm: Vm }>("POST", "/api/workspace", body),
     workspaceDelete: (id: string) => http<{ ok: boolean }>("DELETE", `/api/workspace/${id}`),
+    ponte: () => http<{ ok: boolean; tailscale_ip?: string; agente_local?: boolean; backend?: string; nota?: string }>("GET", "/api/ponte", undefined, 8000),
+    workspaceAuto: () => http<{ ok: boolean; vm: Vm; health?: unknown; reuso?: boolean }>("POST", "/api/workspace/auto", {}),
+    workspaceDetectGithub: (repo = "") =>
+      http<{ ok: boolean; vm: Vm; ip?: string; run?: string; aviso?: string }>("POST", "/api/workspace/detect-github", { repo }, 45000),
     workspaceHealth: (id: string) => http<{ ok: boolean; status: string; message?: string; agente?: unknown }>("GET", `/api/workspace/${id}/health`, undefined, 8000),
     workspaceAutologon: (id: string) => http<{ ok: boolean }>("POST", `/api/workspace/${id}/autologon`, {}),
     workspaceJob: (id: string, kind: string, args: Record<string, unknown> = {}) =>

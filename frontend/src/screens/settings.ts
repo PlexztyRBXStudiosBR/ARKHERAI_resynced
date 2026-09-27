@@ -56,8 +56,18 @@ export function renderSettings(ctx: Ctx): HTMLElement {
   grid.append(safeToggle);
 
   // backend
-  const backend = el("input", { class: "input", value: s.settings.backendBase, placeholder: "https://backend.arkher.exemplo (vazio = mesmo servidor)" });
-  backend.addEventListener("change", () => ctx.store.updateSettings({ backendBase: backend.value.trim() }));
+  const backend = el("input", {
+    class: "input",
+    value: s.settings.backendBase,
+    placeholder: "https://seu-pc.tailXXXX.ts.net  (vazio só funciona se o site e a API forem o mesmo host)",
+  }) as HTMLInputElement;
+  backend.addEventListener("change", () => {
+    const v = backend.value.trim().replace(/\/$/, "");
+    if (typeof location !== "undefined" && location.protocol === "https:" && v.startsWith("http://")) {
+      toast("Vercel é HTTPS: cole a URL https://….ts.net do Tailscale Serve, não http://100.x");
+    }
+    ctx.store.updateSettings({ backendBase: v });
+  });
   grid.append(field(t("settings_backend", lang), backend));
 
   root.append(grid);
