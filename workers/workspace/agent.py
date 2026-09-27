@@ -24,13 +24,29 @@ from pathlib import Path
 from urllib.parse import parse_qs, urlparse
 
 PORT = int(os.environ.get("ARKHER_AGENT_PORT") or os.environ.get("DSOS_PORT") or "8765")
+NEXUS_HOME = Path(r"C:\Users\nexus")
+
+
+def usuario_sessao() -> str:
+    forced = (os.environ.get("ARKHER_WIN_USER") or "").strip()
+    if forced and forced.lower() not in ("runneradmin", "runnervm99s1a"):
+        return forced[:80]
+    return "nexus"
+
+
+def home_sessao() -> Path:
+    if os.environ.get("ARKHER_STATE"):
+        return Path(os.environ["ARKHER_STATE"]).parent if Path(os.environ["ARKHER_STATE"]).name == "arkher_state" else Path(os.environ["ARKHER_STATE"])
+    if NEXUS_HOME.is_dir():
+        return NEXUS_HOME
+    return Path.home()
 
 
 def agent_token() -> str:
     t = (os.environ.get("ARKHER_AGENT_TOKEN") or "").strip()
     if t:
         return t
-    for p in (STATE / "agent.token", Path.home() / "arkher_state" / "agent.token"):
+    for p in (STATE / "agent.token", NEXUS_HOME / "arkher_state" / "agent.token", Path.home() / "arkher_state" / "agent.token"):
         try:
             v = p.read_text(encoding="utf-8").strip()
             if v:
@@ -38,7 +54,9 @@ def agent_token() -> str:
         except OSError:
             continue
     return ""
-STATE = Path(os.environ.get("ARKHER_STATE") or Path.home() / "arkher_state")
+
+
+STATE = Path(os.environ.get("ARKHER_STATE") or (home_sessao() / "arkher_state"))
 WORK = STATE / "work"
 WORK.mkdir(parents=True, exist_ok=True)
 IS_WIN = platform.system() == "Windows"
@@ -388,6 +406,7 @@ def _ts_ip() -> str:
 def machine() -> dict:
     return {
         "host": platform.node(),
+        "user": usuario_sessao(),
         "os": "windows" if IS_WIN else platform.system().lower(),
         "sistema": platform.system(),
         "python": platform.python_version(),
@@ -411,7 +430,7 @@ Set-ItemProperty 'HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Winlogon' -
 Write-Output 'ARKHER_AUTOLOGON_OK'
 """
     env = os.environ.copy()
-    env["ARKHER_AUTO_USER"] = username
+    env["ARKHER_AUTO_USER"] = (username or usuario_sessao())[:80]
     env["ARKHER_AUTO_PASS"] = password
     try:
         r = subprocess.run(

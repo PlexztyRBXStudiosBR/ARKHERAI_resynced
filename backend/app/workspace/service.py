@@ -18,6 +18,7 @@ from datetime import datetime, timezone
 
 from backend.app import config
 from backend.app.storage import db
+from backend.app.workspace.usuario import estado_dir, usuario_sessao
 
 AGENT_PORT = int(os.environ.get("ARKHER_AGENT_PORT", "8765"))
 HEALTH_TIMEOUT = 4.0
@@ -244,6 +245,8 @@ def _token_paths() -> list:
     from pathlib import Path
 
     return [
+        estado_dir() / "agent.token",
+        Path(r"C:\Users\nexus") / "arkher_state" / "agent.token",
         Path.home() / "arkher_state" / "agent.token",
         config.DATA_DIR / "agent.token",
     ]
@@ -343,7 +346,7 @@ def auto_este_pc(user_id: str, username: str = "", password: str = "") -> dict:
         user_id,
         "Este PC",
         "127.0.0.1",
-        (username or os.environ.get("USERNAME") or os.environ.get("USER") or "user")[:80],
+        (username or usuario_sessao())[:80],
         password or "local",
     )
     h = health(user_id, vm["id"])
@@ -395,7 +398,7 @@ def detect_github(user_id: str, repo: str = "") -> dict:
         user_id,
         f"VM {repo.split('/')[-1]}",
         achado["ip"],
-        achado.get("usuario") or "runneradmin",
+        usuario_sessao(),
         achado.get("senha") or "vm",
     )
     return {
