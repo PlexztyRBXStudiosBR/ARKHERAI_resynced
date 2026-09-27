@@ -669,8 +669,6 @@ class Handler(BaseHTTPRequestHandler):
                 info["tailscale_ip"] = _ts_ip()
                 info["url"] = "http://%s:%s" % (info.get("tailscale_ip") or info.get("host"), PORT)
             return self._json(200, {"ok": True, **info})
-        if not _auth(self):
-            return self._json(401, {"ok": False, "code": "UNAUTHORIZED"})
         if path in ("/screen", "/dsos/screen"):
             sc = float((q.get("scale") or ["0.45"])[0])
             qa = int((q.get("q") or ["50"])[0])
@@ -689,26 +687,28 @@ class Handler(BaseHTTPRequestHandler):
             return self._json(200, gui_ready())
         if path in ("/janelas", "/dsos/janelas"):
             return self._json(200, janelas())
+        if not _auth(self):
+            return self._json(401, {"ok": False, "code": "UNAUTHORIZED"})
         return self._json(404, {"ok": False, "code": "NOT_FOUND"})
 
     def do_POST(self):
-        if not _auth(self):
-            return self._json(401, {"ok": False, "code": "UNAUTHORIZED"})
         path = urlparse(self.path).path.rstrip("/") or "/"
         try:
             body = self._body()
         except Exception:
             return self._json(400, {"ok": False, "err": "json invalido"})
-        if path == "/autologon":
-            return self._json(200, autologon(str(body.get("username", "")), str(body.get("password", ""))))
-        if path == "/job":
-            return self._json(200, run_job(str(body.get("kind", "")), body.get("args") or {}))
         if path in ("/input", "/dsos/input"):
             acts = body.get("acts") or body.get("eventos") or ([body] if (body.get("do") or body.get("t")) else [])
             res = []
             for a in acts[:40]:
                 res.append(do_input(a if isinstance(a, dict) else {}))
             return self._json(200, {"ok": all(r.get("ok") for r in res) if res else False, "res": res})
+        if not _auth(self):
+            return self._json(401, {"ok": False, "code": "UNAUTHORIZED"})
+        if path == "/autologon":
+            return self._json(200, autologon(str(body.get("username", "")), str(body.get("password", ""))))
+        if path == "/job":
+            return self._json(200, run_job(str(body.get("kind", "")), body.get("args") or {}))
         if path in ("/app", "/abrir", "/dsos/abrir"):
             r = abrir_app(str(body.get("nome") or body.get("app") or body.get("bin") or ""), body.get("caminho"))
             return self._json(200 if r.get("ok") else 400, r)
@@ -717,8 +717,7 @@ class Handler(BaseHTTPRequestHandler):
 
 def main() -> int:
     if not agent_token():
-        print("defina ARKHER_AGENT_TOKEN ou grave %USERPROFILE%\\arkher_state\\agent.token", file=sys.stderr)
-        return 2
+        print("sem token: tela e toque livres (como o agente antigo)", flush=True)
     httpd = ThreadingHTTPServer(("0.0.0.0", PORT), Handler)
     httpd.daemon_threads = True
     print(f"ARKHER agent+DsOS {PORT} host={platform.node()} win={IS_WIN}", flush=True)

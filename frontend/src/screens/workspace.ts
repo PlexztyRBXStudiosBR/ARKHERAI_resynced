@@ -5,6 +5,7 @@ import { confirmDialog, el, toast } from "../components/ui";
 import { icon } from "../components/icons";
 import { t } from "../services/i18n";
 import { renderMarkdown } from "../app/md";
+import { acharAgente, mandarInput } from "../services/ponte";
 import type { Vm } from "../services/api";
 import type { Ctx } from "../app/app";
 
@@ -37,7 +38,7 @@ export function renderWorkspace(ctx: Ctx): HTMLElement {
   const screen = el("div", { class: "ws-screen" });
   const img = el("img", { alt: "tela da VM", class: "ws-frame" }) as HTMLImageElement;
   img.draggable = false;
-  const placeholder = el("p", { class: "dim ws-ph" }, "Este PC / Detectar VM → Tela ao vivo. No celular use o site da Vercel com o backend HTTPS do PC (Config).");
+  const placeholder = el("p", { class: "dim ws-ph" }, "Tela do PC (agente :8765). Toque curto = clique.");
   const hud = makeHud(ctx, () => selectedId);
   screen.append(placeholder, hud);
   desk.append(bar, screen);
@@ -71,11 +72,7 @@ export function renderWorkspace(ctx: Ctx): HTMLElement {
   };
 
   liveBtn.onclick = () => {
-    if (!selectedId) {
-      toast("Cadastre um PC");
-      return;
-    }
-    startLive(ctx, selectedId, img, screen, placeholder, titleEl);
+    startLive(img, screen, placeholder, titleEl);
   };
 
   driveBtn.onclick = () => {
@@ -86,12 +83,13 @@ export function renderWorkspace(ctx: Ctx): HTMLElement {
     toast(drive ? "você dirige — toque e HUD. A IA não clica." : "HUD off — piloto no chat ao lado");
   };
 
-  bindTouch(ctx, img, () => selectedId);
+  bindTouch(img);
 
   addBtn.onclick = () => setup.classList.toggle("on");
 
   side.append(pilotChat(ctx, () => selectedId));
   void refreshVms();
+  startLive(img, screen, placeholder, titleEl);
   return root;
 }
 
@@ -106,30 +104,22 @@ function imgToReal(img: HTMLImageElement, clientX: number, clientY: number): { x
   return { x: Math.round(nx * rw), y: Math.round(ny * rh) };
 }
 
-function bindTouch(ctx: Ctx, img: HTMLImageElement, vmId: () => string | null): void {
+function bindTouch(img: HTMLImageElement): void {
   let t0 = 0;
   let sx = 0;
   let sy = 0;
   let px = 0;
   let py = 0;
   let dragging = false;
-  let fingers = 0;
 
-  const send = async (acts: Record<string, unknown>[]) => {
-    const id = vmId();
-    if (!id || !acts.length) return;
-    try {
-      await ctx.api.workspaceInput(id, acts);
-    } catch (e) {
-      toast((e as { message?: string }).message ?? "toque falhou");
-    }
+  const send = (acts: Record<string, unknown>[]) => {
+    mandarInput(acts);
   };
 
   img.addEventListener("pointerdown", (ev) => {
     if (!img.src) return;
     const p = imgToReal(img, ev.clientX, ev.clientY);
     if (!p) return;
-    fingers += 1;
     t0 = Date.now();
     sx = p.x;
     sy = p.y;
@@ -151,19 +141,17 @@ function bindTouch(ctx: Ctx, img: HTMLImageElement, vmId: () => string | null): 
     if (!t0) return;
     const dt = Date.now() - t0;
     t0 = 0;
-    fingers = Math.max(0, fingers - 1);
     if (dragging) {
       void send([{ do: "drag", x: sx, y: sy, x2: px, y2: py }]);
     } else if (dt > 520) {
       void send([{ do: "right", x: sx, y: sy }]);
-    } else if (dt < 280) {
+    } else if (dt < 400) {
       void send([{ do: "click", x: sx, y: sy }]);
     }
     ev.preventDefault();
   });
   img.addEventListener("pointercancel", () => {
     t0 = 0;
-    fingers = 0;
   });
   img.addEventListener("wheel", (ev) => {
     const p = imgToReal(img, ev.clientX, ev.clientY);
@@ -180,8 +168,6 @@ function bindTouch(ctx: Ctx, img: HTMLImageElement, vmId: () => string | null): 
 }
 
 function startLive(
-  ctx: Ctx,
-  vmId: string,
   img: HTMLImageElement,
   screen: HTMLElement,
   ph: HTMLElement,
@@ -189,58 +175,37 @@ function startLive(
 ): void {
   const my = ++liveGen;
   let busy = false;
-  void (async () => {
-    try {
-      const g = await ctx.api.workspaceGuiReady(vmId);
-      if (!g.ok) ph.textContent = g.nota || g.err || "sem sessão gráfica (Windows App desbloqueado + agente nesta sessão)";
-    } catch {
-      /* health do print basta */
-    }
-  })();
   const tick = async () => {
     if (my !== liveGen) return;
     if (busy) {
-      if (my === liveGen) setTimeout(tick, 900);
+      if (my === liveGen) setTimeout(tick, 200);
       return;
     }
     busy = true;
     try {
-      let blob: Blob | null = null;
-      try {
-        const f = await ctx.api.workspaceFrame(vmId, 0.45, 48);
-        blob = f.blob;
-        if (f.realW) geo.realW = f.realW;
-        if (f.realH) geo.realH = f.realH;
-        if (f.titulo) titleEl.textContent = f.titulo;
-      } catch {
-        const s = await ctx.api.workspaceScreen(vmId, 0.45, 48);
-        const b64 = s.b64 || (s.img && s.img.includes(",") ? s.img.split(",")[1] : "") || "";
-        if (b64) {
-          const bin = atob(b64);
-          const arr = new Uint8Array(bin.length);
-          for (let i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
-          blob = new Blob([arr], { type: "image/jpeg" });
-        }
-        if (s.real_w) geo.realW = Number(s.real_w);
-        if (s.real_h) geo.realH = Number(s.real_h);
-        if (s.titulo) titleEl.textContent = s.titulo;
-        if (!b64) ph.textContent = s.message ?? "sem frame";
-      }
+      const base = await acharAgente();
+      const r = await fetch(`${base}/frame?scale=0.4&q=42`);
+      if (!r.ok) throw new Error("sem frame");
+      const blob = await r.blob();
+      const rw = Number(r.headers.get("X-Arkher-Real-W") || 0);
+      const rh = Number(r.headers.get("X-Arkher-Real-H") || 0);
+      const tit = r.headers.get("X-Arkher-Title") || "";
+      if (rw) geo.realW = rw;
+      if (rh) geo.realH = rh;
+      if (tit) titleEl.textContent = tit;
       if (blob && blob.size > 80) {
         if (lastUrl) URL.revokeObjectURL(lastUrl);
         lastUrl = URL.createObjectURL(blob);
         img.src = lastUrl;
         if (!img.isConnected) screen.append(img);
         ph.remove();
-      } else if (!ph.isConnected) {
-        screen.append(ph);
       }
     } catch (e) {
       ph.textContent = (e as { message?: string }).message ?? "agente offline";
       if (!ph.isConnected) screen.append(ph);
     }
     busy = false;
-    if (my === liveGen) setTimeout(tick, 2200);
+    if (my === liveGen) setTimeout(tick, 700);
   };
   void tick();
 }
@@ -248,9 +213,7 @@ function startLive(
 function makeHud(ctx: Ctx, vmId: () => string | null): HTMLElement {
   const hud = el("div", { class: "ws-hud" });
   const send = (acts: Record<string, unknown>[]) => {
-    const id = vmId();
-    if (!id) return;
-    void ctx.api.workspaceInput(id, acts).catch((e) => toast((e as { message?: string }).message ?? "hud"));
+    mandarInput(acts);
   };
   const key = (label: string, k: string) => {
     const b = el("button", { type: "button", class: "ws-hk" }, label);
