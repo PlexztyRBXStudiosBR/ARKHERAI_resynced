@@ -308,7 +308,8 @@ a { color: var(--acc); }
 
 .integ-cat { grid-column: 1 / -1; margin: 8px 0 0; font-size: 13px; letter-spacing: .08em; text-transform: uppercase; }
 .vm-list { display: flex; flex-direction: column; gap: 10px; margin-top: 14px; }
-.tex-preview { display: block; max-width: 220px; border-radius: 8px; margin-top: 8px; image-rendering: pixelated; border: 1px solid var(--line); }
+.tex-preview { display: block; max-width: 220px; border-radius: 0; margin-top: 8px; image-rendering: pixelated; border: 1px solid var(--line); }
+.tex-preview.tex-full { max-width: min(100%, 640px); image-rendering: auto; }
 .tabs .tab .lab { pointer-events: none; }
 
 .ws-cockpit { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(280px, 0.7fr); }
@@ -320,11 +321,18 @@ a { color: var(--acc); }
 .ws-win { font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 28vw; }
 .ws-hud {
   display: none; position: absolute; right: 8px; bottom: 8px; z-index: 3;
-  background: var(--panel); border: 1px solid var(--line); padding: 8px; width: min(240px, 92vw);
+  background: var(--panel); border: 1px solid var(--line); padding: 8px; width: min(280px, 94vw);
 }
 .ws-hud.on { display: block; }
 .ws-hud p { margin: 0 0 6px; font-size: 12px; }
-.ws-pad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; margin-bottom: 6px; }
+.ws-stick {
+  width: 88px; height: 88px; margin: 0 auto 8px; border: 1px solid var(--line);
+  background: var(--panel2); position: relative; touch-action: none;
+}
+.ws-stick-knob {
+  width: 28px; height: 28px; background: var(--acc); position: absolute;
+  left: 30px; top: 30px; pointer-events: none;
+}
 .ws-hud-row { display: flex; gap: 4px; flex-wrap: wrap; margin-bottom: 6px; }
 .ws-hk {
   min-width: 36px; min-height: 36px; padding: 4px 8px; border: 1px solid var(--line);

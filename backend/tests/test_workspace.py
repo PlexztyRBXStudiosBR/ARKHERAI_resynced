@@ -1,5 +1,5 @@
 from backend.app.acervo.convert import categoria, ingerir, pastas
-from backend.app.workspace.service import _frame_b64, ip_permitido
+from backend.app.workspace.service import _frame_b64, host_permitido, ip_permitido
 from backend.app.workspace.usuario import usuario_sessao
 
 
@@ -31,6 +31,9 @@ def test_ip_permitido_tailscale_e_lan():
     assert not ip_permitido("8.8.8.8")
     assert not ip_permitido("169.254.169.254")
     assert not ip_permitido("not-an-ip")
+    assert host_permitido("arkher-windows-24.tail91d201.ts.net")
+    assert host_permitido("100.88.102.59")
+    assert not host_permitido("evil.com")
 
 
 def test_workspace_rejeita_ip_publico(auth_client):

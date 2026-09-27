@@ -262,6 +262,40 @@ def do_input(act: dict) -> dict:
         return {"ok": True}
     if d in ("app", "abrir"):
         return abrir_app(str(act.get("nome") or act.get("app") or ""), act.get("caminho"))
+    if d in ("url", "abrir_url"):
+        u = str(act.get("url") or act.get("href") or "").strip()
+        host = (u.split("/")[2].lower() if u.startswith("https://") and "/" in u[8:] else "")
+        if not u.startswith("https://") or not any(host.endswith(h) for h in ("mixamo.com", "polyhaven.org", "sketchfab.com", "godotengine.org")):
+            return {"ok": False, "err": "url não permitida"}
+        if IS_WIN:
+            subprocess.Popen(["cmd", "/c", "start", "", u], cwd=str(WORK))
+            return {"ok": True, "url": u}
+        return {"ok": False, "err": "abra no Windows"}
+    if d == "stick":
+        try:
+            nx, ny = float(act.get("x", 0) or 0), float(act.get("y", 0) or 0)
+        except Exception:
+            nx, ny = 0.0, 0.0
+        keys = []
+        if ny < -0.32:
+            keys.append("w")
+        if ny > 0.32:
+            keys.append("s")
+        if nx < -0.32:
+            keys.append("a")
+        if nx > 0.32:
+            keys.append("d")
+        if not keys:
+            return {"ok": True, "stick": "neutro"}
+        combo = "".join(keys)
+        if not IS_WIN:
+            return {"ok": False, "err": "stick só Windows"}
+        S = PS_GUI + f"[System.Windows.Forms.SendKeys]::SendWait({ps_str(combo)})"
+        try:
+            out, err = ps(S, 8)
+            return {"ok": not err.strip(), "err": err.strip()[:200] or None}
+        except Exception as e:  # noqa: BLE001
+            return {"ok": False, "err": str(e)}
     if d in ("trackpad",):
         try:
             dx, dy = int(float(act.get("dx", 0) or 0)), int(float(act.get("dy", 0) or 0))
@@ -347,6 +381,12 @@ APPS_WIN = {
     "studio": [
         r"$env:LOCALAPPDATA\Roblox\Versions\*\RobloxStudioBeta.exe",
         r"$env:LOCALAPPDATA\Roblox\Versions\*\RobloxStudioLauncherBeta.exe",
+    ],
+    "godot": [
+        r"$env:LOCALAPPDATA\Programs\Godot\*\Godot*.exe",
+        r"C:\Program Files\Godot\Godot*.exe",
+        "godot",
+        "Godot_v4.exe",
     ],
     "blender": [r"C:\Program Files\Blender Foundation\*\blender.exe", "blender"],
     "explorer": ["explorer.exe"],
@@ -473,6 +513,19 @@ def install_app(nome: str) -> dict:
                 return {"ok": False, "message": f"download Studio falhou: {e}"}
         subprocess.Popen([str(setup)], cwd=str(WORK))
         return {"ok": True, "app": "studio", "started_installer": True, "setup": str(setup)}
+    if nome in ("godot",):
+        got = _which(["godot", "Godot_v4.exe", "Godot.exe"])
+        if got:
+            return {"ok": True, "app": "godot", "already": True, "exe": got}
+        winget = shutil.which("winget")
+        if IS_WIN and winget:
+            r = subprocess.run(
+                [winget, "install", "-e", "--id", "GodotEngine.GodotEngine",
+                 "--accept-package-agreements", "--accept-source-agreements"],
+                capture_output=True, text=True, timeout=600,
+            )
+            return {"ok": r.returncode == 0, "app": "godot", "out": (r.stdout or r.stderr or "")[-1500:]}
+        return {"ok": False, "message": "Godot: instale Godot 4 ou coloque no PATH."}
     if nome in ("blender",):
         got = _which(["blender", "Blender.exe"])
         if got:
@@ -493,7 +546,7 @@ def open_app(nome: str) -> dict:
     r = abrir_app(nome)
     if r.get("ok"):
         return r
-    if nome.lower() in ("studio", "roblox", "robloxstudio", "blender"):
+    if nome.lower() in ("studio", "roblox", "robloxstudio", "blender", "godot"):
         inst = install_app(nome)
         r2 = abrir_app(nome)
         if r2.get("ok"):

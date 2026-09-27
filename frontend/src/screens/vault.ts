@@ -1,8 +1,10 @@
-// Vault: artefatos gerados (usuário + treino) para o próximo modelo e para o jogo.
+// Vault: Godot + Roblox + Blender + o que o pack gerou. Sem retrenar o mesmo hash.
 
 import { el, toast } from "../components/ui";
 import { icon } from "../components/icons";
 import type { Ctx } from "../app/app";
+
+type Item = { nome: string; pasta: string; bytes: number; tipo: string; path?: string };
 
 export function renderVault(ctx: Ctx): HTMLElement {
   const root = el("div", { class: "panel" });
@@ -11,28 +13,52 @@ export function renderVault(ctx: Ctx): HTMLElement {
     el(
       "p",
       { class: "dim" },
-      "Tudo que a ARKHER gerou: versão do usuário e versão de treino (hash único, sem retrenar o mesmo). Mande ao Studio pelo Workspace.",
+      "Motor principal Godot (.tscn .gd project.godot). Roblox (.rbxlx .lua) e Blender (.py) continuam aqui. Versão sua + versão de treino.",
     ),
   );
+  const status = el("p", { class: "dim" }, "carregando…");
   const list = el("div", { class: "tools-grid" });
-  root.append(list);
-  void ctx.api.studioVault().then((res) => {
-    const itens = res.itens as { nome: string; pasta: string; bytes: number; tipo: string }[];
-    if (!itens.length) {
-      list.append(el("p", { class: "dim" }, "Vault vazio — gere nas abas de produção."));
-      return;
+  root.append(status, list);
+
+  void (async () => {
+    try {
+      const res = await ctx.api.studioVault();
+      const itens = (res.itens || []) as Item[];
+      status.textContent = itens.length
+        ? `${itens.length} no cofre`
+        : "Vault vazio — gere na aba Godot (ou Places/Blender). O pack Android entra em Ingerir.";
+      list.textContent = "";
+      for (const it of itens) {
+        const card = el("div", { class: "tool-card" });
+        card.append(
+          el("h3", {}, it.nome),
+          el("p", { class: "dim" }, `${it.pasta} · ${it.tipo} · ${it.bytes} bytes`),
+        );
+        if (it.path) {
+          const dl = el("button", { class: "mini" }, "abrir");
+          dl.onclick = async () => {
+            try {
+              const r = await ctx.api.vaultItem(it.path!);
+              ctx.download(r.nome || it.nome, r.conteudo || "");
+            } catch (e) {
+              toast((e as { message?: string }).message ?? "erro");
+            }
+          };
+          card.append(dl);
+        }
+        list.append(card);
+      }
+    } catch (e) {
+      status.textContent =
+        "Vault precisa do PC ligado (Tailscale + senha no Workspace). " +
+        ((e as { message?: string }).message ?? "backend offline");
     }
-    for (const it of itens) {
-      const card = el("div", { class: "tool-card" });
-      card.append(el("h3", {}, it.nome), el("p", { class: "dim" }, `${it.pasta} · ${it.tipo} · ${it.bytes} bytes`));
-      list.append(card);
-    }
-  }).catch((e) => toast((e as { message?: string }).message ?? "erro"));
+  })();
 
   const acervo = el("div", { class: "produto-card" });
   acervo.append(
-    el("h2", {}, "Acervo Android"),
-    el("p", { class: "dim" }, "/storage/emulated/0/ArkherAITraining → XML em pastas rbxmx/rbxlx."),
+    el("h2", {}, "Acervo"),
+    el("p", { class: "dim" }, "Celular: /storage/emulated/0/ArkherAITraining — XML rbxmx/rbxlx + o que for Godot no pack."),
   );
   const b = el("button", { class: "pri" });
   b.append(icon("download", 14), " Ingerir acervo");

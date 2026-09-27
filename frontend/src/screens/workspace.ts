@@ -1,12 +1,10 @@
 // Cockpit DsOS: tela real da VM + toque + HUD + chat de piloto.
 // Sem desktop HTML falso. Sem IA de terceiro no loop de visão.
 
-import { confirmDialog, el, toast } from "../components/ui";
-import { icon } from "../components/icons";
+import { el, toast } from "../components/ui";
 import { t } from "../services/i18n";
 import { renderMarkdown } from "../app/md";
-import { acharAgente, mandarInput } from "../services/ponte";
-import type { Vm } from "../services/api";
+import { acharAgente, mandarInput, PC_HOST } from "../services/ponte";
 import type { Ctx } from "../app/app";
 
 let liveGen = 0;
@@ -44,7 +42,10 @@ export function renderWorkspace(ctx: Ctx): HTMLElement {
   desk.append(bar, screen);
 
   const setup = el("div", { class: "ws-setup" });
-  setup.append(formAdd(ctx, () => void refreshVms()));
+  setup.append(formAdd(ctx, () => {
+    void refreshVms();
+    startLive(img, screen, placeholder, titleEl);
+  }));
   desk.append(setup);
 
   async function refreshVms(): Promise<void> {
@@ -210,6 +211,25 @@ function startLive(
   void tick();
 }
 
+const HUD_KEYS: Record<string, [string, string][]> = {
+  godot: [
+    ["F5", "{F5}"], ["F6", "{F6}"], ["Q", "q"], ["W", "w"], ["E", "e"], ["R", "r"],
+    ["F", "f"], ["^S", "^s"], ["^Z", "^z"], ["^D", "^d"], ["Del", "{DEL}"],
+  ],
+  studio: [
+    ["F5", "{F5}"], ["F8", "{F8}"], ["1", "1"], ["2", "2"], ["3", "3"], ["4", "4"],
+    ["R", "r"], ["T", "t"], ["F", "{F}"], ["^S", "^s"], ["^G", "^g"],
+  ],
+  blender: [
+    ["G", "g"], ["R", "r"], ["S", "s"], ["E", "e"], ["Tab", "{TAB}"], ["Z", "z"],
+    ["X", "x"], ["^S", "^s"], ["+A", "+a"], ["7", "{NUMPAD7}"], ["1", "{NUMPAD1}"],
+  ],
+  geral: [
+    ["Esc", "{ESC}"], ["Enter", "{ENTER}"], ["Espaço", " "], ["Tab", "{TAB}"],
+    ["^Z", "^z"], ["^S", "^s"], ["^C", "^c"], ["^V", "^v"], ["Del", "{DEL}"],
+  ],
+};
+
 function makeHud(): HTMLElement {
   const hud = el("div", { class: "ws-hud" });
   const send = (acts: Record<string, unknown>[]) => {
@@ -220,31 +240,73 @@ function makeHud(): HTMLElement {
     b.onclick = () => send([{ do: "key", key: k }]);
     return b;
   };
-  const pad = el("div", { class: "ws-pad" });
-  pad.append(
-    el("span", {}),
-    key("▲", "{UP}"),
-    el("span", {}),
-    key("◀", "{LEFT}"),
-    key("OK", "{ENTER}"),
-    key("▶", "{RIGHT}"),
-    el("span", {}),
-    key("▼", "{DOWN}"),
-    el("span", {}),
-  );
-  const row = el("div", { class: "ws-hud-row" });
-  row.append(
-    key("ESC", "{ESC}"),
-    key("TAB", "{TAB}"),
-    key("⌫", "{BACKSPACE}"),
-    key("Espaço", " "),
-  );
+  const stick = el("div", { class: "ws-stick" });
+  const knob = el("div", { class: "ws-stick-knob" });
+  stick.append(knob);
+  let hold: ReturnType<typeof setTimeout> | null = null;
+  let ax = 0, ay = 0, down = false;
+  const pulse = () => {
+    if (!down) return;
+    send([{ do: "stick", x: ax, y: ay }]);
+    hold = setTimeout(pulse, 70);
+  };
+  const setKnob = (nx: number, ny: number) => {
+    ax = Math.max(-1, Math.min(1, nx));
+    ay = Math.max(-1, Math.min(1, ny));
+    knob.style.transform = `translate(${ax * 22}px, ${ay * 22}px)`;
+  };
+  const fromEv = (ev: PointerEvent) => {
+    const r = stick.getBoundingClientRect();
+    const nx = (ev.clientX - (r.left + r.width / 2)) / (r.width / 2);
+    const ny = (ev.clientY - (r.top + r.height / 2)) / (r.height / 2);
+    setKnob(nx, ny);
+  };
+  stick.addEventListener("pointerdown", (ev) => {
+    down = true;
+    stick.setPointerCapture(ev.pointerId);
+    fromEv(ev);
+    if (hold) clearTimeout(hold);
+    pulse();
+  });
+  stick.addEventListener("pointermove", (ev) => {
+    if (down) fromEv(ev);
+  });
+  const end = () => {
+    down = false;
+    setKnob(0, 0);
+    if (hold) clearTimeout(hold);
+    hold = null;
+  };
+  stick.addEventListener("pointerup", end);
+  stick.addEventListener("pointercancel", end);
+
+  const modes = el("div", { class: "ws-hud-row" });
+  const keysBox = el("div", { class: "ws-hud-row" });
+  let modo = "godot";
+  const paintKeys = () => {
+    keysBox.textContent = "";
+    for (const [lab, k] of HUD_KEYS[modo] || HUD_KEYS.geral) keysBox.append(key(lab, k));
+  };
+  for (const m of ["godot", "studio", "blender", "geral"] as const) {
+    const b = el("button", { type: "button", class: "ws-hk" }, m);
+    b.onclick = () => {
+      modo = m;
+      paintKeys();
+    };
+    modes.append(b);
+  }
+  paintKeys();
   const apps = el("div", { class: "ws-hud-row" });
-  const studio = el("button", { class: "ws-hk" }, "Studio");
-  studio.onclick = () => send([{ do: "app", nome: "studio" }]);
-  const blender = el("button", { class: "ws-hk" }, "Blender");
-  blender.onclick = () => send([{ do: "app", nome: "blender" }]);
-  apps.append(studio, blender);
+  const mkApp = (lab: string, nome: string) => {
+    const b = el("button", { class: "ws-hk" }, lab);
+    b.onclick = () => send([{ do: "app", nome }]);
+    return b;
+  };
+  const mix = el("button", { class: "ws-hk" }, "Mixamo");
+  mix.onclick = () => send([{ do: "url", url: "https://www.mixamo.com" }]);
+  const ph = el("button", { class: "ws-hk" }, "Poly Haven");
+  ph.onclick = () => send([{ do: "url", url: "https://polyhaven.com/models" }]);
+  apps.append(mkApp("Godot", "godot"), mkApp("Studio", "studio"), mkApp("Blender", "blender"), mix, ph);
   const kb = el("input", { class: "input ws-hud-kb", placeholder: "digita na VM…", maxlength: "200" }) as HTMLInputElement;
   kb.addEventListener("keydown", (e) => {
     if (e.key === "Enter") {
@@ -254,88 +316,37 @@ function makeHud(): HTMLElement {
       kb.value = "";
     }
   });
-  hud.append(el("p", { class: "dim" }, "HUD — você dirige. Toque curto = clique, longo = direito, arrasta = drag."), pad, row, apps, kb);
+  hud.append(
+    el("p", { class: "dim" }, "HUD analógico + teclas do software. Toque na tela = clique."),
+    stick,
+    modes,
+    keysBox,
+    apps,
+    kb,
+  );
   return hud;
 }
 
 function formAdd(ctx: Ctx, after: () => void): HTMLElement {
   const lang = ctx.store.state.settings.lang;
   const box = el("div", { class: "memory-form" });
-  const name = el("input", { class: "input", placeholder: t("workspace_name", lang), maxlength: "60" }) as HTMLInputElement;
-  name.value = "PC virtual";
-  const ip = el("input", { class: "input", placeholder: t("workspace_ip", lang), maxlength: "45" }) as HTMLInputElement;
-  const user = el("input", { class: "input", placeholder: t("workspace_user", lang), maxlength: "80" }) as HTMLInputElement;
-  user.value = "nexus";
+  box.append(el("p", { class: "dim" }, t("workspace_hint", lang) + " Usuário: nexus (automático)."));
+  const ip = el("input", { class: "input", placeholder: t("workspace_ip", lang), maxlength: "80" }) as HTMLInputElement;
+  ip.value = PC_HOST;
   const pass = el("input", { class: "input", type: "password", placeholder: t("workspace_pass", lang), maxlength: "200" }) as HTMLInputElement;
   const add = el("button", { class: "pri" }, t("workspace_add", lang));
   add.onclick = async () => {
     try {
-      const res = await ctx.api.workspaceCreate({
-        name: name.value.trim() || "PC virtual",
-        tailscale_ip: ip.value.trim(),
-        username: user.value.trim(),
-        password: pass.value,
-      });
+      const res = await ctx.api.workspaceLigar(ip.value.trim() || PC_HOST, pass.value);
       pass.value = "";
       selectedId = res.vm.id;
-      if (res.vm.agent_token) toast("Token do agente (uma vez): " + res.vm.agent_token);
+      toast("ligado como " + (res.user || "nexus"));
       after();
     } catch (e) {
       toast((e as { message?: string }).message ?? "erro");
     }
   };
-  const ping = el("button", {}, t("workspace_connect", lang));
-  ping.onclick = async () => {
-    if (!selectedId) return;
-    try {
-      const h = await ctx.api.workspaceHealth(selectedId);
-      toast(h.status);
-    } catch (e) {
-      toast((e as { message?: string }).message ?? "erro");
-    }
-  };
-  const auto = el("button", {}, t("workspace_autologon", lang));
-  auto.onclick = async () => {
-    if (!selectedId) return;
-    if (!(await confirmDialog("Aplicar AutoAdminLogon nesta VM?", t("workspace_autologon", lang)))) return;
-    try {
-      await ctx.api.workspaceAutologon(selectedId);
-      toast("auto-logon enviado");
-    } catch (e) {
-      toast((e as { message?: string }).message ?? "erro");
-    }
-  };
-  const dl = el("button", { class: "ghost" });
-  dl.append(icon("download", 14), " agente");
-  dl.onclick = async () => {
-    const src = await ctx.api.getRaw("/api/workspace/agent.py");
-    ctx.download("arkher_agent.py", src);
-  };
-  const este = el("button", { class: "pri" }, "Este PC");
-  este.onclick = async () => {
-    try {
-      const r = await ctx.api.workspaceAuto();
-      selectedId = r.vm.id;
-      if (r.vm.agent_token) toast("Token do agente (uma vez): " + r.vm.agent_token);
-      toast(r.reuso ? "PC já cadastrado" : "Este PC ligado");
-      after();
-    } catch (e) {
-      toast((e as { message?: string }).message ?? "erro");
-    }
-  };
-  const det = el("button", {}, "Detectar VM");
-  det.onclick = async () => {
-    try {
-      const r = await ctx.api.workspaceDetectGithub("");
-      selectedId = r.vm.id;
-      if (r.vm.agent_token) toast("Token do agente (uma vez): " + r.vm.agent_token);
-      toast("VM " + (r.ip || "") + " — rode o agente nela com o token");
-      after();
-    } catch (e) {
-      toast((e as { message?: string }).message ?? "erro");
-    }
-  };
-  box.append(name, ip, user, pass, el("div", { class: "row" }, este, det, add, ping, auto, dl));
+  box.append(ip, pass, el("div", { class: "row" }, add));
   return box;
 }
 
@@ -398,5 +409,3 @@ function pilotChat(ctx: Ctx, vmId: () => string | null): HTMLElement {
   wrap.append(msgs, el("div", { class: "composer" }, input, send));
   return wrap;
 }
-
-export type { Vm };

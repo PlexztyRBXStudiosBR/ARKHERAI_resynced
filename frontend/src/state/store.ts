@@ -14,6 +14,7 @@ export type UiState =
 export type Screen =
   | "chat"
   | "workspace"
+  | "godot"
   | "places"
   | "models"
   | "luau"

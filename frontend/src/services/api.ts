@@ -97,6 +97,8 @@ export function makeApi(baseUrl: () => string, token: () => string | null) {
     workspaceList: () => http<{ vms: Vm[] }>("GET", "/api/workspace"),
     workspaceCreate: (body: { name: string; tailscale_ip: string; username: string; password: string }) =>
       http<{ vm: Vm }>("POST", "/api/workspace", body),
+    workspaceLigar: (tailscale: string, password: string) =>
+      http<{ ok: boolean; vm: Vm; health?: unknown; user?: string }>("POST", "/api/workspace/ligar", { tailscale, password }, 20000),
     workspaceDelete: (id: string) => http<{ ok: boolean }>("DELETE", `/api/workspace/${id}`),
     ponte: () => http<{ ok: boolean; tailscale_ip?: string; agente_local?: boolean; backend?: string; nota?: string }>("GET", "/api/ponte", undefined, 8000),
     workspaceAuto: () => http<{ ok: boolean; vm: Vm; health?: unknown; reuso?: boolean }>("POST", "/api/workspace/auto", {}),
@@ -160,6 +162,8 @@ export function makeApi(baseUrl: () => string, token: () => string | null) {
     studioGenerate: (tab: string, recipe: string, seed = 42, prompt = "") =>
       http<{ result: unknown }>("POST", "/api/studio/generate", { tab, recipe, seed, prompt }, 30000),
     studioVault: () => http<{ itens: unknown[] }>("GET", "/api/studio/vault"),
+    vaultItem: (path: string) =>
+      http<{ ok: boolean; nome?: string; conteudo?: string }>("GET", `/api/studio/vault/item?path=${encodeURIComponent(path)}`),
     async getRaw(path: string): Promise<string> {
       const headers: Record<string, string> = {};
       const tk = token();

@@ -306,6 +306,7 @@ export async function boot(container: HTMLElement): Promise<void> {
     const screens: [ScreenId, StringKey][] = [
       ["chat", "tab_chat"],
       ["workspace", "tab_workspace"],
+      ["godot", "tab_godot"],
       ["places", "tab_places"],
       ["models", "tab_models"],
       ["luau", "tab_luau"],
@@ -330,6 +331,7 @@ export async function boot(container: HTMLElement): Promise<void> {
     const ICONES: Record<ScreenId, string> = {
       chat: "chat",
       workspace: "monitor",
+      godot: "cube",
       places: "cube",
       models: "cube",
       luau: "chip",
@@ -406,7 +408,7 @@ export async function boot(container: HTMLElement): Promise<void> {
     stopWorkspaceLive();
     screenHost.textContent = "";
     const studioTabs = new Set([
-      "places", "models", "luau", "terrain", "animacao", "materiais",
+      "godot", "places", "models", "luau", "terrain", "animacao", "materiais",
       "lighting", "ui", "audio", "fisica", "netcode", "vfx", "blender",
       "design", "pesquisa", "codigo", "pipeline",
     ]);
@@ -425,6 +427,7 @@ export async function boot(container: HTMLElement): Promise<void> {
 const TAB_KEYS = {
   chat: "tab_chat",
   workspace: "tab_workspace",
+  godot: "tab_godot",
   places: "tab_places",
   models: "tab_models",
   luau: "tab_luau",
