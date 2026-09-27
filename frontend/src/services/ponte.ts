@@ -1,6 +1,10 @@
-// Agente direto (porta 8765), igual o ArkherAI antigo. Sem URL de backend.
+// Ponte do site (Vercel HTTPS ou HTTP no PC) ate o agente.
+// No celular HTTPS nao pode chamar http:// — usa :8443 com cert Tailscale.
 
 export const PC_HOST = "arkher-windows-24.tail91d201.ts.net";
+
+export const URL_HTTPS_PC = `https://${PC_HOST}:8443`;
+export const URL_CELULAR = `http://${PC_HOST}:8710`;
 
 let agente = "";
 
@@ -9,11 +13,19 @@ function add(list: string[], u: string): void {
   if (x && !list.includes(x)) list.push(x);
 }
 
+export function paginaHttps(): boolean {
+  return typeof location !== "undefined" && location.protocol === "https:";
+}
+
 export function candidatosAgente(): string[] {
   const out: string[] = [];
+  if (paginaHttps()) {
+    add(out, URL_HTTPS_PC);
+    add(out, `https://${PC_HOST}`);
+    return out;
+  }
   if (typeof location !== "undefined") {
     add(out, `http://${location.hostname}:8765`);
-    add(out, `${location.protocol}//${location.hostname}:8765`);
   }
   add(out, `http://${PC_HOST}:8765`);
   return out;
@@ -21,10 +33,11 @@ export function candidatosAgente(): string[] {
 
 export async function acharAgente(): Promise<string> {
   if (agente) return agente;
-  for (const b of candidatosAgente()) {
+  const list = candidatosAgente();
+  for (const b of list) {
     try {
       const ctrl = new AbortController();
-      const t = setTimeout(() => ctrl.abort(), 2000);
+      const t = setTimeout(() => ctrl.abort(), 2500);
       const r = await fetch(`${b}/health`, { signal: ctrl.signal });
       clearTimeout(t);
       if (r.ok) {
@@ -35,7 +48,7 @@ export async function acharAgente(): Promise<string> {
       /* próximo */
     }
   }
-  return candidatosAgente()[0] || "";
+  return list[0] || "";
 }
 
 export function mandarInput(acts: Record<string, unknown>[]): void {
@@ -51,4 +64,6 @@ export function mandarInput(acts: Record<string, unknown>[]): void {
   });
 }
 
-export const URL_CELULAR = `http://${PC_HOST}:8710`;
+export function urlApiVercel(): string {
+  return URL_HTTPS_PC;
+}

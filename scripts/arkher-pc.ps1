@@ -1,5 +1,5 @@
-# ARKHER no SEU Windows: backend + agente + Tailscale HTTPS, no logon.
-# Nao e GitHub Actions 24h.
+# ARKHER no SEU Windows: backend :8710 + agente :8765 + HTTPS :8443 (Vercel).
+# Nao e GitHub Actions 24h. Nao depende de Tailscale Serve (401 do runneradmin).
 #
 #   powershell -ExecutionPolicy Bypass -File scripts\arkher-pc.ps1 -Ligar
 #   powershell -ExecutionPolicy Bypass -File scripts\arkher-pc.ps1 -Tarefa
@@ -20,6 +20,15 @@ if (-not (Test-Path $TokenFile) -or -not (Get-Content $TokenFile -ErrorAction Si
   Set-Content -Path $TokenFile -Value $tok -Encoding ascii
 }
 $tok = (Get-Content $TokenFile -Raw).Trim()
+$TsHost = "arkher-windows-24.tail91d201.ts.net"
+
+function Get-Tailscale {
+  $c = Get-Command tailscale -ErrorAction SilentlyContinue
+  if ($c) { return $c.Source }
+  $p = "C:\Program Files\Tailscale\tailscale.exe"
+  if (Test-Path $p) { return $p }
+  return $null
+}
 
 function Start-Arkher {
   $env:PYTHONPATH = $Root
@@ -33,17 +42,35 @@ function Start-Arkher {
   if (-not $ag) {
     Start-Process -FilePath $Py -WorkingDirectory $Root -ArgumentList @((Join-Path $Root "workers\workspace\agent.py")) -WindowStyle Minimized
   }
-  $ts = Get-Command tailscale -ErrorAction SilentlyContinue
-  if (-not $ts) { $tsPath = "C:\Program Files\Tailscale\tailscale.exe"; if (Test-Path $tsPath) { $ts = Get-Item $tsPath } }
+
+  $ts = Get-Tailscale
   if ($ts) {
-    & $ts.Source serve --bg 8710 2>$null
-    $ip = (& $ts.Source ip -4 2>$null | Select-Object -First 1)
-    Write-Host "ARKHER backend http://$($ip):8710"
-    Write-Host "Tailscale Serve: rode 'tailscale serve status' e cole o https://….ts.net na Config do site da Vercel."
+    try {
+      $j = & $ts status --json 2>$null | ConvertFrom-Json
+      if ($j.Self.DNSName) { $TsHost = ($j.Self.DNSName).TrimEnd(".") }
+    } catch { }
+    $crt = Join-Path $TokenDir "$TsHost.crt"
+    $key = Join-Path $TokenDir "$TsHost.key"
+    & $ts cert --cert-file $crt --key-file $key $TsHost 2>&1 | Out-Host
+    $env:ARKHER_TS_HOST = $TsHost
+    $env:ARKHER_TLS_CRT = $crt
+    $env:ARKHER_TLS_KEY = $key
+    $hs = Get-NetTCPConnection -LocalPort 8443 -ErrorAction SilentlyContinue
+    if (-not $hs) {
+      if ((Test-Path $crt) -and (Test-Path $key)) {
+        Start-Process -FilePath $Py -WorkingDirectory $Root -ArgumentList @((Join-Path $Root "workers\workspace\https_ponte.py")) -WindowStyle Minimized
+        Write-Host "HTTPS Vercel: https://${TsHost}:8443"
+      } else {
+        Write-Host "tailscale cert falhou. No admin Tailscale: DNS -> Enable HTTPS. Sem isso o site vercel.app nao fala com o PC."
+      }
+    }
+    netsh advfirewall firewall delete rule name="ARKHER HTTPS 8443" 2>$null | Out-Null
+    netsh advfirewall firewall add rule name="ARKHER HTTPS 8443" dir=in action=allow protocol=TCP localport=8443 2>$null | Out-Host
   } else {
-    Write-Host "Tailscale nao encontrado. Sem HTTPS o site vercel.app NAO mostra a tela no celular."
+    Write-Host "Tailscale nao encontrado. Sem certificado o Vercel (HTTPS) nao alcanca o PC."
   }
   Write-Host "Agente token em $TokenFile"
+  Write-Host "Celular: Tailscale ligado + https://arkherai-resynced.vercel.app"
 }
 
 if ($Tarefa) {

@@ -59,13 +59,10 @@ export function renderSettings(ctx: Ctx): HTMLElement {
   const backend = el("input", {
     class: "input",
     value: s.settings.backendBase,
-    placeholder: "https://seu-pc.tailXXXX.ts.net  (vazio só funciona se o site e a API forem o mesmo host)",
+    placeholder: "no Vercel preenche sozinho (https://pc:8443)",
   }) as HTMLInputElement;
   backend.addEventListener("change", () => {
     const v = backend.value.trim().replace(/\/$/, "");
-    if (typeof location !== "undefined" && location.protocol === "https:" && v.startsWith("http://")) {
-      toast("Vercel é HTTPS: cole a URL https://….ts.net do Tailscale Serve, não http://100.x");
-    }
     ctx.store.updateSettings({ backendBase: v });
   });
   grid.append(field(t("settings_backend", lang), backend));

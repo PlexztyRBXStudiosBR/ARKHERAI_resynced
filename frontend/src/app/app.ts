@@ -16,7 +16,7 @@ import { renderSettings } from "../screens/settings";
 import { renderStudio } from "../screens/studio";
 import { renderVault } from "../screens/vault";
 import { saveToken } from "../state/store";
-import { URL_CELULAR } from "../services/ponte";
+import { paginaHttps, urlApiVercel } from "../services/ponte";
 
 export interface Ctx {
   store: Store;
@@ -37,11 +37,14 @@ export interface Ctx {
 
 export async function boot(container: HTMLElement): Promise<void> {
   const store = new Store();
-  if (typeof location !== "undefined" && location.hostname.endsWith("vercel.app")) {
-    location.replace(URL_CELULAR);
-    return;
-  }
   const configuredApi = (import.meta.env.VITE_ARKHER_API as string | undefined) ?? "";
+  if (paginaHttps()) {
+    const httpsPc = urlApiVercel();
+    const atual = (store.state.settings.backendBase || configuredApi).replace(/\/$/, "");
+    if (!atual || atual.startsWith("http://")) {
+      store.updateSettings({ backendBase: httpsPc });
+    }
+  }
   const base = () => (store.state.settings.backendBase || configuredApi).replace(/\/$/, "");
   const api = makeApi(base, () => store.state.token);
 
