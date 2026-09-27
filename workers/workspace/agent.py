@@ -541,6 +541,19 @@ def convert_rbx(src: str, dest: str | None = None) -> dict:
     return {"ok": False, "message": py_err or "conversor falhou no binário"}
 
 
+def studio_places_job(root: str = "") -> dict:
+    here = Path(__file__).resolve()
+    repo = here.parents[2] if len(here.parents) >= 2 else here.parent
+    script = repo / "tools" / "studio_places.py"
+    if not script.is_file():
+        return {"ok": False, "message": "tools/studio_places.py ausente"}
+    cmd = [sys.executable, str(script)]
+    if root:
+        cmd.append(root)
+    r = subprocess.run(cmd, capture_output=True, text=True, timeout=900)
+    return {"ok": r.returncode == 0, "out": (r.stdout or "")[-2000:], "err": (r.stderr or "")[-1000:]}
+
+
 def import_place(path: str) -> dict:
     p = Path(path)
     if not p.is_file():
@@ -609,6 +622,8 @@ def run_job(kind: str, args: dict) -> dict:
         return convert_rbx(str(args.get("src", "")), args.get("dest"))
     if kind == "import_place":
         return import_place(str(args.get("path", "")))
+    if kind == "studio_places":
+        return studio_places_job(str(args.get("root") or ""))
     if kind == "blender_script":
         return blender_script(str(args.get("conteudo", "")), str(args.get("nome", "arkher.py")))
     if kind == "sync_file":

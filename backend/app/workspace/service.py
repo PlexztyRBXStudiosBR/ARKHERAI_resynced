@@ -27,6 +27,7 @@ JOB_TIMEOUTS = {
     "install_app": 600.0,
     "convert_rbx": 900.0,
     "import_place": 60.0,
+    "studio_places": 900.0,
     "blender_script": 600.0,
     "screenshot": 20.0,
 }
@@ -226,6 +227,7 @@ def job(user_id: str, vm_id: str, kind: str, args: dict) -> dict:
         "open_app",
         "convert_rbx",
         "import_place",
+        "studio_places",
         "blender_script",
         "sync_file",
         "ls",
