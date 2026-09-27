@@ -20,8 +20,10 @@ não de poder bruto nem de serviços externos.
 | --- | --- |
 | Interface (chat super-IA, integrações, Workspace, cérebro, config) | ✅ pronta e testada |
 | Backend próprio (API, auth, SSE, segurança) | ✅ pronto e testado |
-| Modelo próprio **ARKHER-1 mini** | ✅ instalado (checkpoint `v0.1.0-gamedev`) |
-| Qualidade do modelo | ⚠️ **experimental** — 3,98 M de parâmetros treinados em CPU num corpus semente de ~89 mil tokens, com foco em game dev. Responde bem os temas do corpus (3D, animação, Roblox, engines, netcode, identidade); fora disso, é limitada. |
+| Modelo próprio **ARKHER-1 mini** | ✅ instalado (checkpoint `v0.6.0-gamedev`) |
+
+## UPDATE 128M PARAMETROS
+| Qualidade do modelo | ⚠️ **experimental** — 128M de parâmetros treinados em CPU num corpus, com foco em game dev. Responde bem os temas do corpus (3D, animação, Roblox, engines, netcode, identidade); fora disso, é mais limitada, porem funciona. |
 | Infraestrutura de treinamento | ✅ real e reproduzível (tokenizer próprio, treino com retomada, avaliação, relatório) |
 | Aprendizado com o uso | ✅ feedback 👍/👎 registrado por resposta (sinal para os próximos ciclos de treino) |
 | Camada extra de segurança/correção de resposta | ✅ ativa (recusas, verificação aritmética, alegações de ações, redação de logs) |
