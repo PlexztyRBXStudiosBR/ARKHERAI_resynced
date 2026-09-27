@@ -39,7 +39,7 @@ export function renderWorkspace(ctx: Ctx): HTMLElement {
   const img = el("img", { alt: "tela da VM", class: "ws-frame" }) as HTMLImageElement;
   img.draggable = false;
   const placeholder = el("p", { class: "dim ws-ph" }, "Tela do PC (agente :8765). Toque curto = clique.");
-  const hud = makeHud(ctx, () => selectedId);
+  const hud = makeHud();
   screen.append(placeholder, hud);
   desk.append(bar, screen);
 
@@ -210,7 +210,7 @@ function startLive(
   void tick();
 }
 
-function makeHud(ctx: Ctx, vmId: () => string | null): HTMLElement {
+function makeHud(): HTMLElement {
   const hud = el("div", { class: "ws-hud" });
   const send = (acts: Record<string, unknown>[]) => {
     mandarInput(acts);
