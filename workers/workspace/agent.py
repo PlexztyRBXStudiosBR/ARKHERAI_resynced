@@ -348,6 +348,12 @@ APPS_WIN = {
         r"$env:LOCALAPPDATA\Roblox\Versions\*\RobloxStudioBeta.exe",
         r"$env:LOCALAPPDATA\Roblox\Versions\*\RobloxStudioLauncherBeta.exe",
     ],
+    "godot": [
+        r"$env:LOCALAPPDATA\Programs\Godot\*\Godot*.exe",
+        r"C:\Program Files\Godot\Godot*.exe",
+        "godot",
+        "Godot_v4.exe",
+    ],
     "blender": [r"C:\Program Files\Blender Foundation\*\blender.exe", "blender"],
     "explorer": ["explorer.exe"],
     "notepad": ["notepad.exe"],
@@ -473,6 +479,19 @@ def install_app(nome: str) -> dict:
                 return {"ok": False, "message": f"download Studio falhou: {e}"}
         subprocess.Popen([str(setup)], cwd=str(WORK))
         return {"ok": True, "app": "studio", "started_installer": True, "setup": str(setup)}
+    if nome in ("godot",):
+        got = _which(["godot", "Godot_v4.exe", "Godot.exe"])
+        if got:
+            return {"ok": True, "app": "godot", "already": True, "exe": got}
+        winget = shutil.which("winget")
+        if IS_WIN and winget:
+            r = subprocess.run(
+                [winget, "install", "-e", "--id", "GodotEngine.GodotEngine",
+                 "--accept-package-agreements", "--accept-source-agreements"],
+                capture_output=True, text=True, timeout=600,
+            )
+            return {"ok": r.returncode == 0, "app": "godot", "out": (r.stdout or r.stderr or "")[-1500:]}
+        return {"ok": False, "message": "Godot: instale Godot 4 ou coloque no PATH."}
     if nome in ("blender",):
         got = _which(["blender", "Blender.exe"])
         if got:
@@ -493,7 +512,7 @@ def open_app(nome: str) -> dict:
     r = abrir_app(nome)
     if r.get("ok"):
         return r
-    if nome.lower() in ("studio", "roblox", "robloxstudio", "blender"):
+    if nome.lower() in ("studio", "roblox", "robloxstudio", "blender", "godot"):
         inst = install_app(nome)
         r2 = abrir_app(nome)
         if r2.get("ok"):

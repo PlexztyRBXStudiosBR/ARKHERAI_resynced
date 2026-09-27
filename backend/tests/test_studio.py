@@ -7,8 +7,19 @@ from backend.app.workspace.pilot import interpretar
 def test_catalogo_tem_abas_gamedev():
     ids = {c["id"] for c in kits.CATALOGO}
     assert len(ids) >= 13
-    for preciso in ("places", "models", "luau", "terrain", "animacao", "materiais", "lighting", "ui", "netcode", "vfx", "blender"):
+    for preciso in ("godot", "places", "models", "luau", "terrain", "animacao", "materiais", "lighting", "ui", "netcode", "vfx", "blender"):
         assert preciso in ids
+
+
+def test_gera_godot_cena_e_player():
+    cena = kits.gerar("godot", "cena3d", 3, "atelier")
+    assert cena["arquivo"]["nome"].endswith(".tscn")
+    assert "[gd_scene" in cena["arquivo"]["conteudo"]
+    gd = kits.gerar("godot", "player", 3)
+    assert gd["arquivo"]["nome"].endswith(".gd")
+    assert "CharacterBody3D" in gd["arquivo"]["conteudo"]
+    proj = kits.gerar("godot", "projeto", 3)
+    assert "config_version=5" in proj["arquivo"]["conteudo"]
 
 
 def test_gera_place_xml():

@@ -76,16 +76,25 @@ def versao_treino(pedido: str, conteudo: str, nome: str) -> str:
 
 def guardar(user_id: str, pedido: str, arquivo: dict | None) -> dict:
     """Persiste as duas versões. Retorna metadados (sem duplicar treino)."""
-    if not arquivo or not arquivo.get("conteudo"):
+    if not arquivo or not (arquivo.get("conteudo") or arquivo.get("conteudo_b64")):
         return {"ok": False, "motivo": "sem_conteudo"}
     nome = str(arquivo.get("nome") or "artefato.txt")
-    conteudo = str(arquivo["conteudo"])
+    if arquivo.get("conteudo"):
+        conteudo = str(arquivo["conteudo"])
+        raw = None
+    else:
+        import base64
+        raw = base64.b64decode(str(arquivo.get("conteudo_b64") or ""))
+        conteudo = "b64:" + sha(str(arquivo.get("conteudo_b64") or "")[:200])
     h = sha(conteudo)
     USER_DIR.mkdir(parents=True, exist_ok=True)
     TREINO_DIR.mkdir(parents=True, exist_ok=True)
     seguro = re.sub(r"[^\w.\-]+", "_", nome)[:80]
     user_path = USER_DIR / f"{h[:12]}_{seguro}"
-    user_path.write_text(conteudo, encoding="utf-8")
+    if raw is not None:
+        user_path.write_bytes(raw)
+    else:
+        user_path.write_text(conteudo, encoding="utf-8")
     treino_nova = not ja_treinada(conteudo)
     treino_path = TREINO_DIR / f"{h[:12]}_{seguro}"
     if treino_nova:

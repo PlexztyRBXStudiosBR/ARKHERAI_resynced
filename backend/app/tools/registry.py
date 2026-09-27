@@ -166,7 +166,7 @@ TOOLS: dict[str, dict] = {
 CHAT_NATIVE = {
     "calc", "roblox_gen", "obj_gen", "anim_gen", "terrain_gen", "style_gen",
     "fisica_gen", "blender_gen", "rbxlx_gen", "build_gen", "text_analysis", "tex_gen",
-    "web_search", "figma_gen", "jogo_completo",
+    "web_search", "figma_gen", "jogo_completo", "godot_gen",
 }
 
 
@@ -374,6 +374,13 @@ def run(user_id: str, tool_id: str, args: dict, require_auth: bool = True) -> di
                     "descricao": "O Blender não está instalado neste servidor. Segue o script pronto para rodar no seu Blender (ou instale o Blender no servidor e a ARKHER executa de verdade).",
                     "arquivo": {"nome": f"{cena}_seed{seed}_arkher.py", "conteudo": script},
                 }
+        elif tool_id == "godot_gen":
+            from backend.app.studio import godot as godot_mod
+            try:
+                seed = int(args.get("seed", 42))
+            except ValueError:
+                seed = 42
+            result = godot_mod.gerar(str(args.get("tipo") or "cena3d"), seed, str(args.get("tema") or ""))
         elif tool_id == "rbxlx_gen":
             try:
                 seed = int(args.get("seed", 42))

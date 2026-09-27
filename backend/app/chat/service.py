@@ -202,6 +202,15 @@ def _detectar_tarefa(texto: str) -> tuple[str, dict] | None:
         r"heliponto|heliporto|mastro|bandeira|antena|radar|veiculo|veiculos|jipe|jipes|"
         r"carro|carros|sacos|trincheira|muro|muralha|cerco|base|cidade|vila|militar|exercito|"
         r"castelo|castelos|fortaleza|cidadela|bunker|bunkers|tanque|tanques)\b", t)
+    if pedido and re.search(r"\bgodot\b", t):
+        tipo = "cena3d"
+        if "player" in t or "personagem" in t:
+            tipo = "player"
+        elif "projeto" in t:
+            tipo = "projeto"
+        elif "hud" in t:
+            tipo = "hud"
+        return ("godot_gen", {"tipo": tipo, "seed": seed, "tema": texto})
     if pedido and re.search(r"\b(jogo inteiro|game completo|equipe media|time medio|time medio)\b", t):
         return ("jogo_completo", {"tema": texto, "seed": seed})
     if pedido and estrutura:
@@ -279,6 +288,12 @@ def _formatar_ferramenta(tool_id: str, result: dict) -> tuple[str, str, dict | N
                 "3. Os artefatos saem na pasta `arkher_saida/`."
             )
         return f"{result['descricao']}{extra}", "arquivo", result["arquivo"]
+    if tool_id == "godot_gen":
+        corpo = (
+            f"{result.get('descricao')}\n\nComo usar: {result.get('como_usar')}\n\n"
+            "Godot 4 — baixe o arquivo e coloque no projeto. Roblox fica no Vault se você gerar Places."
+        )
+        return corpo, "arquivo", result.get("arquivo")
     if tool_id == "rbxlx_gen":
         corpo = (
             f"{result['descricao']}\n\nComo usar: {result['como_usar']}\n\n"

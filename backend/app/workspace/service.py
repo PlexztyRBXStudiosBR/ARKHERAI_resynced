@@ -11,6 +11,7 @@ import base64
 import ipaddress
 import json
 import os
+import re
 import secrets
 import urllib.error
 import urllib.request
@@ -64,6 +65,9 @@ def _dec(blob: str) -> str:
     return bytes(b ^ key[i % len(key)] ^ iv[i % 16] for i, b in enumerate(data)).decode("utf-8")
 
 
+_TS_HOST = re.compile(r"^[a-z0-9][a-z0-9.-]{0,60}\.ts\.net$")
+
+
 def ip_permitido(ip: str) -> bool:
     """Bloqueia SSRF: só Tailscale CGNAT, loopback e RFC1918."""
     try:
@@ -79,6 +83,16 @@ def ip_permitido(ip: str) -> bool:
     if addr.is_loopback or addr.is_private:
         return True
     return False
+
+
+def host_permitido(host: str) -> bool:
+    """IP da malha OU MagicDNS *.ts.net. Sem hostname público."""
+    h = (host or "").strip().lower().rstrip(".")
+    if not h or len(h) > 80:
+        return False
+    if _TS_HOST.match(h):
+        return True
+    return ip_permitido(h)
 
 
 class WorkspaceError(Exception):
@@ -108,10 +122,10 @@ def obter(user_id: str, vm_id: str) -> dict | None:
 
 def criar(user_id: str, name: str, tailscale_ip: str, username: str, password: str) -> dict:
     ip = tailscale_ip.strip()
-    if not ip_permitido(ip):
+    if not host_permitido(ip):
         raise WorkspaceError(
             "BAD_IP",
-            "Use um IP Tailscale (100.x) ou da sua LAN. IPs públicos são recusados (SSRF).",
+            "Use IP Tailscale (100.x), LAN, ou o nome *.ts.net. Host público é recusado.",
         )
     if not username.strip() or len(username) > 80:
         raise WorkspaceError("BAD_USER", "Usuário da VM inválido.")
@@ -159,8 +173,8 @@ def _segredos(user_id: str, vm_id: str) -> tuple[str, str, str]:
 
 
 def _req(ip: str, token: str, method: str, path: str, body: dict | None = None, timeout: float = HEALTH_TIMEOUT):
-    if not ip_permitido(ip):
-        raise WorkspaceError("BAD_IP", "IP não permitido.")
+    if not host_permitido(ip):
+        raise WorkspaceError("BAD_IP", "Host não permitido.")
     url = f"http://{ip}:{AGENT_PORT}{path}"
     data = None if body is None else json.dumps(body).encode("utf-8")
     req = urllib.request.Request(url, data=data, method=method)
@@ -334,6 +348,35 @@ def _ler_token() -> str:
         except OSError:
             continue
     return os.environ.get("ARKHER_AGENT_TOKEN", "")
+
+
+def ligar(user_id: str, tailscale: str, password: str) -> dict:
+    """Celular: só Tailscale (IP ou *.ts.net) + senha. Usuário é sempre nexus."""
+    host = (tailscale or "").strip()
+    user = usuario_sessao()
+    if not host_permitido(host):
+        raise WorkspaceError("BAD_IP", "Cole o 100.x ou o nome …ts.net do PC.")
+    if not password or len(password) > 200:
+        raise WorkspaceError("BAD_PASSWORD", "Senha da sessão Windows.")
+    existentes = listar(user_id)
+    vm = None
+    for v in existentes:
+        if (v.get("tailscale_ip") or "").lower() == host.lower():
+            vm = v
+            db.execute(
+                "UPDATE vms SET username = ?, password_enc = ? WHERE id = ? AND user_id = ?",
+                (user, _enc(password), v["id"], user_id),
+            )
+            break
+    if vm is None:
+        vm = criar(user_id, "PC nexus", host, user, password)
+    auto = {"ok": False}
+    try:
+        auto = autologon(user_id, vm["id"])
+    except WorkspaceError as e:
+        auto = {"ok": False, "message": e.message}
+    h = health(user_id, vm["id"])
+    return {"ok": True, "vm": obter(user_id, vm["id"]), "health": h, "autologon": auto, "user": user}
 
 
 def auto_este_pc(user_id: str, username: str = "", password: str = "") -> dict:

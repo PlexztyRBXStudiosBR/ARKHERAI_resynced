@@ -23,6 +23,8 @@ def interpretar(mensagem: str) -> list[dict]:
     jobs: list[dict] = []
     if re.search(r"\b(abre|abrir|abre o|abrir o|abre a)\b.*\b(studio|roblox)\b", n) or n.strip() in ("studio", "roblox studio"):
         jobs.append({"kind": "open_app", "args": {"app": "studio"}})
+    if re.search(r"\b(abre|abrir)\b.*\bgodot\b", n) or n.strip() == "godot":
+        jobs.append({"kind": "open_app", "args": {"app": "godot"}})
     if re.search(r"\b(abre|abrir)\b.*\bblender\b", n) or n.strip() == "blender":
         jobs.append({"kind": "open_app", "args": {"app": "blender"}})
     if re.search(r"\b(print|screenshot|captura|tela)\b", n):
@@ -42,6 +44,8 @@ def interpretar(mensagem: str) -> list[dict]:
         jobs.append({"kind": "convert_rbx", "args": {"src": ""}})
     if re.search(r"\b(instala|instalar|baixa|baixar)\b.*\b(studio|roblox)\b", n):
         jobs.append({"kind": "install_app", "args": {"app": "studio"}})
+    if re.search(r"\b(instala|instalar|baixa|baixar)\b.*\bgodot\b", n):
+        jobs.append({"kind": "install_app", "args": {"app": "godot"}})
     if re.search(r"\b(instala|instalar|baixa|baixar)\b.*\bblender\b", n):
         jobs.append({"kind": "install_app", "args": {"app": "blender"}})
     return jobs
@@ -66,11 +70,19 @@ def piloto(user_id: str, vm_id: str, mensagem: str) -> dict:
     n = _norm(mensagem)
     gerado = None
     if re.search(r"\b(crie|cria|gerar|gera|monta|fazer|faz)\b", n):
-        tab, rec = "places", "obby"
-        if "arena" in n:
-            rec = "arena"
+        tab, rec = "godot", "cena3d"
+        if "godot" in n and "projeto" in n:
+            rec = "projeto"
+        elif "player" in n or "personagem" in n:
+            tab, rec = "godot", "player"
+        elif "plataforma" in n:
+            tab, rec = "godot", "plataforma"
+        elif "arena" in n:
+            tab, rec = "places", "arena"
+        elif "obby" in n or "roblox" in n:
+            tab, rec = "places", "obby"
         elif "base" in n or "quartel" in n:
-            rec = "base"
+            tab, rec = "places", "base"
         elif "jeep" in n or "jipe" in n:
             tab, rec = "models", "jeep"
         elif "espada" in n or "sword" in n:

@@ -11,10 +11,27 @@ from pathlib import Path
 from xml.sax.saxutils import escape, quoteattr
 
 from backend.app import config
-from backend.app.studio import geral, jogo
+from backend.app.studio import geral, godot, jogo
 from backend.app.tools import blender_gen, generators, rbxlx_gen
 
 CATALOGO: list[dict] = [
+    {
+        "id": "godot",
+        "nome": {"pt-BR": "Godot", "en": "Godot"},
+        "foco": "godot",
+        "hint": {
+            "pt-BR": "Motor principal: projeto, cena 3D, player GDScript, HUD, plataforma 2D, export. Roblox fica nas outras abas.",
+            "en": "Main engine: project, 3D scene, GDScript player, HUD, 2D platform, export. Roblox stays in the other tabs.",
+        },
+        "receitas": [
+            ("projeto", "project.godot"),
+            ("cena3d", "Cena 3D (.tscn)"),
+            ("player", "Player (.gd)"),
+            ("hud", "HUD canto"),
+            ("plataforma", "Plataforma 2D"),
+            ("export", "Export Windows"),
+        ],
+    },
     {
         "id": "places",
         "nome": {"pt-BR": "Places", "en": "Places"},
@@ -767,7 +784,9 @@ def gerar(tab: str, recipe: str, seed: int = 42, prompt: str = "") -> dict:
     tab, recipe = (tab or "").strip().lower(), (recipe or "").strip().lower()
     seed = int(seed)
     validar(tab, recipe)
-    if tab == "places":
+    if tab == "godot":
+        res = godot.gerar(recipe, seed, prompt)
+    elif tab == "places":
         res = _gerar_place(recipe, seed, prompt)
     elif tab == "models":
         res = _gerar_model(recipe, seed)
@@ -834,7 +853,11 @@ def listar_vault() -> list[dict]:
     if not root.exists():
         return out
     for p in sorted(root.rglob("*")):
-        if p.is_file() and p.suffix.lower() in {".rbxlx", ".rbxmx", ".lua", ".py", ".obj", ".png", ".json", ".txt"}:
+        if p.is_file() and p.suffix.lower() in {
+            ".rbxlx", ".rbxmx", ".rbxl", ".rbxm", ".lua", ".luau",
+            ".py", ".obj", ".png", ".json", ".txt", ".md",
+            ".tscn", ".gd", ".godot", ".cfg", ".cs", ".import",
+        }:
             out.append({
                 "path": str(p),
                 "nome": p.name,

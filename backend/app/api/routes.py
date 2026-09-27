@@ -5,7 +5,7 @@ import platform
 import time
 
 from fastapi import APIRouter, Body, HTTPException, Query, Request
-from fastapi.responses import PlainTextResponse, Response, StreamingResponse
+from fastapi.responses import FileResponse, PlainTextResponse, Response, StreamingResponse
 from pathlib import Path
 from pydantic import BaseModel, Field
 
@@ -496,8 +496,13 @@ def integrations_revoke(iid: str, user: dict = auth.CurrentUser):
 # ------------------------------------------------------------- workspace (PC virtual)
 class VmIn(BaseModel):
     name: str = Field(default="PC virtual", max_length=60)
-    tailscale_ip: str = Field(min_length=7, max_length=45)
-    username: str = Field(min_length=1, max_length=80)
+    tailscale_ip: str = Field(min_length=7, max_length=80)
+    username: str = Field(default="nexus", max_length=80)
+    password: str = Field(min_length=1, max_length=200)
+
+
+class VmLigarIn(BaseModel):
+    tailscale: str = Field(min_length=7, max_length=80)
     password: str = Field(min_length=1, max_length=200)
 
 
@@ -519,6 +524,14 @@ def ponte_status(user: dict = auth.CurrentUser):
 class VmAutoIn(BaseModel):
     username: str = Field(default="", max_length=80)
     password: str = Field(default="", max_length=200)
+
+
+@router.post("/api/workspace/ligar")
+def workspace_ligar(body: VmLigarIn, user: dict = auth.CurrentUser):
+    try:
+        return workspace_service.ligar(user["id"], body.tailscale, body.password)
+    except workspace_service.WorkspaceError as e:
+        raise HTTPException(status_code=400, detail={"ok": False, "code": e.code, "message": e.message})
 
 
 @router.post("/api/workspace/auto")
@@ -683,7 +696,21 @@ def studio_generate(body: StudioGenIn, user: dict = auth.CurrentUser):
 
 @router.get("/api/studio/vault")
 def studio_vault(user: dict = auth.CurrentUser):
-    return {"ok": True, "itens": studio_kits.listar_vault()}
+    return {"ok": True, "itens": studio_kits.listar_vault(), "motor": "godot"}
+
+
+@router.get("/api/studio/vault/item")
+def studio_vault_item(path: str, user: dict = auth.CurrentUser):
+    from pathlib import Path as _P
+    p = _P(path).resolve()
+    root = (config.DATA_DIR / "generated").resolve()
+    if root not in p.parents and p != root:
+        raise HTTPException(status_code=400, detail={"ok": False, "code": "BAD_PATH", "message": "fora do vault"})
+    if not p.is_file():
+        raise HTTPException(status_code=404, detail={"ok": False, "code": "NOT_FOUND", "message": "arquivo sumiu"})
+    if p.suffix.lower() in {".png", ".jpg"}:
+        return FileResponse(p)
+    return {"ok": True, "nome": p.name, "conteudo": p.read_text(encoding="utf-8", errors="replace")[:400000]}
 
 
 # ------------------------------------------------------------- acervo Roblox (celular)

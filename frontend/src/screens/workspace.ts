@@ -1,12 +1,10 @@
 // Cockpit DsOS: tela real da VM + toque + HUD + chat de piloto.
 // Sem desktop HTML falso. Sem IA de terceiro no loop de visão.
 
-import { confirmDialog, el, toast } from "../components/ui";
-import { icon } from "../components/icons";
+import { el, toast } from "../components/ui";
 import { t } from "../services/i18n";
 import { renderMarkdown } from "../app/md";
-import { acharAgente, mandarInput } from "../services/ponte";
-import type { Vm } from "../services/api";
+import { acharAgente, mandarInput, PC_HOST } from "../services/ponte";
 import type { Ctx } from "../app/app";
 
 let liveGen = 0;
@@ -44,7 +42,10 @@ export function renderWorkspace(ctx: Ctx): HTMLElement {
   desk.append(bar, screen);
 
   const setup = el("div", { class: "ws-setup" });
-  setup.append(formAdd(ctx, () => void refreshVms()));
+  setup.append(formAdd(ctx, () => {
+    void refreshVms();
+    startLive(img, screen, placeholder, titleEl);
+  }));
   desk.append(setup);
 
   async function refreshVms(): Promise<void> {
@@ -261,81 +262,23 @@ function makeHud(): HTMLElement {
 function formAdd(ctx: Ctx, after: () => void): HTMLElement {
   const lang = ctx.store.state.settings.lang;
   const box = el("div", { class: "memory-form" });
-  const name = el("input", { class: "input", placeholder: t("workspace_name", lang), maxlength: "60" }) as HTMLInputElement;
-  name.value = "PC virtual";
-  const ip = el("input", { class: "input", placeholder: t("workspace_ip", lang), maxlength: "45" }) as HTMLInputElement;
-  const user = el("input", { class: "input", placeholder: t("workspace_user", lang), maxlength: "80" }) as HTMLInputElement;
-  user.value = "nexus";
+  box.append(el("p", { class: "dim" }, t("workspace_hint", lang) + " Usuário: nexus (automático)."));
+  const ip = el("input", { class: "input", placeholder: t("workspace_ip", lang), maxlength: "80" }) as HTMLInputElement;
+  ip.value = PC_HOST;
   const pass = el("input", { class: "input", type: "password", placeholder: t("workspace_pass", lang), maxlength: "200" }) as HTMLInputElement;
   const add = el("button", { class: "pri" }, t("workspace_add", lang));
   add.onclick = async () => {
     try {
-      const res = await ctx.api.workspaceCreate({
-        name: name.value.trim() || "PC virtual",
-        tailscale_ip: ip.value.trim(),
-        username: user.value.trim(),
-        password: pass.value,
-      });
+      const res = await ctx.api.workspaceLigar(ip.value.trim() || PC_HOST, pass.value);
       pass.value = "";
       selectedId = res.vm.id;
-      if (res.vm.agent_token) toast("Token do agente (uma vez): " + res.vm.agent_token);
+      toast("ligado como " + (res.user || "nexus"));
       after();
     } catch (e) {
       toast((e as { message?: string }).message ?? "erro");
     }
   };
-  const ping = el("button", {}, t("workspace_connect", lang));
-  ping.onclick = async () => {
-    if (!selectedId) return;
-    try {
-      const h = await ctx.api.workspaceHealth(selectedId);
-      toast(h.status);
-    } catch (e) {
-      toast((e as { message?: string }).message ?? "erro");
-    }
-  };
-  const auto = el("button", {}, t("workspace_autologon", lang));
-  auto.onclick = async () => {
-    if (!selectedId) return;
-    if (!(await confirmDialog("Aplicar AutoAdminLogon nesta VM?", t("workspace_autologon", lang)))) return;
-    try {
-      await ctx.api.workspaceAutologon(selectedId);
-      toast("auto-logon enviado");
-    } catch (e) {
-      toast((e as { message?: string }).message ?? "erro");
-    }
-  };
-  const dl = el("button", { class: "ghost" });
-  dl.append(icon("download", 14), " agente");
-  dl.onclick = async () => {
-    const src = await ctx.api.getRaw("/api/workspace/agent.py");
-    ctx.download("arkher_agent.py", src);
-  };
-  const este = el("button", { class: "pri" }, "Este PC");
-  este.onclick = async () => {
-    try {
-      const r = await ctx.api.workspaceAuto();
-      selectedId = r.vm.id;
-      if (r.vm.agent_token) toast("Token do agente (uma vez): " + r.vm.agent_token);
-      toast(r.reuso ? "PC já cadastrado" : "Este PC ligado");
-      after();
-    } catch (e) {
-      toast((e as { message?: string }).message ?? "erro");
-    }
-  };
-  const det = el("button", {}, "Detectar VM");
-  det.onclick = async () => {
-    try {
-      const r = await ctx.api.workspaceDetectGithub("");
-      selectedId = r.vm.id;
-      if (r.vm.agent_token) toast("Token do agente (uma vez): " + r.vm.agent_token);
-      toast("VM " + (r.ip || "") + " — rode o agente nela com o token");
-      after();
-    } catch (e) {
-      toast((e as { message?: string }).message ?? "erro");
-    }
-  };
-  box.append(name, ip, user, pass, el("div", { class: "row" }, este, det, add, ping, auto, dl));
+  box.append(ip, pass, el("div", { class: "row" }, add));
   return box;
 }
 
@@ -398,5 +341,3 @@ function pilotChat(ctx: Ctx, vmId: () => string | null): HTMLElement {
   wrap.append(msgs, el("div", { class: "composer" }, input, send));
   return wrap;
 }
-
-export type { Vm };
