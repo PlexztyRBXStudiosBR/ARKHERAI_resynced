@@ -194,11 +194,13 @@ function messageEl(ctx: Ctx, m: Message, streaming: boolean): HTMLElement {
           ver3d.onclick = () => openViewer(m.arquivo!.nome, m.arquivo!.conteudo!);
           actions.append(ver3d);
         }
-        if (m.arquivo.nome.toLowerCase().endsWith(".png") && m.arquivo.conteudo_b64) {
+        const low = m.arquivo.nome.toLowerCase();
+        if ((low.endsWith(".png") || low.endsWith(".jpg") || low.endsWith(".jpeg")) && m.arquivo.conteudo_b64) {
+          const mime = low.endsWith(".png") ? "image/png" : "image/jpeg";
           const img = el("img", {
-            class: "tex-preview",
+            class: "tex-preview tex-full",
             alt: m.arquivo.nome,
-            src: "data:image/png;base64," + m.arquivo.conteudo_b64,
+            src: `data:${mime};base64,` + m.arquivo.conteudo_b64,
           });
           bubble.append(img);
         }

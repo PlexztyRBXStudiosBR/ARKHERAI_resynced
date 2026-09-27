@@ -857,6 +857,7 @@ def listar_vault() -> list[dict]:
             ".rbxlx", ".rbxmx", ".rbxl", ".rbxm", ".lua", ".luau",
             ".py", ".obj", ".png", ".json", ".txt", ".md",
             ".tscn", ".gd", ".godot", ".cfg", ".cs", ".import",
+            ".jpg", ".jpeg", ".glb", ".gltf", ".fbx", ".obj",
         }:
             out.append({
                 "path": str(p),

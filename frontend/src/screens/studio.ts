@@ -83,8 +83,10 @@ export function renderStudio(ctx: Ctx, tabId: string): HTMLElement {
           ver.onclick = () => openViewer(res.arquivo!.nome, res.arquivo!.conteudo!);
           acoes.append(ver);
         }
-        if (res.arquivo.nome.toLowerCase().endsWith(".png") && res.arquivo.conteudo_b64) {
-          card.append(el("img", { class: "tex-preview", alt: res.arquivo.nome, src: "data:image/png;base64," + res.arquivo.conteudo_b64 }));
+        const low = res.arquivo.nome.toLowerCase();
+        if ((low.endsWith(".png") || low.endsWith(".jpg") || low.endsWith(".jpeg")) && res.arquivo.conteudo_b64) {
+          const mime = low.endsWith(".png") ? "image/png" : "image/jpeg";
+          card.append(el("img", { class: "tex-preview tex-full", alt: res.arquivo.nome, src: `data:${mime};base64,` + res.arquivo.conteudo_b64 }));
         }
         if (res.arquivo.conteudo && /\.(lua|py|md|json|yml|gdshader)$/i.test(res.arquivo.nome)) {
           const pre = el("pre", { class: "train-log" }, res.arquivo.conteudo.slice(0, 4000));

@@ -241,6 +241,14 @@ def _detectar_tarefa(texto: str) -> tuple[str, dict] | None:
             return ("roblox_gen", {"tipo": "checkpoint"})
         if "dia" in t and "noite" in t:
             return ("roblox_gen", {"tipo": "dia_noite"})
+    if re.search(r"\b(jpg|jpeg|imagem|conceito|poster|capa|pintura)\b", t) or (
+        re.search(r"\b(gera|gerar|cria|crie|faz|fazer)\b", t) and re.search(r"\b(foto|quadro|cena 2d)\b", t)
+    ):
+        return ("jpg_gen", {"pedido": texto, "seed": seed})
+    if re.search(r"\b(sketchfab|mixamo|polyhaven|poly haven)\b", t) or (
+        re.search(r"\b(baixa|baixar|download|ingere|colher)\b", t) and re.search(r"\b(modelo|modelos|fbx|glb)\b", t)
+    ):
+        return ("modelos_web", {"consulta": texto, "tema": texto})
     if ("textura" in t or "albedo" in t or "normal map" in t) and not re.search(r"\b(blender|personagem|cena)\b", t):
         return ("tex_gen", {"pedido": texto, "seed": seed})
     if "blender" in t or "3d" in t or "personagem" in t or "robo" in t or "cenario" in t or "modelo" in t or "animacao" in t:
@@ -288,6 +296,21 @@ def _formatar_ferramenta(tool_id: str, result: dict) -> tuple[str, str, dict | N
                 "3. Os artefatos saem na pasta `arkher_saida/`."
             )
         return f"{result['descricao']}{extra}", "arquivo", result["arquivo"]
+    if tool_id == "jpg_gen":
+        return (
+            f"{result.get('descricao')}\n\n{result.get('como_usar')}",
+            "arquivo",
+            result.get("arquivo"),
+        )
+    if tool_id == "modelos_web":
+        return (
+            str(result.get("message") or "fontes de modelo")
+            + "\n\n```json\n"
+            + json.dumps({k: result.get(k) for k in ("polyhaven", "sketchfab", "mixamo", "ingest_local", "para_treino") if k in result}, ensure_ascii=False)[:4000]
+            + "\n```",
+            "ferramenta",
+            None,
+        )
     if tool_id == "godot_gen":
         corpo = (
             f"{result.get('descricao')}\n\nComo usar: {result.get('como_usar')}\n\n"

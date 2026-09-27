@@ -160,13 +160,34 @@ TOOLS: dict[str, dict] = {
         "permissoes": ["geracao_de_textura_local"],
         "confirmacao": False,
     },
+    "jpg_gen": {
+        "id": "jpg_gen",
+        "nome": "JPG de cena inteira",
+        "descricao": "JPEG de conceito (céu, chão, silhueta) gerado no backend, sem modelo de terceiro.",
+        "permissoes": ["geracao_de_imagem_local"],
+        "confirmacao": False,
+    },
+    "modelos_web": {
+        "id": "modelos_web",
+        "nome": "Modelos licenciados (Poly Haven / Sketchfab / Mixamo local)",
+        "descricao": "CC0 Poly Haven + busca Sketchfab (token). Mixamo só pasta local — sem scrape.",
+        "permissoes": ["download_de_modelo_licenciado"],
+        "confirmacao": False,
+    },
+    "godot_gen": {
+        "id": "godot_gen",
+        "nome": "Gerador Godot 4",
+        "descricao": "project.godot, .tscn e .gd gerados no chat.",
+        "permissoes": ["geracao_godot_local"],
+        "confirmacao": False,
+    },
 }
 
 # Ferramentas que o chat executa direto (a super-IA gera no próprio recado).
 CHAT_NATIVE = {
     "calc", "roblox_gen", "obj_gen", "anim_gen", "terrain_gen", "style_gen",
     "fisica_gen", "blender_gen", "rbxlx_gen", "build_gen", "text_analysis", "tex_gen",
-    "web_search", "figma_gen", "jogo_completo", "godot_gen",
+    "web_search", "figma_gen", "jogo_completo", "godot_gen", "jpg_gen", "modelos_web",
 }
 
 
@@ -414,6 +435,22 @@ def run(user_id: str, tool_id: str, args: dict, require_auth: bool = True) -> di
                 result = generators.gerar_textura(str(args.get("pedido", args.get("tema", "pedra"))), args.get("seed"))
             except ValueError as e:
                 raise ToolError("INVALID_ARG", str(e))
+        elif tool_id == "jpg_gen":
+            from backend.app.tools import jpg_cena
+            result = jpg_cena.gerar_jpg(str(args.get("pedido") or args.get("tema") or "cena"), args.get("seed"))
+        elif tool_id == "modelos_web":
+            from backend.app.acervo import modelos as modelos_web
+            tok = ""
+            try:
+                from backend.app.integrations import service as integ
+                tok = integ.token_de(user_id, "sketchfab") or ""
+            except Exception:
+                tok = ""
+            result = modelos_web.colher(
+                str(args.get("consulta") or args.get("tema") or "character"),
+                token_sketchfab=tok,
+                baixar=True,
+            )
         elif tool_id == "ponte_instalar":
             result = {
                 "descricao": "Permissão registrada. As pontes estão liberadas para construir ao vivo.",

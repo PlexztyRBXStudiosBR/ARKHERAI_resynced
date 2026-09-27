@@ -211,6 +211,25 @@ function startLive(
   void tick();
 }
 
+const HUD_KEYS: Record<string, [string, string][]> = {
+  godot: [
+    ["F5", "{F5}"], ["F6", "{F6}"], ["Q", "q"], ["W", "w"], ["E", "e"], ["R", "r"],
+    ["F", "f"], ["^S", "^s"], ["^Z", "^z"], ["^D", "^d"], ["Del", "{DEL}"],
+  ],
+  studio: [
+    ["F5", "{F5}"], ["F8", "{F8}"], ["1", "1"], ["2", "2"], ["3", "3"], ["4", "4"],
+    ["R", "r"], ["T", "t"], ["F", "{F}"], ["^S", "^s"], ["^G", "^g"],
+  ],
+  blender: [
+    ["G", "g"], ["R", "r"], ["S", "s"], ["E", "e"], ["Tab", "{TAB}"], ["Z", "z"],
+    ["X", "x"], ["^S", "^s"], ["+A", "+a"], ["7", "{NUMPAD7}"], ["1", "{NUMPAD1}"],
+  ],
+  geral: [
+    ["Esc", "{ESC}"], ["Enter", "{ENTER}"], ["Espaço", " "], ["Tab", "{TAB}"],
+    ["^Z", "^z"], ["^S", "^s"], ["^C", "^c"], ["^V", "^v"], ["Del", "{DEL}"],
+  ],
+};
+
 function makeHud(): HTMLElement {
   const hud = el("div", { class: "ws-hud" });
   const send = (acts: Record<string, unknown>[]) => {
@@ -221,31 +240,73 @@ function makeHud(): HTMLElement {
     b.onclick = () => send([{ do: "key", key: k }]);
     return b;
   };
-  const pad = el("div", { class: "ws-pad" });
-  pad.append(
-    el("span", {}),
-    key("▲", "{UP}"),
-    el("span", {}),
-    key("◀", "{LEFT}"),
-    key("OK", "{ENTER}"),
-    key("▶", "{RIGHT}"),
-    el("span", {}),
-    key("▼", "{DOWN}"),
-    el("span", {}),
-  );
-  const row = el("div", { class: "ws-hud-row" });
-  row.append(
-    key("ESC", "{ESC}"),
-    key("TAB", "{TAB}"),
-    key("⌫", "{BACKSPACE}"),
-    key("Espaço", " "),
-  );
+  const stick = el("div", { class: "ws-stick" });
+  const knob = el("div", { class: "ws-stick-knob" });
+  stick.append(knob);
+  let hold: ReturnType<typeof setTimeout> | null = null;
+  let ax = 0, ay = 0, down = false;
+  const pulse = () => {
+    if (!down) return;
+    send([{ do: "stick", x: ax, y: ay }]);
+    hold = setTimeout(pulse, 70);
+  };
+  const setKnob = (nx: number, ny: number) => {
+    ax = Math.max(-1, Math.min(1, nx));
+    ay = Math.max(-1, Math.min(1, ny));
+    knob.style.transform = `translate(${ax * 22}px, ${ay * 22}px)`;
+  };
+  const fromEv = (ev: PointerEvent) => {
+    const r = stick.getBoundingClientRect();
+    const nx = (ev.clientX - (r.left + r.width / 2)) / (r.width / 2);
+    const ny = (ev.clientY - (r.top + r.height / 2)) / (r.height / 2);
+    setKnob(nx, ny);
+  };
+  stick.addEventListener("pointerdown", (ev) => {
+    down = true;
+    stick.setPointerCapture(ev.pointerId);
+    fromEv(ev);
+    if (hold) clearTimeout(hold);
+    pulse();
+  });
+  stick.addEventListener("pointermove", (ev) => {
+    if (down) fromEv(ev);
+  });
+  const end = () => {
+    down = false;
+    setKnob(0, 0);
+    if (hold) clearTimeout(hold);
+    hold = null;
+  };
+  stick.addEventListener("pointerup", end);
+  stick.addEventListener("pointercancel", end);
+
+  const modes = el("div", { class: "ws-hud-row" });
+  const keysBox = el("div", { class: "ws-hud-row" });
+  let modo = "godot";
+  const paintKeys = () => {
+    keysBox.textContent = "";
+    for (const [lab, k] of HUD_KEYS[modo] || HUD_KEYS.geral) keysBox.append(key(lab, k));
+  };
+  for (const m of ["godot", "studio", "blender", "geral"] as const) {
+    const b = el("button", { type: "button", class: "ws-hk" }, m);
+    b.onclick = () => {
+      modo = m;
+      paintKeys();
+    };
+    modes.append(b);
+  }
+  paintKeys();
   const apps = el("div", { class: "ws-hud-row" });
-  const studio = el("button", { class: "ws-hk" }, "Studio");
-  studio.onclick = () => send([{ do: "app", nome: "studio" }]);
-  const blender = el("button", { class: "ws-hk" }, "Blender");
-  blender.onclick = () => send([{ do: "app", nome: "blender" }]);
-  apps.append(studio, blender);
+  const mkApp = (lab: string, nome: string) => {
+    const b = el("button", { class: "ws-hk" }, lab);
+    b.onclick = () => send([{ do: "app", nome }]);
+    return b;
+  };
+  const mix = el("button", { class: "ws-hk" }, "Mixamo");
+  mix.onclick = () => send([{ do: "url", url: "https://www.mixamo.com" }]);
+  const ph = el("button", { class: "ws-hk" }, "Poly Haven");
+  ph.onclick = () => send([{ do: "url", url: "https://polyhaven.com/models" }]);
+  apps.append(mkApp("Godot", "godot"), mkApp("Studio", "studio"), mkApp("Blender", "blender"), mix, ph);
   const kb = el("input", { class: "input ws-hud-kb", placeholder: "digita na VM…", maxlength: "200" }) as HTMLInputElement;
   kb.addEventListener("keydown", (e) => {
     if (e.key === "Enter") {
@@ -255,7 +316,14 @@ function makeHud(): HTMLElement {
       kb.value = "";
     }
   });
-  hud.append(el("p", { class: "dim" }, "HUD — você dirige. Toque curto = clique, longo = direito, arrasta = drag."), pad, row, apps, kb);
+  hud.append(
+    el("p", { class: "dim" }, "HUD analógico + teclas do software. Toque na tela = clique."),
+    stick,
+    modes,
+    keysBox,
+    apps,
+    kb,
+  );
   return hud;
 }
 
