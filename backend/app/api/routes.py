@@ -718,6 +718,12 @@ class AcervoIn(BaseModel):
     root: str = Field(default="/storage/emulated/0/ArkherAITraining", max_length=400)
 
 
+@router.get("/api/acervo/fontes")
+def acervo_fontes(user: dict = auth.CurrentUser):
+    from backend.app.acervo import fontes as _fontes
+    return {"ok": True, "n": len(_fontes.lista()), "fontes": _fontes.lista()}
+
+
 @router.get("/api/acervo")
 def acervo_get(root: str = "/storage/emulated/0/ArkherAITraining", user: dict = auth.CurrentUser):
     return acervo_service.status(root)

@@ -245,8 +245,12 @@ def _detectar_tarefa(texto: str) -> tuple[str, dict] | None:
         re.search(r"\b(gera|gerar|cria|crie|faz|fazer)\b", t) and re.search(r"\b(foto|quadro|cena 2d)\b", t)
     ):
         return ("jpg_gen", {"pedido": texto, "seed": seed})
-    if re.search(r"\b(sketchfab|mixamo|polyhaven|poly haven)\b", t) or (
-        re.search(r"\b(baixa|baixar|download|ingere|colher)\b", t) and re.search(r"\b(modelo|modelos|fbx|glb)\b", t)
+    if re.search(
+        r"\b(sketchfab|mixamo|polyhaven|poly haven|kenney|opengameart|ambientcg|fontes)\b",
+        t,
+    ) or re.search(r"todos os sites", t) or (
+        re.search(r"\b(baixa|baixar|download|ingere|colher|varre|varrer)\b", t)
+        and re.search(r"\b(modelo|modelos|fbx|glb|asset|textura)\b", t)
     ):
         return ("modelos_web", {"consulta": texto, "tema": texto})
     if ("textura" in t or "albedo" in t or "normal map" in t) and not re.search(r"\b(blender|personagem|cena)\b", t):
@@ -303,10 +307,15 @@ def _formatar_ferramenta(tool_id: str, result: dict) -> tuple[str, str, dict | N
             result.get("arquivo"),
         )
     if tool_id == "modelos_web":
+        sites = result.get("sites") or []
+        nomes = ", ".join(str(s.get("nome") or s.get("id")) for s in sites)
         return (
             str(result.get("message") or "fontes de modelo")
-            + "\n\n```json\n"
-            + json.dumps({k: result.get(k) for k in ("polyhaven", "sketchfab", "mixamo", "ingest_local", "para_treino") if k in result}, ensure_ascii=False)[:4000]
+            + f"\n\nSites ({len(sites)}): {nomes}\n\n```json\n"
+            + json.dumps(
+                {k: result.get(k) for k in ("n_sites", "n_api", "n_hits", "para_treino", "ingest_local") if k in result},
+                ensure_ascii=False,
+            )[:2500]
             + "\n```",
             "ferramenta",
             None,

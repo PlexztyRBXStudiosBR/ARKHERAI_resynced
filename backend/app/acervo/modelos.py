@@ -179,20 +179,29 @@ def ingerir_pasta(pasta: str | None = None) -> dict:
 
 
 def colher(consulta: str, token_sketchfab: str = "", baixar: bool = True, limite: int = 6) -> dict:
-    """Busca + download CC0 (Poly Haven) + índice Sketchfab. Mixamo só nota/ingest."""
+    """Varre 40+ sites. Baixa CC0 (Poly Haven). O resto: API, abrir no PC ou pasta local."""
+    from backend.app.acervo import fontes as fontes_mod
+
+    lote = fontes_mod.colher_todas(consulta, limite_por=2)
     ph = polyhaven_buscar(consulta, limite=limite)
     baixados = []
     if baixar and ph.get("ok"):
-        for hit in (ph.get("resultados") or [])[:limite]:
+        for hit in (ph.get("resultados") or [])[: min(4, limite)]:
             r = polyhaven_baixar(str(hit.get("id") or ""))
             baixados.append(r)
     sk = sketchfab_buscar(consulta, token_sketchfab, limite=limite)
     mx = mixamo_nota()
     ing = ingerir_pasta()
     ok_n = sum(1 for b in baixados if b.get("ok"))
+    nomes = ", ".join(f["nome"] for f in fontes_mod.lista()[:12])
     return {
         "ok": True,
         "consulta": consulta,
+        "n_sites": lote.get("n_sites"),
+        "n_api": lote.get("n_api"),
+        "n_hits": lote.get("n_hits"),
+        "sites": [{"id": f["id"], "nome": f["nome"], "modo": f["modo"], "licenca": f["licenca"]} for f in fontes_mod.lista()],
+        "varredura": lote,
         "polyhaven": ph,
         "baixados": baixados,
         "sketchfab": sk,
@@ -200,7 +209,9 @@ def colher(consulta: str, token_sketchfab: str = "", baixar: bool = True, limite
         "ingest_local": ing,
         "para_treino": ok_n + int(ing.get("n") or 0),
         "message": (
-            f"Poly Haven CC0: {ok_n} baixados. Sketchfab: lista (download com token). "
-            f"Mixamo: {ing.get('n') or 0} FBX locais. Tudo no Vault/treino."
+            f"{lote.get('n_sites')} sites no catálogo ({nomes}…). "
+            f"APIs responderam {lote.get('n_hits')} itens. "
+            f"CC0 baixado agora: {ok_n}. Pasta local: {ing.get('n') or 0}. "
+            "Lojas pagas/Adobe/Epic: você baixa; a ARKHER não raspa."
         ),
     }
