@@ -16,6 +16,7 @@ import { renderSettings } from "../screens/settings";
 import { renderStudio } from "../screens/studio";
 import { renderVault } from "../screens/vault";
 import { saveToken } from "../state/store";
+import { URL_CELULAR } from "../services/ponte";
 
 export interface Ctx {
   store: Store;
@@ -36,8 +37,10 @@ export interface Ctx {
 
 export async function boot(container: HTMLElement): Promise<void> {
   const store = new Store();
-  // Em Vercel, a API persistente vem de VITE_ARKHER_API. Em desenvolvimento
-  // vazio mantém o proxy/origem local configurado pelo projeto.
+  if (typeof location !== "undefined" && location.hostname.endsWith("vercel.app")) {
+    location.replace(URL_CELULAR);
+    return;
+  }
   const configuredApi = (import.meta.env.VITE_ARKHER_API as string | undefined) ?? "";
   const base = () => (store.state.settings.backendBase || configuredApi).replace(/\/$/, "");
   const api = makeApi(base, () => store.state.token);
@@ -61,9 +64,6 @@ export async function boot(container: HTMLElement): Promise<void> {
 
   applyTheme(store);
   renderShell(container, ctx);
-  if (typeof location !== "undefined" && location.hostname.endsWith("vercel.app") && !base()) {
-    toast("Vercel não é o backend. Config → cole https://SEU-PC.ts.net (Tailscale Serve). Sem isso o celular não vê a tela.");
-  }
 
   // identidade de dispositivo (auth própria, modo local)
   try {
@@ -85,7 +85,7 @@ export async function boot(container: HTMLElement): Promise<void> {
         throw e;
       }
     }
-  } catch {
+    } catch {
     store.setUiFromHealth(false, undefined, null);
   }
 
