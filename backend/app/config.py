@@ -34,10 +34,17 @@ PORT = _port()
 CORS_ORIGINS = [
     o.strip()
     for o in os.environ.get(
-        "ARKHER_CORS_ORIGINS", "http://localhost:5173,http://127.0.0.1:5173"
+        "ARKHER_CORS_ORIGINS",
+        "http://localhost:5173,http://127.0.0.1:5173,https://arkherai-resynced.vercel.app",
     ).split(",")
     if o.strip()
 ]
+# Vercel + Tailscale Serve (HTTPS). Sem isso o celular no site da Vercel é bloqueado.
+CORS_ORIGIN_REGEX = os.environ.get(
+    "ARKHER_CORS_ORIGIN_REGEX",
+    r"https://([a-z0-9-]+\.)*vercel\.app|https://[a-z0-9._-]+\.ts\.net(:\d+)?|"
+    r"http://(localhost|127\.0\.0\.1|100\.\d+\.\d+\.\d+)(:\d+)?",
+)
 
 # Limites de entrada/saída
 MAX_MESSAGE_CHARS = int(os.environ.get("ARKHER_MAX_MESSAGE_CHARS", "4000"))

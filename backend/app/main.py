@@ -25,9 +25,10 @@ def create_app() -> FastAPI:
 
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=config.CORS_ORIGINS,
-        allow_methods=["GET", "POST", "PATCH", "DELETE"],
-        allow_headers=["Authorization", "Content-Type", "X-Arkher-Token"],
+        allow_origins=config.CORS_ORIGINS or ["*"],
+        allow_origin_regex=config.CORS_ORIGIN_REGEX,
+        allow_methods=["GET", "POST", "PATCH", "DELETE", "OPTIONS"],
+        allow_headers=["Authorization", "Content-Type", "X-Arkher-Token", "X-Arkher-Agent"],
         max_age=600,
     )
 

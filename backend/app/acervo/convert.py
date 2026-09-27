@@ -89,26 +89,54 @@ def digest(p: Path) -> tuple[str, int]:
 
 def is_xml(p: Path) -> bool:
     try:
-        return p.open("rb").read(240).lstrip().startswith(b"<")
+        head = p.open("rb").read(240).lstrip()
+        if head.startswith(b"<roblox!"):
+            return False
+        return head.startswith(b"<")
     except OSError:
         return False
 
 
 def convert_bin(src: Path, dst: Path, kind: str) -> tuple[bool, str]:
-    template = os.environ.get("ARKHER_RBXL_CONVERTER", "").strip()
-    if not template:
-        return False, "conversor nao configurado (ARKHER_RBXL_CONVERTER)"
-    cmd = template.format(input=str(src), output=str(dst), kind=kind)
+    """rbxl→rbxlx / rbxm→rbxmx. Python primeiro; rbx-util se existir; senão env."""
     try:
-        r = subprocess.run(
-            cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
-            text=True, timeout=900,
-        )
-        if r.returncode == 0 and dst.exists() and dst.stat().st_size > 0:
-            return True, "convertido"
-        return False, (r.stdout or "falha do conversor")[-500:]
-    except Exception as e:
-        return False, str(e)
+        from backend.app.acervo.rbx_binary import ConvertError, convert_file
+
+        convert_file(src, dst)
+        if dst.exists() and dst.stat().st_size > 40:
+            return True, "arkher"
+    except Exception as e:  # noqa: BLE001
+        py_err = f"{type(e).__name__}: {e}"
+        if dst.exists() and dst.stat().st_size == 0:
+            dst.unlink()
+    else:
+        py_err = "saida vazia"
+    tool = shutil.which("rbx-util") or shutil.which("rbx-dom")
+    if tool:
+        try:
+            r = subprocess.run(
+                [tool, "convert", str(src), str(dst)],
+                capture_output=True, text=True, timeout=900,
+            )
+            if r.returncode == 0 and dst.exists() and dst.stat().st_size > 0:
+                return True, "rbx-util"
+            return False, (r.stdout or r.stderr or py_err)[-500:]
+        except Exception as e:  # noqa: BLE001
+            py_err = f"{py_err}; rbx-util: {e}"
+    template = os.environ.get("ARKHER_RBXL_CONVERTER", "").strip()
+    if template:
+        cmd = template.format(input=str(src), output=str(dst), kind=kind)
+        try:
+            r = subprocess.run(
+                cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+                text=True, timeout=900,
+            )
+            if r.returncode == 0 and dst.exists() and dst.stat().st_size > 0:
+                return True, "convertido"
+            return False, (r.stdout or py_err)[-500:]
+        except Exception as e:  # noqa: BLE001
+            return False, str(e)
+    return False, py_err
 
 
 def pastas(root: Path) -> dict[str, Path]:

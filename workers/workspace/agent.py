@@ -24,7 +24,20 @@ from pathlib import Path
 from urllib.parse import parse_qs, urlparse
 
 PORT = int(os.environ.get("ARKHER_AGENT_PORT") or os.environ.get("DSOS_PORT") or "8765")
-TOKEN = os.environ.get("ARKHER_AGENT_TOKEN", "")
+
+
+def agent_token() -> str:
+    t = (os.environ.get("ARKHER_AGENT_TOKEN") or "").strip()
+    if t:
+        return t
+    for p in (STATE / "agent.token", Path.home() / "arkher_state" / "agent.token"):
+        try:
+            v = p.read_text(encoding="utf-8").strip()
+            if v:
+                return v
+        except OSError:
+            continue
+    return ""
 STATE = Path(os.environ.get("ARKHER_STATE") or Path.home() / "arkher_state")
 WORK = STATE / "work"
 WORK.mkdir(parents=True, exist_ok=True)
@@ -55,15 +68,16 @@ public class M {
 
 
 def _auth(handler) -> bool:
+    tok = agent_token()
     got = handler.headers.get("Authorization", "")
     if got.startswith("Bearer "):
         got = got[7:]
     got = got or handler.headers.get("X-Arkher-Agent", "")
     q = parse_qs(urlparse(handler.path).query)
     got = got or (q.get("token") or [""])[0]
-    if not TOKEN:
+    if not tok:
         return False
-    return got == TOKEN
+    return got == tok
 
 
 def ps(script: str, timeout: int = 60) -> tuple[str, str]:
@@ -357,6 +371,20 @@ if(-not $ok){{ Write-Output "NAO|nenhum candidato existe" }}
         return {"ok": False, "err": str(e)}
 
 
+def _ts_ip() -> str:
+    exe = shutil.which("tailscale")
+    if IS_WIN and not exe:
+        p = Path(r"C:\Program Files\Tailscale\tailscale.exe")
+        exe = str(p) if p.exists() else ""
+    if not exe:
+        return ""
+    try:
+        r = subprocess.run([exe, "ip", "-4"], capture_output=True, text=True, timeout=12)
+        return (r.stdout or "").strip().splitlines()[0] if r.stdout else ""
+    except Exception:
+        return ""
+
+
 def machine() -> dict:
     return {
         "host": platform.node(),
@@ -455,20 +483,43 @@ def open_app(nome: str) -> dict:
     return {"ok": False, "message": r.get("err") or "app não permitida"}
 
 
+def _rbx_python_convert(src_p: Path, dest_p: Path) -> dict | None:
+    here = Path(__file__).resolve()
+    candidates = [here.parent, here.parents[2] if len(here.parents) >= 2 else here.parent]
+    for root in candidates:
+        if str(root) not in sys.path:
+            sys.path.insert(0, str(root))
+    try:
+        from backend.app.acervo.rbx_binary import convert_file  # type: ignore
+    except Exception:
+        return None
+    convert_file(src_p, dest_p)
+    return {"ok": True, "dest": str(dest_p), "modo": "arkher", "bytes": dest_p.stat().st_size}
+
+
 def convert_rbx(src: str, dest: str | None = None) -> dict:
     src_p = Path(src)
     if not src_p.is_file():
         return {"ok": False, "message": "arquivo fonte inexistente"}
-    tool = shutil.which("rbx-util") or shutil.which("rbx-dom")
     dest_p = Path(dest) if dest else WORK / (src_p.stem + (".rbxlx" if src_p.suffix.lower() == ".rbxl" else ".rbxmx"))
-    if src_p.open("rb").read(80).lstrip().startswith(b"<"):
+    head = src_p.open("rb").read(80).lstrip()
+    if head.startswith(b"<") and not head.startswith(b"<roblox!"):
         if src_p.resolve() != dest_p.resolve():
             shutil.copy2(src_p, dest_p)
         return {"ok": True, "dest": str(dest_p), "modo": "xml_copy", "bytes": dest_p.stat().st_size}
-    if not tool:
-        return {"ok": False, "message": "rbx-util ausente; XML já existentes são copiados. Binário fica pendente."}
-    r = subprocess.run([tool, "convert", str(src_p), str(dest_p)], capture_output=True, text=True, timeout=900)
-    return {"ok": r.returncode == 0 and dest_p.exists(), "dest": str(dest_p), "out": (r.stdout or r.stderr or "")[-1000:]}
+    try:
+        got = _rbx_python_convert(src_p, dest_p)
+        if got and dest_p.exists() and dest_p.stat().st_size > 40:
+            return got
+    except Exception as e:  # noqa: BLE001
+        py_err = f"{type(e).__name__}: {e}"
+    else:
+        py_err = ""
+    tool = shutil.which("rbx-util") or shutil.which("rbx-dom")
+    if tool:
+        r = subprocess.run([tool, "convert", str(src_p), str(dest_p)], capture_output=True, text=True, timeout=900)
+        return {"ok": r.returncode == 0 and dest_p.exists(), "dest": str(dest_p), "out": (r.stdout or r.stderr or "")[-1000:]}
+    return {"ok": False, "message": py_err or "conversor falhou no binário"}
 
 
 def import_place(path: str) -> dict:
@@ -609,13 +660,17 @@ class Handler(BaseHTTPRequestHandler):
         self._json(200, {"ok": True})
 
     def do_GET(self):
-        if not _auth(self):
-            return self._json(401, {"ok": False, "code": "UNAUTHORIZED"})
         u = urlparse(self.path)
         q = parse_qs(u.query)
         path = u.path.rstrip("/") or "/"
-        if path in ("/", "/health"):
-            return self._json(200, {"ok": True, **machine()})
+        if path in ("/", "/health", "/node"):
+            info = machine()
+            if path == "/node":
+                info["tailscale_ip"] = _ts_ip()
+                info["url"] = "http://%s:%s" % (info.get("tailscale_ip") or info.get("host"), PORT)
+            return self._json(200, {"ok": True, **info})
+        if not _auth(self):
+            return self._json(401, {"ok": False, "code": "UNAUTHORIZED"})
         if path in ("/screen", "/dsos/screen"):
             sc = float((q.get("scale") or ["0.45"])[0])
             qa = int((q.get("q") or ["50"])[0])
@@ -661,8 +716,8 @@ class Handler(BaseHTTPRequestHandler):
 
 
 def main() -> int:
-    if not TOKEN:
-        print("defina ARKHER_AGENT_TOKEN", file=sys.stderr)
+    if not agent_token():
+        print("defina ARKHER_AGENT_TOKEN ou grave %USERPROFILE%\\arkher_state\\agent.token", file=sys.stderr)
         return 2
     httpd = ThreadingHTTPServer(("0.0.0.0", PORT), Handler)
     httpd.daemon_threads = True

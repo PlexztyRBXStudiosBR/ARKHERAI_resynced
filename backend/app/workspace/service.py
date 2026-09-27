@@ -137,6 +137,7 @@ def criar(user_id: str, name: str, tailscale_ip: str, username: str, password: s
     vm = obter(user_id, vid)
     assert vm is not None
     vm["agent_token"] = agent_token  # mostrado UMA vez na criação
+    _gravar_token_agente(agent_token)
     return vm
 
 
@@ -237,6 +238,208 @@ def job(user_id: str, vm_id: str, kind: str, args: dict) -> dict:
     ip, _pw, token = _segredos(user_id, vm_id)
     timeout = JOB_TIMEOUTS.get(kind, JOB_TIMEOUT)
     return _agent(ip, token, "POST", "/job", {"kind": kind, "args": args or {}}, timeout=timeout)
+
+
+def _token_paths() -> list:
+    from pathlib import Path
+
+    return [
+        Path.home() / "arkher_state" / "agent.token",
+        config.DATA_DIR / "agent.token",
+    ]
+
+
+def _gravar_token_agente(token: str) -> None:
+    from pathlib import Path
+
+    for p in _token_paths():
+        try:
+            p.parent.mkdir(parents=True, exist_ok=True)
+            p.write_text(token, encoding="utf-8")
+            try:
+                p.chmod(0o600)
+            except OSError:
+                pass
+        except OSError:
+            continue
+
+
+def tailscale_ip_local() -> str:
+    exe = shutil_which_ts()
+    if not exe:
+        return ""
+    try:
+        r = subprocess_run_ts(exe)
+        return (r or "").strip().splitlines()[0] if r else ""
+    except Exception:
+        return ""
+
+
+def shutil_which_ts() -> str:
+    import shutil
+    from pathlib import Path
+
+    w = shutil.which("tailscale")
+    if w:
+        return w
+    win = Path(r"C:\Program Files\Tailscale\tailscale.exe")
+    return str(win) if win.exists() else ""
+
+
+def subprocess_run_ts(exe: str) -> str:
+    import subprocess
+
+    r = subprocess.run([exe, "ip", "-4"], capture_output=True, text=True, timeout=15)
+    return r.stdout or ""
+
+
+def ponte() -> dict:
+    """O que este PC oferece: Tailscale, agente local, URL HTTPS se Serve estiver ligado."""
+    ts = tailscale_ip_local()
+    agent_ok = False
+    try:
+        raw = _agent(ts or "127.0.0.1", _ler_token() or "x", "GET", "/health", timeout=2.0)
+        agent_ok = bool(raw.get("ok"))
+    except WorkspaceError:
+        try:
+            raw = _agent("127.0.0.1", _ler_token() or "x", "GET", "/health", timeout=2.0)
+            agent_ok = bool(raw.get("ok"))
+        except WorkspaceError:
+            agent_ok = False
+    return {
+        "ok": True,
+        "tailscale_ip": ts,
+        "agente_local": agent_ok,
+        "backend": f"http://{ts}:8710" if ts else "",
+        "nota": (
+            "No celular use o site da Vercel + Config backend = https://SEU-PC.ts.net "
+            "(Tailscale Serve). HTTPS da Vercel não fala com http://100.x."
+            if ts
+            else "Tailscale não respondeu neste PC."
+        ),
+    }
+
+
+def _ler_token() -> str:
+    for p in _token_paths():
+        try:
+            t = p.read_text(encoding="utf-8").strip()
+            if t.startswith("agt_"):
+                return t
+        except OSError:
+            continue
+    return os.environ.get("ARKHER_AGENT_TOKEN", "")
+
+
+def auto_este_pc(user_id: str, username: str = "", password: str = "") -> dict:
+    """Cadastra ESTE Windows (onde o uvicorn roda) como VM 127.0.0.1."""
+    ts = tailscale_ip_local()
+    existentes = listar(user_id)
+    for vm in existentes:
+        if vm.get("tailscale_ip") in ("127.0.0.1", ts):
+            h = health(user_id, vm["id"])
+            return {"ok": True, "vm": vm, "health": h, "reuso": True}
+    vm = criar(
+        user_id,
+        "Este PC",
+        "127.0.0.1",
+        (username or os.environ.get("USERNAME") or os.environ.get("USER") or "user")[:80],
+        password or "local",
+    )
+    h = health(user_id, vm["id"])
+    return {"ok": True, "vm": vm, "health": h, "reuso": False, "tailscale_ip": ts}
+
+
+def detect_github(user_id: str, repo: str = "") -> dict:
+    """Lê o run MAIS NOVO do Actions (não dispara workflow). Pega TAILSCALE_IP do log."""
+    from backend.app.integrations import service as integ
+
+    pat = integ.token_de(user_id, "github")
+    if not pat:
+        raise WorkspaceError("NO_GITHUB", "Autorize GitHub em Integrações e cole um PAT (Actions: read).")
+    repo = (repo or os.environ.get("ARKHER_VM_REPO") or "PlexztyRBXStudiosBR/ArkherAI").strip()
+    api = "https://api.github.com"
+    headers = {
+        "Authorization": "Bearer " + pat,
+        "Accept": "application/vnd.github+json",
+        "User-Agent": "ARKHER",
+        "X-GitHub-Api-Version": "2022-11-28",
+    }
+
+    def gh(path: str) -> tuple[bytes, str]:
+        req = urllib.request.Request(api + path, headers=headers)
+        try:
+            with urllib.request.urlopen(req, timeout=30) as resp:
+                return resp.read(), resp.headers.get("Content-Type") or ""
+        except urllib.error.HTTPError as e:
+            raise WorkspaceError("GITHUB", f"GitHub HTTP {e.code} em {path}") from e
+
+    raw, _ = gh(f"/repos/{repo}/actions/runs?per_page=8")
+    runs = (json.loads(raw.decode("utf-8", "replace")) or {}).get("workflow_runs") or []
+    if not runs:
+        raise WorkspaceError("NO_RUN", f"Nenhum run em {repo}. Ligue a VM no Actions (manual, não 24h).")
+    run = runs[0]
+    logs, _ct = gh(f"/repos/{repo}/actions/runs/{run['id']}/logs")
+    texto = _unzip_text(logs)
+    achado = _parse_rdp_log(texto)
+    if not achado.get("ip"):
+        raise WorkspaceError(
+            "NO_IP",
+            "Run existe mas o log não tem TAILSCALE_IP. A VM ainda está subindo, ou o workflow não imprime o IP.",
+        )
+    for vm0 in listar(user_id):
+        if vm0.get("tailscale_ip") == achado["ip"]:
+            return {"ok": True, "vm": vm0, "run": run.get("html_url"), "ip": achado["ip"], "reuso": True,
+                    "aviso": "Não disparamos o workflow. Só lemos o que já estava no ar."}
+    vm = criar(
+        user_id,
+        f"VM {repo.split('/')[-1]}",
+        achado["ip"],
+        achado.get("usuario") or "runneradmin",
+        achado.get("senha") or "vm",
+    )
+    return {
+        "ok": True,
+        "vm": {k: vm[k] for k in vm if k != "agent_token"} | {"agent_token": vm.get("agent_token")},
+        "run": run.get("html_url"),
+        "ip": achado["ip"],
+        "aviso": "Não disparamos o workflow. Só lemos o que já estava no ar.",
+    }
+
+
+def _unzip_text(blob: bytes) -> str:
+    import io
+    import zipfile
+
+    if blob[:2] != b"PK":
+        return blob.decode("utf-8", "replace")
+    parts = []
+    with zipfile.ZipFile(io.BytesIO(blob)) as z:
+        for n in z.namelist()[:40]:
+            try:
+                parts.append(z.read(n).decode("utf-8", "replace"))
+            except Exception:
+                continue
+    return "\n".join(parts)
+
+
+def _parse_rdp_log(texto: str) -> dict:
+    import re
+
+    t = re.sub(r"\x1b\[[0-9;]*m", "", texto or "")
+    def acha(rx: str) -> str:
+        m = re.search(rx, t, re.I)
+        return m.group(1).strip() if m else ""
+    ip = (
+        acha(r"TAILSCALE_IP=((?:\d{1,3}\.){3}\d{1,3})")
+        or acha(r"Address:\s*((?:\d{1,3}\.){3}\d{1,3})")
+        or acha(r"\b(100\.(?:\d{1,3}\.){2}\d{1,3})\b")
+    )
+    usuario = acha(r"Username:\s*(\S+)") or acha(r"usuario:\s*(\S+)") or acha(r"User:\s*(\S+)")
+    senha = acha(r"Password:\s*(\S+)") or acha(r"senha:\s*(\S+)")
+    if senha in ("***",):
+        senha = ""
+    return {"ip": ip, "usuario": usuario, "senha": senha}
 
 
 def token_agente(user_id: str, vm_id: str) -> str:
